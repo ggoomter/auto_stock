@@ -1,0 +1,11 @@
+2025-10-06 00:05:57 - auto_stock - INFO - 🚀 StockDatabase 초기화 시작 (백그라운드 로드)
+2025-10-06 00:05:57 - auto_stock - INFO - 📥 백그라운드에서 한국 주식 데이터 로딩 시작...
+2025-10-06 00:05:57 - auto_stock - INFO - 🚀 백그라운드 로딩 스레드 시작
+2025-10-06 00:05:57 - auto_stock - INFO - 🚀 Fallback 데이터로 빠른 검색 (전체 로딩 백그라운드 진행)
+2025-10-06 00:05:58 - auto_stock - INFO - KRX 전체 종목 리스트 로딩 중...
+2025-10-06 00:05:58 - auto_stock - INFO - KOSPI 959개 종목 로드 완료
+2025-10-06 00:05:58 - auto_stock - INFO - 🚀 Fallback 데이터로 빠른 검색 (전체 로딩 백그라운드 진행)
+2025-10-06 00:05:59 - auto_stock - INFO - KOSDAQ 1805개 종목 로드 완료
+2025-10-06 00:05:59 - auto_stock - INFO - ETF 1029개 종목 로드 완료
+2025-10-06 00:05:59 - auto_stock - ERROR - FinanceDataReader 로드 실패: "['sector'] not in index", 기본 데이터 사용
+2025-10-06 00:05:59 - auto_stock - INFO - ✅ 백그라운드 로딩 완료: 14개 종목

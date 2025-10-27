@@ -1,0 +1,62 @@
+{
+  "symbols": ["AAPL", "005930.KS"],
+  "date_range": {
+    "start": "2020-01-01",
+    "end": "2025-09-30"
+  },
+  "horizon": {
+    "lookahead_days": 5,
+    "rebalance_days": 1
+  },
+  "strategy": {
+    "entry": "( MACD.cross_up == true AND RSI < 30 ) AND ( +DI > -DI )",
+    "exit": "( MACD.cross_down == true ) OR ( RSI > 70 )",
+    "risk": {
+      "stop_pct": 0.07,
+      "take_pct": 0.15,
+      "position_sizing": "vol_target_10"
+    }
+  },
+  "simulate": {
+    "bootstrap_runs": 1000,
+    "transaction_cost_bps": 10,
+    "slippage_bps": 5
+  },
+  "features": [
+    "MACD",
+    "RSI",
+    "DMI",
+    "+DI",
+    "-DI",
+    "ADX",
+    "BBANDS",
+    "OBV",
+    "RET",
+    "VOL",
+    "INDEX",
+    "FX",
+    "RATE",
+    "VIX"
+  ],
+  "events": [
+    "ELECTION",
+    "FOMC",
+    "EARNINGS",
+    "DIVIDEND",
+    "WAR",
+    "REGULATION",
+    "PANDEMIC"
+  ],
+  "target": {
+    "metric": [
+      "CAGR",
+      "Sharpe",
+      "MaxDD",
+      "HitRatio",
+      "AvgWin",
+      "AvgLoss"
+    ]
+  },
+  "explain": true,
+  "output_detail": "full"
+}

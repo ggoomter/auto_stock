@@ -1,0 +1,15 @@
+{
+  "strategy_name": "buffett",
+  "symbols": ["AAPL"],
+  "date_range": {
+    "start": "2024-01-01",
+    "end": "2024-12-31"
+  },
+  "simulate": {
+    "bootstrap_runs": 1000,
+    "transaction_cost_bps": 10,
+    "slippage_bps": 5
+  },
+  "output_detail": "full",
+  "_comment": "펀더멘털 데이터는 최근 1년만 정확. yfinance는 최근 4분기만 제공."
+}

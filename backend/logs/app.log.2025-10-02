@@ -1,0 +1,112 @@
+2025-10-02 14:12:14 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 14:12:14 - auto_stock - INFO - Strategy: buffett
+2025-10-02 14:12:14 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-02 14:12:14 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 14:12:14 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-02 14:12:15 - auto_stock - INFO - Data loaded for AAPL: 333 rows
+2025-10-02 14:12:16 - auto_stock - INFO - Signals generated - Entry: 32, Exit: 30
+2025-10-02 14:12:16 - auto_stock - INFO - Backtest complete - CAGR: 24.09%, Sharpe: 1.19, MaxDD: 0.00%
+2025-10-02 14:27:40 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 14:27:40 - auto_stock - INFO - Strategy: buffett
+2025-10-02 14:27:40 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-02 14:27:40 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 14:27:40 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-02 14:27:41 - auto_stock - INFO - Data loaded for AAPL: 333 rows
+2025-10-02 14:27:43 - auto_stock - INFO - Signals generated - Entry: 33, Exit: 10
+2025-10-02 14:27:43 - auto_stock - INFO - Backtest complete - Trades: 1, CAGR: 22.26%, Sharpe: 0.87, MaxDD: 0.00%
+2025-10-02 14:31:57 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 14:31:57 - auto_stock - INFO - Strategy: buffett
+2025-10-02 14:31:57 - auto_stock - INFO - Symbols: ['TSLA']
+2025-10-02 14:31:57 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 14:31:57 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-02 14:31:57 - auto_stock - INFO - Data loaded for TSLA: 333 rows
+2025-10-02 14:31:58 - auto_stock - INFO - Signals generated - Entry: 1, Exit: 22
+2025-10-02 14:31:58 - auto_stock - INFO - Backtest complete - Trades: 1, CAGR: 19.15%, Sharpe: 0.87, MaxDD: 0.00%
+2025-10-02 14:32:21 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 14:32:21 - auto_stock - INFO - Strategy: buffett
+2025-10-02 14:32:21 - auto_stock - INFO - Symbols: ['TSLA']
+2025-10-02 14:32:21 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 14:32:21 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-02 14:32:21 - auto_stock - INFO - Data loaded for TSLA: 333 rows
+2025-10-02 14:32:22 - auto_stock - INFO - Signals generated - Entry: 1, Exit: 22
+2025-10-02 14:32:22 - auto_stock - INFO - Backtest complete - Trades: 1, CAGR: 19.15%, Sharpe: 0.87, MaxDD: 0.00%
+2025-10-02 14:32:32 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 14:32:32 - auto_stock - INFO - Strategy: livermore
+2025-10-02 14:32:32 - auto_stock - INFO - Symbols: ['TSLA']
+2025-10-02 14:32:32 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 14:32:32 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-02 14:32:32 - auto_stock - INFO - Data loaded for TSLA: 333 rows
+2025-10-02 14:32:32 - auto_stock - INFO - Signals generated - Entry: 1, Exit: 57
+2025-10-02 14:32:32 - auto_stock - INFO - Backtest complete - Trades: 1, CAGR: -3.24%, Sharpe: -0.87, MaxDD: -2.95%
+2025-10-02 14:38:53 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 14:38:53 - auto_stock - INFO - Strategy: livermore
+2025-10-02 14:38:53 - auto_stock - INFO - Symbols: ['MSFT']
+2025-10-02 14:38:53 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 14:38:53 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-02 14:38:53 - auto_stock - INFO - Data loaded for MSFT: 333 rows
+2025-10-02 14:38:53 - auto_stock - INFO - Signals generated - Entry: 0, Exit: 195
+2025-10-02 14:38:53 - auto_stock - INFO - Backtest complete - Trades: 0, CAGR: 0.00%, Sharpe: 0.00, MaxDD: 0.00%
+2025-10-02 14:44:06 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 14:44:06 - auto_stock - INFO - Strategy: livermore
+2025-10-02 14:44:06 - auto_stock - INFO - Symbols: ['MSFT']
+2025-10-02 14:44:06 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 14:44:06 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-02 14:44:06 - auto_stock - INFO - Data loaded for MSFT: 333 rows
+2025-10-02 14:44:06 - auto_stock - INFO - Signals generated - Entry: 0, Exit: 195
+2025-10-02 14:44:06 - auto_stock - INFO - Backtest complete - Trades: 0, CAGR: 0.00%, Sharpe: 0.00, MaxDD: 0.00%
+2025-10-02 15:02:16 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 15:02:16 - auto_stock - INFO - Strategy: oneil
+2025-10-02 15:02:16 - auto_stock - INFO - Symbols: ['TSLA']
+2025-10-02 15:02:16 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 15:02:16 - auto_stock - INFO - Strategy loaded: William O'Neil - CAN SLIM
+2025-10-02 15:02:17 - auto_stock - INFO - Data loaded for TSLA: 333 rows
+2025-10-02 15:02:19 - auto_stock - INFO - Signals generated - Entry: 0, Exit: 0
+2025-10-02 15:02:19 - auto_stock - INFO - Backtest complete - Trades: 0, CAGR: 0.00%, Sharpe: 0.00, MaxDD: 0.00%
+2025-10-02 15:11:23 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 15:11:23 - auto_stock - INFO - Strategy: oneil
+2025-10-02 15:11:23 - auto_stock - INFO - Symbols: ['MSFT']
+2025-10-02 15:11:23 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 15:11:23 - auto_stock - INFO - Strategy loaded: William O'Neil - CAN SLIM
+2025-10-02 15:11:23 - auto_stock - INFO - Data loaded for MSFT: 333 rows
+2025-10-02 15:11:25 - auto_stock - INFO - Signals generated - Entry: 0, Exit: 0
+2025-10-02 15:11:25 - auto_stock - INFO - Backtest complete - Trades: 0, CAGR: 0.00%, Sharpe: 0.00, MaxDD: 0.00%
+2025-10-02 15:14:25 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 15:14:25 - auto_stock - INFO - Strategy: buffett
+2025-10-02 15:14:25 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-02 15:14:25 - auto_stock - INFO - Period: 2023-01-01 ~ 2024-01-01
+2025-10-02 15:14:25 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-02 15:14:25 - auto_stock - INFO - Data loaded for AAPL: 333 rows
+2025-10-02 15:14:26 - auto_stock - INFO - Signals generated - Entry: 48, Exit: 8
+2025-10-02 15:14:26 - auto_stock - INFO - Backtest complete - Trades: 2, CAGR: 19.36%, Sharpe: 0.84, MaxDD: -0.57%
+2025-10-02 15:14:47 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 15:14:47 - auto_stock - INFO - Strategy: buffett
+2025-10-02 15:14:47 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-02 15:14:47 - auto_stock - INFO - Period: 2023-01-01 ~ 2024-01-01
+2025-10-02 15:14:47 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-02 15:14:47 - auto_stock - INFO - Data loaded for AAPL: 333 rows
+2025-10-02 15:14:47 - auto_stock - INFO - Signals generated - Entry: 48, Exit: 8
+2025-10-02 15:14:47 - auto_stock - INFO - Backtest complete - Trades: 2, CAGR: 19.36%, Sharpe: 0.84, MaxDD: -0.57%
+2025-10-02 15:16:30 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 15:16:30 - auto_stock - INFO - Strategy: oneil
+2025-10-02 15:16:30 - auto_stock - INFO - Symbols: ['GOOGL']
+2025-10-02 15:16:30 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 15:16:30 - auto_stock - INFO - Strategy loaded: William O'Neil - CAN SLIM
+2025-10-02 15:16:31 - auto_stock - INFO - Data loaded for GOOGL: 333 rows
+2025-10-02 15:16:33 - auto_stock - INFO - Signals generated - Entry: 0, Exit: 0
+2025-10-02 15:16:33 - auto_stock - INFO - Backtest complete - Trades: 0, CAGR: 0.00%, Sharpe: 0.00, MaxDD: 0.00%
+2025-10-02 16:20:22 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 16:20:22 - auto_stock - INFO - Strategy: oneil
+2025-10-02 16:20:22 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-02 16:20:22 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 16:20:22 - auto_stock - INFO - Strategy loaded: William O'Neil - CAN SLIM
+2025-10-02 16:20:22 - auto_stock - INFO - Data loaded for AAPL: 333 rows
+2025-10-02 16:20:24 - auto_stock - INFO - Signals generated - Entry: 0, Exit: 0
+2025-10-02 16:20:24 - auto_stock - INFO - Backtest complete - Trades: 0, CAGR: 0.00%, Sharpe: 0.00, MaxDD: 0.00%
+2025-10-02 16:28:32 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-02 16:28:32 - auto_stock - INFO - Strategy: lynch
+2025-10-02 16:28:32 - auto_stock - INFO - Symbols: ['GOOGL']
+2025-10-02 16:28:32 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-02 16:28:32 - auto_stock - INFO - Strategy loaded: Peter Lynch - Growth at Reasonable Price
+2025-10-02 16:28:32 - auto_stock - INFO - Data loaded for GOOGL: 333 rows
+2025-10-02 16:28:33 - auto_stock - INFO - Signals generated - Entry: 0, Exit: 0
+2025-10-02 16:28:33 - auto_stock - INFO - Backtest complete - Trades: 0, CAGR: 0.00%, Sharpe: 0.00, MaxDD: 0.00%

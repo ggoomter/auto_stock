@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(grep:*)",
+      "Bash(awk:*)",
+      "Bash(python:*)",
+      "Bash(npm run dev:*)",
+      "Bash(dir:*)",
+      "Bash(curl:*)",
+      "Bash(pip install:*)",
+      "Bash(findstr:*)",
+      "Bash(pkill:*)",
+      "Bash(tasklist)",
+      "Bash(taskkill:*)",
+      "Bash(STOP.bat)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 13908 & taskkill /F /PID 28376\")",
+      "Bash(cmd.exe /c \"venv\\Scripts\\activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\")",
+      "Bash(timeout:*)",
+      "Bash(cmd.exe /c STOP.bat)",
+      "Bash(cmd.exe:*)",
+      "Bash(venvScripts:*)",
+      "Read(//g/**)",
+      "Bash(del:*)",
+      "Bash(netstat:*)",
+      "Bash(START.bat)",
+      "Bash(if exist example_request.json del /F /Q example_request.json)",
+      "Bash(if exist example_master_strategy_request.json del /F /Q example_master_strategy_request.json)",
+      "Bash(git init:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(cd:*)",
+      "Bash(venvScriptspython.exe:*)",
+      "Bash(venvScriptspip.exe install finance-datareader)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

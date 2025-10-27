@@ -1,0 +1,909 @@
+2025-10-04 16:28:33 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:28:33 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:28:33 - auto_stock - INFO - Symbols: ['005930.KS']
+2025-10-04 16:28:33 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 16:28:33 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:28:36 - auto_stock - INFO - Data loaded for 005930.KS: 333 rows
+2025-10-04 16:28:36 - auto_stock - INFO - Signals generated - Entry: 17, Exit: 94
+2025-10-04 16:28:36 - auto_stock - INFO - Backtest complete - Trades: 7, CAGR: 5.46%, Sharpe: 0.39, MaxDD: -4.70%
+2025-10-04 16:38:33 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:38:33 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:38:33 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 16:38:33 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 16:38:33 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:38:33 - auto_stock - INFO - Data loaded for 005930: 610 rows
+2025-10-04 16:38:33 - auto_stock - INFO - Signals generated - Entry: 33, Exit: 228
+2025-10-04 16:38:33 - auto_stock - INFO - Backtest complete - Trades: 13, CAGR: -3.64%, Sharpe: -0.69, MaxDD: -8.41%
+2025-10-04 16:39:03 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:39:03 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:39:03 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 16:39:03 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 16:39:03 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:39:03 - auto_stock - INFO - Data loaded for 005930: 610 rows
+2025-10-04 16:39:03 - auto_stock - INFO - Signals generated - Entry: 33, Exit: 228
+2025-10-04 16:39:03 - auto_stock - INFO - Backtest complete - Trades: 13, CAGR: -3.64%, Sharpe: -0.69, MaxDD: -8.41%
+2025-10-04 16:39:45 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:39:45 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:39:45 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 16:39:45 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 16:39:45 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:39:45 - auto_stock - INFO - Data loaded for 005930: 610 rows
+2025-10-04 16:39:45 - auto_stock - INFO - Signals generated - Entry: 33, Exit: 228
+2025-10-04 16:39:45 - auto_stock - INFO - Backtest complete - Trades: 13, CAGR: -3.64%, Sharpe: -0.69, MaxDD: -8.41%
+2025-10-04 16:39:55 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:39:55 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:39:55 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 16:39:55 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 16:39:55 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:39:55 - auto_stock - INFO - Data loaded for 005930: 610 rows
+2025-10-04 16:39:55 - auto_stock - INFO - Signals generated - Entry: 33, Exit: 228
+2025-10-04 16:39:55 - auto_stock - INFO - Backtest complete - Trades: 13, CAGR: -3.64%, Sharpe: -0.69, MaxDD: -8.41%
+2025-10-04 16:46:54 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:46:54 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:46:54 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 16:46:54 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 16:46:54 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:46:54 - auto_stock - INFO - Data loaded for 005930: 610 rows
+2025-10-04 16:46:54 - auto_stock - INFO - Signals generated - Entry: 33, Exit: 228
+2025-10-04 16:46:54 - auto_stock - INFO - Backtest complete - Trades: 13, CAGR: -3.64%, Sharpe: -0.69, MaxDD: -8.41%
+2025-10-04 16:47:49 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:47:49 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:47:49 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 16:47:49 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 16:47:49 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:47:49 - auto_stock - INFO - Data loaded for 005930: 610 rows
+2025-10-04 16:47:49 - auto_stock - INFO - Signals generated - Entry: 33, Exit: 228
+2025-10-04 16:47:49 - auto_stock - INFO - Backtest complete - Trades: 13, CAGR: -3.64%, Sharpe: -0.69, MaxDD: -8.41%
+2025-10-04 16:48:04 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:48:04 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:48:04 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 16:48:04 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 16:48:04 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:48:04 - auto_stock - INFO - Data loaded for 005930: 610 rows
+2025-10-04 16:48:04 - auto_stock - INFO - Signals generated - Entry: 33, Exit: 228
+2025-10-04 16:48:04 - auto_stock - INFO - Backtest complete - Trades: 13, CAGR: -3.64%, Sharpe: -0.69, MaxDD: -8.41%
+2025-10-04 16:48:59 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:48:59 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:48:59 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 16:48:59 - auto_stock - INFO - Period: 2024-09-01 ~ 2025-10-04
+2025-10-04 16:48:59 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:48:59 - auto_stock - INFO - Data loaded for 005930: 366 rows
+2025-10-04 16:48:59 - auto_stock - INFO - Signals generated - Entry: 16, Exit: 168
+2025-10-04 16:48:59 - auto_stock - INFO - Backtest complete - Trades: 9, CAGR: -2.42%, Sharpe: -0.72, MaxDD: -4.02%
+2025-10-04 16:49:38 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:49:38 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:49:38 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 16:49:38 - auto_stock - INFO - Period: 2024-09-01 ~ 2025-10-04
+2025-10-04 16:49:38 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:49:38 - auto_stock - INFO - Data loaded for 005930: 366 rows
+2025-10-04 16:49:38 - auto_stock - INFO - Signals generated - Entry: 16, Exit: 168
+2025-10-04 16:49:38 - auto_stock - INFO - Backtest complete - Trades: 9, CAGR: -2.42%, Sharpe: -0.72, MaxDD: -4.02%
+2025-10-04 16:50:12 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:50:12 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:50:12 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 16:50:12 - auto_stock - INFO - Period: 2024-09-01 ~ 2025-10-04
+2025-10-04 16:50:12 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:50:12 - auto_stock - INFO - Data loaded for 005930: 366 rows
+2025-10-04 16:50:12 - auto_stock - INFO - Signals generated - Entry: 16, Exit: 168
+2025-10-04 16:50:12 - auto_stock - INFO - Backtest complete - Trades: 9, CAGR: -2.42%, Sharpe: -0.72, MaxDD: -4.02%
+2025-10-04 16:55:31 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:55:31 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:55:31 - auto_stock - INFO - Symbols: ['005930.KS']
+2025-10-04 16:55:31 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 16:55:31 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:59:26 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:59:26 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:59:26 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 16:59:26 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 16:59:26 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:59:30 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 16:59:30 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 16:59:32 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 16:59:32 - auto_stock - INFO - Strategy: livermore
+2025-10-04 16:59:32 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 16:59:32 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 16:59:32 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 16:59:32 - auto_stock - INFO - Data loaded for AAPL: 408 rows
+2025-10-04 16:59:32 - auto_stock - INFO - Signals generated - Entry: 18, Exit: 127
+2025-10-04 17:00:08 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:00:08 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:00:08 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:00:08 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:00:08 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:00:08 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:00:08 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:00:10 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:00:10 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:00:10 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 17:00:10 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:00:10 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:00:10 - auto_stock - INFO - Data loaded for AAPL: 408 rows
+2025-10-04 17:00:10 - auto_stock - INFO - Signals generated - Entry: 18, Exit: 127
+2025-10-04 17:00:58 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:00:58 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:00:58 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:00:58 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:00:58 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:00:58 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:00:58 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:01:00 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:01:00 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:01:00 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 17:01:00 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:01:00 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:01:00 - auto_stock - INFO - Data loaded for AAPL: 408 rows
+2025-10-04 17:01:00 - auto_stock - INFO - Signals generated - Entry: 18, Exit: 127
+2025-10-04 17:04:56 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:04:56 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:04:56 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:04:56 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:04:56 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:04:56 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:04:56 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:04:58 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:04:58 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:04:58 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 17:04:58 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:04:58 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:04:58 - auto_stock - INFO - Data loaded for AAPL: 408 rows
+2025-10-04 17:04:58 - auto_stock - INFO - Signals generated - Entry: 18, Exit: 127
+2025-10-04 17:06:17 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:06:17 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:06:17 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:06:17 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:06:17 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:06:17 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:06:17 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:06:19 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:06:19 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:06:19 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 17:06:19 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:06:19 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:06:19 - auto_stock - INFO - Data loaded for AAPL: 408 rows
+2025-10-04 17:06:19 - auto_stock - INFO - Signals generated - Entry: 18, Exit: 127
+2025-10-04 17:07:06 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:07:06 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:07:06 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:07:06 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:07:06 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:07:07 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:07:08 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:07:08 - auto_stock - INFO - Backtest complete - Trades: 6, CAGR: 6.39%, Sharpe: 0.46, MaxDD: -8.25%
+2025-10-04 17:07:08 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1105300.0
+2025-10-04 17:07:08 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:07:31 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:07:31 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:07:31 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:07:31 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:07:31 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:07:31 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:07:31 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:07:31 - auto_stock - INFO - Backtest complete - Trades: 6, CAGR: 6.39%, Sharpe: 0.46, MaxDD: -8.25%
+2025-10-04 17:07:31 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1105300.0
+2025-10-04 17:07:31 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:07:33 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:07:33 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:07:33 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 17:07:33 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:07:33 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:07:34 - auto_stock - INFO - Data loaded for AAPL: 408 rows
+2025-10-04 17:07:34 - auto_stock - INFO - Signals generated - Entry: 18, Exit: 127
+2025-10-04 17:07:34 - auto_stock - INFO - Backtest complete - Trades: 4, CAGR: -0.48%, Sharpe: -0.02, MaxDD: -8.18%
+2025-10-04 17:07:34 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 992344.0
+2025-10-04 17:07:34 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:20:32 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:20:32 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:20:32 - auto_stock - INFO - Symbols: ['005930.KS']
+2025-10-04 17:20:32 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 17:20:32 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:20:33 - auto_stock - INFO - Data loaded for 005930.KS: 211 rows
+2025-10-04 17:20:33 - auto_stock - INFO - Signals generated - Entry: 2, Exit: 125
+2025-10-04 17:20:33 - auto_stock - INFO - Backtest complete - Trades: 1, CAGR: -2.60%, Sharpe: -1.10, MaxDD: -2.24%
+2025-10-04 17:20:33 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 977566.0
+2025-10-04 17:20:33 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:22:50 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:22:50 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:22:50 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:22:50 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:22:50 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:22:50 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:22:50 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:22:50 - auto_stock - INFO - Backtest complete - Trades: 6, CAGR: 6.39%, Sharpe: 0.46, MaxDD: -8.25%
+2025-10-04 17:22:50 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1105300.0
+2025-10-04 17:22:50 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:22:52 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:22:52 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:22:52 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 17:22:52 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:22:52 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:22:52 - auto_stock - INFO - Data loaded for AAPL: 408 rows
+2025-10-04 17:22:52 - auto_stock - INFO - Signals generated - Entry: 18, Exit: 127
+2025-10-04 17:22:52 - auto_stock - INFO - Backtest complete - Trades: 4, CAGR: -0.48%, Sharpe: -0.02, MaxDD: -8.18%
+2025-10-04 17:22:52 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 992344.0
+2025-10-04 17:22:52 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:23:54 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:23:54 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:23:54 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:23:54 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:23:54 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:23:54 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:23:54 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:23:54 - auto_stock - INFO - Backtest complete - Trades: 6, CAGR: 6.39%, Sharpe: 0.46, MaxDD: -8.25%
+2025-10-04 17:23:54 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1105300.0
+2025-10-04 17:23:54 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:24:19 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:24:19 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:24:19 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:24:19 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:24:19 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:24:19 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:24:19 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:24:19 - auto_stock - INFO - Backtest complete - Trades: 6, CAGR: 6.39%, Sharpe: 0.46, MaxDD: -8.25%
+2025-10-04 17:24:19 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1105300.0
+2025-10-04 17:24:19 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:28:28 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:28:28 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:28:28 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:28:28 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:28:28 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:28:30 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:28:30 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:28:30 - auto_stock - INFO - Backtest complete - Trades: 6, CAGR: 6.39%, Sharpe: 0.46, MaxDD: -8.25%
+2025-10-04 17:28:30 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1105300.0
+2025-10-04 17:28:30 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:28:32 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:28:32 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:28:32 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 17:28:32 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:28:32 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:28:33 - auto_stock - INFO - Data loaded for AAPL: 408 rows
+2025-10-04 17:28:33 - auto_stock - INFO - Signals generated - Entry: 18, Exit: 127
+2025-10-04 17:28:33 - auto_stock - INFO - Backtest complete - Trades: 4, CAGR: -0.48%, Sharpe: -0.02, MaxDD: -8.18%
+2025-10-04 17:28:33 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 992344.0
+2025-10-04 17:28:33 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:28:55 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:28:55 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:28:55 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:28:55 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:28:55 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:28:55 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:28:55 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:28:55 - auto_stock - INFO - Backtest complete - Trades: 6, CAGR: 6.39%, Sharpe: 0.46, MaxDD: -8.25%
+2025-10-04 17:28:55 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1105300.0
+2025-10-04 17:28:55 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:29:13 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:29:13 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:29:13 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:29:13 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:29:13 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:29:13 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:29:13 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:29:13 - auto_stock - INFO - Backtest complete - Trades: 6, CAGR: 6.39%, Sharpe: 0.46, MaxDD: -8.25%
+2025-10-04 17:29:13 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1105300.0
+2025-10-04 17:29:13 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:34:29 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:34:29 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:34:29 - auto_stock - INFO - Symbols: ['005930.KS']
+2025-10-04 17:34:29 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 17:34:29 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:34:30 - auto_stock - INFO - Data loaded for 005930.KS: 211 rows
+2025-10-04 17:34:31 - auto_stock - INFO - Signals generated - Entry: 2, Exit: 125
+2025-10-04 17:34:31 - auto_stock - INFO - Backtest complete - Trades: 1, CAGR: -2.60%, Sharpe: -1.10, MaxDD: -2.24%
+2025-10-04 17:34:31 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 977566.0
+2025-10-04 17:34:31 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:41:06 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:41:06 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:41:06 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:41:06 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:41:06 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:41:06 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:41:06 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:41:06 - auto_stock - INFO - Backtest complete - Trades: 6, CAGR: 6.39%, Sharpe: 0.46, MaxDD: -8.25%
+2025-10-04 17:41:06 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1105303.0
+2025-10-04 17:41:06 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:41:17 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:41:17 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:41:17 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 17:41:17 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:41:17 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:41:17 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 17:41:17 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 17:41:17 - auto_stock - INFO - Backtest complete - Trades: 6, CAGR: 6.39%, Sharpe: 0.46, MaxDD: -8.25%
+2025-10-04 17:41:17 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1105303.0
+2025-10-04 17:41:17 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:41:19 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:41:19 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:41:19 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 17:41:19 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 17:41:19 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:41:20 - auto_stock - INFO - Data loaded for AAPL: 408 rows
+2025-10-04 17:41:20 - auto_stock - INFO - Signals generated - Entry: 18, Exit: 127
+2025-10-04 17:41:20 - auto_stock - INFO - Backtest complete - Trades: 4, CAGR: -0.48%, Sharpe: -0.02, MaxDD: -8.18%
+2025-10-04 17:41:20 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 992344.0
+2025-10-04 17:41:20 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:43:43 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:43:43 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:43:43 - auto_stock - INFO - Symbols: ['005930.KS']
+2025-10-04 17:43:43 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 17:43:43 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:43:43 - auto_stock - INFO - Data loaded for 005930.KS: 211 rows
+2025-10-04 17:43:43 - auto_stock - INFO - Signals generated - Entry: 2, Exit: 125
+2025-10-04 17:43:43 - auto_stock - INFO - Backtest complete - Trades: 1, CAGR: -2.60%, Sharpe: -1.10, MaxDD: -2.24%
+2025-10-04 17:43:43 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 977566.0
+2025-10-04 17:43:43 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:46:55 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:46:55 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:46:55 - auto_stock - INFO - Symbols: ['005930.KS']
+2025-10-04 17:46:55 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 17:46:55 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:46:55 - auto_stock - INFO - Data loaded for 005930.KS: 211 rows
+2025-10-04 17:46:55 - auto_stock - INFO - Signals generated - Entry: 2, Exit: 125
+2025-10-04 17:46:55 - auto_stock - INFO - Backtest complete - Trades: 1, CAGR: -2.60%, Sharpe: -1.10, MaxDD: -2.24%
+2025-10-04 17:46:55 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 977566.0
+2025-10-04 17:46:55 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 17:53:56 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 17:53:56 - auto_stock - INFO - Strategy: livermore
+2025-10-04 17:53:56 - auto_stock - INFO - Symbols: ['005930.KS']
+2025-10-04 17:53:56 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 17:53:56 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 17:53:56 - auto_stock - INFO - Data loaded for 005930.KS: 211 rows
+2025-10-04 17:53:56 - auto_stock - INFO - Signals generated - Entry: 2, Exit: 125
+2025-10-04 17:53:56 - auto_stock - INFO - Backtest complete - Trades: 1, CAGR: -2.60%, Sharpe: -1.10, MaxDD: -2.24%
+2025-10-04 17:53:56 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 977566.0
+2025-10-04 17:53:56 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 18:01:54 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:01:54 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:01:54 - auto_stock - INFO - Symbols: ['066570.KS']
+2025-10-04 18:01:54 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 18:01:54 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:01:55 - auto_stock - INFO - Data loaded for 066570.KS: 211 rows
+2025-10-04 18:01:55 - auto_stock - INFO - Signals generated - Entry: 8, Exit: 98
+2025-10-04 18:01:55 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: -12.90%, Sharpe: -2.30, MaxDD: -11.19%
+2025-10-04 18:01:55 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 888071.0
+2025-10-04 18:01:55 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 18:08:28 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:08:28 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:08:28 - auto_stock - INFO - Symbols: ['005930']
+2025-10-04 18:08:28 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:08:28 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:08:28 - auto_stock - INFO - Data loaded for 005930: 395 rows
+2025-10-04 18:08:28 - auto_stock - INFO - Signals generated - Entry: 29, Exit: 180
+2025-10-04 18:08:28 - auto_stock - INFO - Backtest complete - Trades: 6, CAGR: 6.39%, Sharpe: 0.46, MaxDD: -8.25%
+2025-10-04 18:08:28 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1105303.0
+2025-10-04 18:08:28 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 18:08:30 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:08:30 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:08:30 - auto_stock - INFO - Symbols: ['066570']
+2025-10-04 18:08:30 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:08:30 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:08:31 - auto_stock - INFO - Data loaded for 066570: 395 rows
+2025-10-04 18:08:31 - auto_stock - INFO - Signals generated - Entry: 18, Exit: 211
+2025-10-04 18:08:31 - auto_stock - INFO - Backtest complete - Trades: 8, CAGR: -7.02%, Sharpe: -1.51, MaxDD: -12.75%
+2025-10-04 18:08:31 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 889072.0
+2025-10-04 18:08:31 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 18:09:38 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:09:38 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:09:38 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:09:38 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 18:09:38 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:09:38 - auto_stock - INFO - Data loaded for 000720.KS: 211 rows
+2025-10-04 18:09:38 - auto_stock - INFO - Signals generated - Entry: 2, Exit: 130
+2025-10-04 18:09:38 - auto_stock - INFO - Backtest complete - Trades: 2, CAGR: -4.65%, Sharpe: -1.55, MaxDD: -4.01%
+2025-10-04 18:09:38 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 959932.0
+2025-10-04 18:09:38 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 18:11:51 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:11:51 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:11:51 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:11:51 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:11:51 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:11:52 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:11:52 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:11:52 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:11:52 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1162341.0
+2025-10-04 18:11:52 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 18:12:47 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:12:47 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:12:47 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:12:47 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:12:47 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:12:47 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:12:47 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:12:47 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:12:47 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1162341.0
+2025-10-04 18:12:47 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 18:14:42 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:14:42 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:14:42 - auto_stock - INFO - Symbols: ['005380.KS']
+2025-10-04 18:14:42 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 18:14:42 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:14:43 - auto_stock - INFO - Data loaded for 005380.KS: 211 rows
+2025-10-04 18:14:43 - auto_stock - INFO - Signals generated - Entry: 3, Exit: 98
+2025-10-04 18:14:43 - auto_stock - INFO - Backtest complete - Trades: 2, CAGR: -4.03%, Sharpe: -1.51, MaxDD: -3.47%
+2025-10-04 18:14:43 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 965266.0
+2025-10-04 18:14:43 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 18:17:55 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:17:55 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:17:55 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:17:55 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:17:55 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:17:55 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:17:55 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:17:55 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:17:55 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1162341.0
+2025-10-04 18:17:55 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 18:18:53 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:18:53 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:18:53 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:18:53 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:18:53 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:18:53 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:18:53 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:18:53 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:18:53 - auto_stock - INFO - Response data - Exchange rate: 1407.3800048828125, Initial KRW: 1000000, Final KRW: 1162341.0
+2025-10-04 18:18:53 - auto_stock - INFO - Response created - Fields: ['strategy_info', 'backtest', 'fundamental_screen', 'condition_checks', 'signal_examples', 'trade_history', 'initial_capital', 'initial_capital_krw', 'final_capital', 'final_capital_krw', 'exchange_rate']
+2025-10-04 18:25:04 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:25:04 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:25:04 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:25:04 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:25:04 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:25:06 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:25:06 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 18:25:06 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:25:06 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:25:06 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 000720.KS
+2025-10-04 18:25:35 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:25:35 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:25:35 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:25:35 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:25:35 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:25:35 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:25:35 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 18:25:35 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:25:35 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:25:35 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 000720.KS
+2025-10-04 18:26:04 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:26:04 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:26:04 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:26:04 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:26:04 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:26:04 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:26:04 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 18:26:04 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:26:04 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:26:04 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 000720.KS
+2025-10-04 18:26:37 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:26:37 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:26:37 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:26:37 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:26:37 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:26:37 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:26:37 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 18:26:37 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:26:37 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:26:37 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 000720.KS
+2025-10-04 18:27:13 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:27:13 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:27:13 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:27:13 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:27:13 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:27:13 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:27:13 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 18:27:13 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:27:13 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:27:13 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 000720.KS
+2025-10-04 18:28:04 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:28:04 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:28:04 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:28:04 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:28:04 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:28:04 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:28:04 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 18:28:04 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:28:04 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:28:04 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 000720.KS
+2025-10-04 18:29:17 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:29:17 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:29:17 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:29:17 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:29:17 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:29:17 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:29:17 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 18:29:17 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:29:17 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:29:17 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 000720.KS
+2025-10-04 18:32:21 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:32:21 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:32:21 - auto_stock - INFO - Symbols: ['066570.KS']
+2025-10-04 18:32:21 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 18:32:21 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:32:22 - auto_stock - INFO - Data loaded for 066570.KS: 211 rows
+2025-10-04 18:32:22 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 066570.KS, Base: 066570, Is Korean: True
+2025-10-04 18:32:22 - auto_stock - INFO - Signals generated - Entry: 8, Exit: 98
+2025-10-04 18:32:22 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: -12.90%, Sharpe: -2.30, MaxDD: -11.19%
+2025-10-04 18:32:22 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 066570.KS
+2025-10-04 18:33:04 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:33:04 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:33:04 - auto_stock - INFO - Symbols: ['066570.KS']
+2025-10-04 18:33:04 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 18:33:04 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:33:04 - auto_stock - INFO - Data loaded for 066570.KS: 211 rows
+2025-10-04 18:33:04 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 066570.KS, Base: 066570, Is Korean: True
+2025-10-04 18:33:04 - auto_stock - INFO - Signals generated - Entry: 8, Exit: 98
+2025-10-04 18:33:04 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: -12.90%, Sharpe: -2.30, MaxDD: -11.19%
+2025-10-04 18:33:04 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 066570.KS
+2025-10-04 18:37:20 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:37:20 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:37:20 - auto_stock - INFO - Symbols: ['066570.KS']
+2025-10-04 18:37:20 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 18:37:20 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:37:20 - auto_stock - INFO - Data loaded for 066570.KS: 211 rows
+2025-10-04 18:37:20 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 066570.KS, Base: 066570, Is Korean: True
+2025-10-04 18:37:20 - auto_stock - INFO - Signals generated - Entry: 8, Exit: 98
+2025-10-04 18:37:20 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: -12.90%, Sharpe: -2.30, MaxDD: -11.19%
+2025-10-04 18:37:20 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 066570.KS
+2025-10-04 18:40:45 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:40:45 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:40:45 - auto_stock - INFO - Symbols: ['066570.KS']
+2025-10-04 18:40:45 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 18:40:45 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:40:45 - auto_stock - INFO - Data loaded for 066570.KS: 211 rows
+2025-10-04 18:40:45 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 066570.KS, Base: 066570, Is Korean: True
+2025-10-04 18:40:45 - auto_stock - INFO - Signals generated - Entry: 8, Exit: 98
+2025-10-04 18:40:45 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: -12.90%, Sharpe: -2.30, MaxDD: -11.19%
+2025-10-04 18:40:45 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 066570.KS
+2025-10-04 18:42:27 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:42:27 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:42:27 - auto_stock - INFO - Symbols: ['066570.KS']
+2025-10-04 18:42:27 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 18:42:27 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:42:27 - auto_stock - INFO - Data loaded for 066570.KS: 211 rows
+2025-10-04 18:42:27 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 066570.KS, Base: 066570, Is Korean: True
+2025-10-04 18:42:27 - auto_stock - INFO - Signals generated - Entry: 8, Exit: 98
+2025-10-04 18:42:27 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: -12.90%, Sharpe: -2.30, MaxDD: -11.19%
+2025-10-04 18:42:27 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 066570.KS
+2025-10-04 18:49:22 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:49:22 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:49:22 - auto_stock - INFO - Symbols: ['066570.KS']
+2025-10-04 18:49:22 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 18:49:22 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:49:22 - auto_stock - INFO - Data loaded for 066570.KS: 211 rows
+2025-10-04 18:49:23 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 066570.KS, Base: 066570, Is Korean: True
+2025-10-04 18:49:23 - auto_stock - INFO - Signals generated - Entry: 8, Exit: 98
+2025-10-04 18:49:23 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: -12.90%, Sharpe: -2.30, MaxDD: -11.19%
+2025-10-04 18:49:23 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 066570.KS
+2025-10-04 18:49:42 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:49:42 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:49:42 - auto_stock - INFO - Symbols: ['066570.KS']
+2025-10-04 18:49:42 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 18:49:42 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:49:42 - auto_stock - INFO - Data loaded for 066570.KS: 211 rows
+2025-10-04 18:49:42 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 066570.KS, Base: 066570, Is Korean: True
+2025-10-04 18:49:42 - auto_stock - INFO - Signals generated - Entry: 8, Exit: 98
+2025-10-04 18:49:42 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: -12.90%, Sharpe: -2.30, MaxDD: -11.19%
+2025-10-04 18:49:42 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 066570.KS
+2025-10-04 18:50:22 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:50:22 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:50:22 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:50:22 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:50:22 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:50:22 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:50:22 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 18:50:22 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:50:22 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:50:22 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 000720.KS
+2025-10-04 18:58:33 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 18:58:33 - auto_stock - INFO - Strategy: livermore
+2025-10-04 18:58:33 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 18:58:33 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 18:58:33 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 18:58:33 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 18:58:33 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 18:58:33 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 18:58:33 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 18:58:33 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 000720.KS
+2025-10-04 19:02:31 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 19:02:31 - auto_stock - INFO - Strategy: livermore
+2025-10-04 19:02:31 - auto_stock - INFO - Symbols: ['066570.KS']
+2025-10-04 19:02:31 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 19:02:31 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 19:02:31 - auto_stock - INFO - Data loaded for 066570.KS: 211 rows
+2025-10-04 19:02:32 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 066570.KS, Base: 066570, Is Korean: True
+2025-10-04 19:02:32 - auto_stock - INFO - Signals generated - Entry: 8, Exit: 98
+2025-10-04 19:02:32 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: -12.90%, Sharpe: -2.30, MaxDD: -11.19%
+2025-10-04 19:02:32 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 066570.KS
+2025-10-04 19:21:21 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 19:21:21 - auto_stock - INFO - Strategy: livermore
+2025-10-04 19:21:21 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 19:21:21 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 19:21:21 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 19:21:21 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 19:21:21 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 19:21:21 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 19:21:21 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 19:21:21 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 000720.KS
+2025-10-04 19:34:03 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 19:34:03 - auto_stock - INFO - Strategy: livermore
+2025-10-04 19:34:03 - auto_stock - INFO - Symbols: ['051910.KS']
+2025-10-04 19:34:03 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 19:34:03 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 19:34:03 - auto_stock - INFO - Data loaded for 051910.KS: 211 rows
+2025-10-04 19:34:03 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 051910.KS, Base: 051910, Is Korean: True
+2025-10-04 19:34:03 - auto_stock - INFO - Signals generated - Entry: 4, Exit: 154
+2025-10-04 19:34:03 - auto_stock - INFO - Backtest complete - Trades: 3, CAGR: -5.32%, Sharpe: -1.83, MaxDD: -4.59%
+2025-10-04 19:34:03 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 051910.KS
+2025-10-04 19:34:32 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 19:34:32 - auto_stock - INFO - Strategy: livermore
+2025-10-04 19:34:32 - auto_stock - INFO - Symbols: ['051910.KS']
+2025-10-04 19:34:32 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 19:34:32 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 19:34:32 - auto_stock - INFO - Data loaded for 051910.KS: 211 rows
+2025-10-04 19:34:32 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 051910.KS, Base: 051910, Is Korean: True
+2025-10-04 19:34:32 - auto_stock - INFO - Signals generated - Entry: 4, Exit: 154
+2025-10-04 19:34:32 - auto_stock - INFO - Backtest complete - Trades: 3, CAGR: -5.32%, Sharpe: -1.83, MaxDD: -4.59%
+2025-10-04 19:34:32 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 051910.KS
+2025-10-04 19:35:50 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 19:35:50 - auto_stock - INFO - Strategy: livermore
+2025-10-04 19:35:50 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 19:35:50 - auto_stock - INFO - Period: 2024-01-01 ~ 2025-10-04
+2025-10-04 19:35:50 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 19:35:50 - auto_stock - INFO - Data loaded for 000720.KS: 395 rows
+2025-10-04 19:35:50 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 19:35:50 - auto_stock - INFO - Signals generated - Entry: 26, Exit: 208
+2025-10-04 19:35:50 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: 9.76%, Sharpe: 0.92, MaxDD: -4.01%
+2025-10-04 19:35:50 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 000720.KS
+2025-10-04 19:36:21 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 19:36:21 - auto_stock - INFO - Strategy: buffett
+2025-10-04 19:36:21 - auto_stock - INFO - Symbols: ['000720.KS']
+2025-10-04 19:36:21 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 19:36:21 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 19:36:23 - auto_stock - INFO - Data loaded for 000720.KS: 211 rows
+2025-10-04 19:36:23 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 000720.KS, Base: 000720, Is Korean: True
+2025-10-04 19:37:42 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 19:37:42 - auto_stock - INFO - Strategy: livermore
+2025-10-04 19:37:42 - auto_stock - INFO - Symbols: ['066570.KS']
+2025-10-04 19:37:42 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 19:37:42 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 19:37:42 - auto_stock - INFO - Data loaded for 066570.KS: 211 rows
+2025-10-04 19:37:42 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 066570.KS, Base: 066570, Is Korean: True
+2025-10-04 19:37:42 - auto_stock - INFO - Signals generated - Entry: 8, Exit: 98
+2025-10-04 19:37:42 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: -12.90%, Sharpe: -2.30, MaxDD: -11.19%
+2025-10-04 19:37:42 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 066570.KS
+2025-10-04 19:40:05 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 19:40:05 - auto_stock - INFO - Strategy: livermore
+2025-10-04 19:40:05 - auto_stock - INFO - Symbols: ['066570.KS']
+2025-10-04 19:40:05 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 19:40:05 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 19:40:05 - auto_stock - INFO - Data loaded for 066570.KS: 211 rows
+2025-10-04 19:40:05 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: 066570.KS, Base: 066570, Is Korean: True
+2025-10-04 19:40:05 - auto_stock - INFO - Signals generated - Entry: 8, Exit: 98
+2025-10-04 19:40:05 - auto_stock - INFO - Backtest complete - Trades: 5, CAGR: -12.90%, Sharpe: -2.30, MaxDD: -11.19%
+2025-10-04 19:40:05 - auto_stock - INFO - Trade processing - is_korean_stock: True, symbol: 066570.KS
+2025-10-04 19:41:30 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 19:41:30 - auto_stock - INFO - Strategy: livermore
+2025-10-04 19:41:30 - auto_stock - INFO - Symbols: ['MSFT']
+2025-10-04 19:41:30 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 19:41:30 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 19:41:31 - auto_stock - INFO - Data loaded for MSFT: 218 rows
+2025-10-04 19:41:31 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: MSFT, Base: MSFT, Is Korean: False
+2025-10-04 19:41:31 - auto_stock - INFO - Signals generated - Entry: 4, Exit: 72
+2025-10-04 19:41:31 - auto_stock - INFO - Backtest complete - Trades: 3, CAGR: -8.84%, Sharpe: -1.81, MaxDD: -7.65%
+2025-10-04 19:41:31 - auto_stock - INFO - Trade processing - is_korean_stock: False, symbol: MSFT
+2025-10-04 19:49:49 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 19:49:49 - auto_stock - INFO - Strategy: livermore
+2025-10-04 19:49:49 - auto_stock - INFO - Symbols: ['MSFT']
+2025-10-04 19:49:49 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 19:49:49 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 19:49:49 - auto_stock - INFO - Data loaded for MSFT: 218 rows
+2025-10-04 19:49:49 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: MSFT, Base: MSFT, Is Korean: False
+2025-10-04 19:49:49 - auto_stock - INFO - Signals generated - Entry: 4, Exit: 72
+2025-10-04 19:49:49 - auto_stock - INFO - Backtest complete - Trades: 3, CAGR: -8.84%, Sharpe: -1.81, MaxDD: -7.65%
+2025-10-04 19:49:49 - auto_stock - INFO - Trade processing - is_korean_stock: False, symbol: MSFT
+2025-10-04 19:54:06 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 19:54:06 - auto_stock - INFO - Strategy: buffett
+2025-10-04 19:54:06 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 19:54:06 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 19:54:06 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 19:54:06 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 19:54:06 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:00:41 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:00:41 - auto_stock - INFO - Strategy: livermore
+2025-10-04 20:00:41 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:00:41 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 20:00:41 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 20:00:42 - auto_stock - INFO - Data loaded for AAPL: 218 rows
+2025-10-04 20:00:42 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:00:42 - auto_stock - INFO - Signals generated - Entry: 10, Exit: 26
+2025-10-04 20:00:42 - auto_stock - INFO - Backtest complete - Trades: 2, CAGR: 7.55%, Sharpe: 0.86, MaxDD: -1.49%
+2025-10-04 20:00:42 - auto_stock - INFO - Trade processing - is_korean_stock: False, symbol: AAPL
+2025-10-04 20:00:50 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:00:50 - auto_stock - INFO - Strategy: livermore
+2025-10-04 20:00:50 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:00:50 - auto_stock - INFO - Period: 2024-01-01 ~ 2024-12-31
+2025-10-04 20:00:50 - auto_stock - INFO - Strategy loaded: Jesse Livermore - Trend Following
+2025-10-04 20:00:50 - auto_stock - INFO - Data loaded for AAPL: 218 rows
+2025-10-04 20:00:50 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:00:50 - auto_stock - INFO - Signals generated - Entry: 10, Exit: 26
+2025-10-04 20:00:50 - auto_stock - INFO - Backtest complete - Trades: 2, CAGR: 7.55%, Sharpe: 0.86, MaxDD: -1.49%
+2025-10-04 20:00:50 - auto_stock - INFO - Trade processing - is_korean_stock: False, symbol: AAPL
+2025-10-04 20:07:16 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:07:16 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:07:16 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:07:16 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:07:16 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:07:16 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:07:16 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:08:15 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:08:15 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:08:15 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:08:15 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:08:15 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:08:15 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:08:15 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:09:05 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:09:05 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:09:05 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:09:05 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:09:05 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:09:05 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:09:05 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:09:55 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:09:55 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:09:55 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:09:55 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:09:55 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:09:55 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:09:55 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:11:33 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:11:33 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:11:33 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:11:33 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:11:33 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:11:33 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:11:33 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:11:48 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:11:48 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:11:48 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:11:48 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:11:48 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:11:48 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:11:48 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:11:59 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:11:59 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:11:59 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:11:59 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:11:59 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:11:59 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:11:59 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:13:21 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:13:21 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:13:21 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:13:21 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:13:21 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:13:21 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:13:21 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:14:31 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:14:31 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:14:31 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:14:31 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:14:31 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:14:31 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:14:31 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:15:10 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:15:10 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:15:10 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:15:10 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:15:10 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:15:10 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:15:10 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:15:55 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:15:55 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:15:55 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:15:55 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:15:55 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:15:55 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:15:55 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 20:16:57 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 20:16:57 - auto_stock - INFO - Strategy: buffett
+2025-10-04 20:16:57 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 20:16:57 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 20:16:57 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 20:16:57 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 20:16:57 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:22:05 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:22:05 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:22:05 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:22:05 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:22:05 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:22:05 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:22:06 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:22:40 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:22:40 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:22:40 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:22:40 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:22:40 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:22:40 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:22:40 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:23:34 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:23:34 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:23:34 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:23:34 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:23:34 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:23:34 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:23:34 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:24:20 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:24:20 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:24:20 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:24:20 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:24:20 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:24:20 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:24:20 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:25:04 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:25:04 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:25:04 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:25:04 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:25:04 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:25:04 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:25:04 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:25:38 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:25:38 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:25:38 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:25:38 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:25:38 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:25:38 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:25:38 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:28:02 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:28:02 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:28:02 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:28:02 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:28:02 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:28:02 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:28:02 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:28:20 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:28:20 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:28:20 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:28:20 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:28:20 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:28:20 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:28:20 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:28:51 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:28:51 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:28:51 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:28:51 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:28:51 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:28:51 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:28:51 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:29:19 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:29:19 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:29:19 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:29:19 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:29:19 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:29:19 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:29:19 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:31:25 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:31:25 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:31:25 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:31:25 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:31:25 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:31:25 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:31:25 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:36:15 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:36:15 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:36:15 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:36:15 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:36:15 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:36:15 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:36:15 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:39:26 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:39:26 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:39:26 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:39:26 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:39:26 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:39:26 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:39:26 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
+2025-10-04 21:40:54 - auto_stock - INFO - === Master Strategy Request ===
+2025-10-04 21:40:54 - auto_stock - INFO - Strategy: buffett
+2025-10-04 21:40:54 - auto_stock - INFO - Symbols: ['AAPL']
+2025-10-04 21:40:54 - auto_stock - INFO - Period: 2020-01-01 ~ 2023-12-31
+2025-10-04 21:40:54 - auto_stock - INFO - Strategy loaded: Warren Buffett - Value Investing
+2025-10-04 21:40:54 - auto_stock - INFO - Data loaded for AAPL: 973 rows
+2025-10-04 21:40:54 - auto_stock - INFO - [KOREAN_STOCK_CHECK] Symbol: AAPL, Base: AAPL, Is Korean: False
