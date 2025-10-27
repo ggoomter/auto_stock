@@ -39,3 +39,7 @@ backend/cache/
 # OS
 .DS_Store
 Thumbs.db
+
+# Windows error files
+nul
+*/nul

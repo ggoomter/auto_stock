@@ -33,7 +33,11 @@
       "Bash(venvScriptspython.exe:*)",
       "Bash(venvScriptspip.exe install finance-datareader)",
       "Bash(npm run build:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: Financial Research Copilot 프로젝트\n\n- FastAPI 백엔드 + React TypeScript 프론트엔드\n- 마스터 전략 시스템 (Buffett, Lynch, Graham, Dalio, Livermore, Soros, Druckenmiller)\n- 백테스팅 엔진 (몬테카를로 시뮬레이션, 호가 단위 처리)\n- 기술적 지표 분석 (MACD, RSI, DMI, Bollinger Bands)\n- 펀더멘털 분석 (PEG 자동 계산, DART API 통합)\n- 한국 주식 지원 (호가 단위, KRW 포맷팅, DART 재무제표)\n- 이벤트 스케줄러 및 뉴스 크롤러\n- 조건별 체크 표시 기능\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(if exist nul del /F /Q nul)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nchore: nul 파일 제거 및 .gitignore 업데이트\n\n- Windows 오류로 생성된 nul 파일 삭제\n- .gitignore에 nul 파일 패턴 추가\n- Claude 설정 업데이트\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
