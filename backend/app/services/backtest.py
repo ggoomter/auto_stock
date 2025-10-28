@@ -156,6 +156,13 @@ class BacktestEngine:
                         entry_price,
                         shares,
                     )
+                    logger.info(
+                        "  💵 Entry Detail - Capital used: %.2f, Cash before: %.2f, Cash after: %.2f, Equity: %.2f",
+                        capital_used,
+                        cash + capital_used,
+                        cash,
+                        cash,  # equity는 진입 직후 cash와 동일 (포지션은 다음 날부터 평가)
+                    )
                 else:
                     self.warnings.append(
                         f"{date.date()} entry skipped (capital or risk budget insufficient)."
@@ -319,6 +326,8 @@ class BacktestEngine:
                 cash += proceeds
                 pnl = (exit_price - position["entry_price"]) * shares_to_exit
                 pnl_pct = (exit_price / position["entry_price"]) - 1 if position["entry_price"] else 0.0
+                # 부분 청산 후 equity 계산 (현금 + 남은 주식 가치)
+                equity_after_partial = cash + (position["shares"] - shares_to_exit) * close_price
                 trade = {
                     "entry_date": position["entry_date"],
                     "exit_date": date,
@@ -330,6 +339,7 @@ class BacktestEngine:
                     "exit_reason": rule["flag"],
                     "holding_days": _holding_days(position["entry_date"], date),
                     "partial": True,
+                    "balance_after": equity_after_partial,  # 거래 후 잔고
                 }
                 self.trades.append(trade)
                 position["shares"] -= shares_to_exit
@@ -435,6 +445,7 @@ class BacktestEngine:
         cash += proceeds
         pnl = (exit_price - position["entry_price"]) * shares
         pnl_pct = (exit_price / position["entry_price"]) - 1 if position["entry_price"] else 0.0
+        equity = cash  # 거래 후 자산 = 현금
         trade = {
             "entry_date": position["entry_date"],
             "exit_date": exit_date,
@@ -446,16 +457,25 @@ class BacktestEngine:
             "exit_reason": exit_reason,
             "holding_days": _holding_days(position["entry_date"], exit_date),
             "partial": False,
+            "balance_after": equity,  # 거래 후 잔고
         }
         self.trades.append(trade)
-        equity = cash
         logger.info(
-            "Exit %s on %s @ %.2f (%s shares, PnL %s)",
+            "Exit %s on %s @ %.2f (%s shares, PnL %s, Balance %.0f)",
             exit_reason,
             exit_date.strftime("%Y-%m-%d"),
             exit_price,
             shares,
             f"{pnl:+.0f}",
+            equity,
+        )
+        logger.info(
+            "  💰 Trade Detail - Entry: %.2f, Exit: %.2f, Proceeds: %.2f, Cash before: %.2f, Cash after: %.2f",
+            position["entry_price"],
+            exit_price,
+            proceeds,
+            cash - proceeds,
+            cash,
         )
         return cash, equity, pnl, pnl_pct
 

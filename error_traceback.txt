@@ -4,40 +4,42 @@ GLOBAL EXCEPTION HANDLER CAUGHT:
 Error: Unable to serialize unknown type: <class 'numpy.bool'>
 Traceback:
 Traceback (most recent call last):
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
     await self.app(scope, receive, _send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
     await self.simple_response(scope, receive, send, request_headers=headers)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
     await self.app(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
     raise exc
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
     await app(scope, receive, sender)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 716, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 736, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 290, in handle
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
     await self.app(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 78, in app
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\starlette\routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\starlette\routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\starlette\routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\fastapi\routing.py", line 124, in app
     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
     raise exc
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
     await app(scope, receive, sender)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 75, in app
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\fastapi\routing.py", line 110, in app
     response = await f(request)
                ^^^^^^^^^^^^^^^^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\routing.py", line 328, in app
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\fastapi\routing.py", line 412, in app
     content = await serialize_response(
               ^^^^^^^^^^^^^^^^^^^^^^^^^
     ...<9 lines>...
     )
     ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\routing.py", line 182, in serialize_response
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\fastapi\routing.py", line 258, in serialize_response
     return field.serialize(
            ~~~~~~~~~~~~~~~^
         value,
@@ -47,7 +49,7 @@ Traceback (most recent call last):
         ^^^^^^^^^^^^^^^^^^^^^^^^^^
     )
     ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\_compat.py", line 152, in serialize
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\fastapi\_compat\v2.py", line 137, in serialize
     return self._type_adapter.dump_python(
            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
         value,
@@ -57,300 +59,12 @@ Traceback (most recent call last):
         ^^^^^^^^^^^^^^^^^^^^^^^^^^
     )
     ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\pydantic\type_adapter.py", line 572, in dump_python
+  File "G:\ai_coding\auto_stock\backend\venv\Lib\site-packages\pydantic\type_adapter.py", line 605, in dump_python
     return self.serializer.to_python(
            ~~~~~~~~~~~~~~~~~~~~~~~~~^
         instance,
         ^^^^^^^^^
-    ...<11 lines>...
-        context=context,
-        ^^^^^^^^^^^^^^^^
-    )
-    ^
-pydantic_core._pydantic_core.PydanticSerializationError: Unable to serialize unknown type: <class 'numpy.bool'>
-
-================================================================================
-
-================================================================================
-GLOBAL EXCEPTION HANDLER CAUGHT:
-Error: Unable to serialize unknown type: <class 'numpy.bool'>
-Traceback:
-Traceback (most recent call last):
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
-    await self.app(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 716, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 736, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 290, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 78, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 75, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\routing.py", line 328, in app
-    content = await serialize_response(
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<9 lines>...
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\routing.py", line 182, in serialize_response
-    return field.serialize(
-           ~~~~~~~~~~~~~~~^
-        value,
-        ^^^^^^
-    ...<5 lines>...
-        exclude_none=exclude_none,
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\_compat.py", line 152, in serialize
-    return self._type_adapter.dump_python(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        value,
-        ^^^^^^
-    ...<6 lines>...
-        exclude_none=exclude_none,
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\pydantic\type_adapter.py", line 572, in dump_python
-    return self.serializer.to_python(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~^
-        instance,
-        ^^^^^^^^^
-    ...<11 lines>...
-        context=context,
-        ^^^^^^^^^^^^^^^^
-    )
-    ^
-pydantic_core._pydantic_core.PydanticSerializationError: Unable to serialize unknown type: <class 'numpy.bool'>
-
-================================================================================
-
-================================================================================
-GLOBAL EXCEPTION HANDLER CAUGHT:
-Error: Unable to serialize unknown type: <class 'numpy.bool'>
-Traceback:
-Traceback (most recent call last):
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
-    await self.app(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 716, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 736, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 290, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 78, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 75, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\routing.py", line 328, in app
-    content = await serialize_response(
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<9 lines>...
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\routing.py", line 182, in serialize_response
-    return field.serialize(
-           ~~~~~~~~~~~~~~~^
-        value,
-        ^^^^^^
-    ...<5 lines>...
-        exclude_none=exclude_none,
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\_compat.py", line 152, in serialize
-    return self._type_adapter.dump_python(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        value,
-        ^^^^^^
-    ...<6 lines>...
-        exclude_none=exclude_none,
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\pydantic\type_adapter.py", line 572, in dump_python
-    return self.serializer.to_python(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~^
-        instance,
-        ^^^^^^^^^
-    ...<11 lines>...
-        context=context,
-        ^^^^^^^^^^^^^^^^
-    )
-    ^
-pydantic_core._pydantic_core.PydanticSerializationError: Unable to serialize unknown type: <class 'numpy.bool'>
-
-================================================================================
-
-================================================================================
-GLOBAL EXCEPTION HANDLER CAUGHT:
-Error: Unable to serialize unknown type: <class 'numpy.bool'>
-Traceback:
-Traceback (most recent call last):
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
-    await self.app(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 716, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 736, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 290, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 78, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 75, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\routing.py", line 328, in app
-    content = await serialize_response(
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<9 lines>...
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\routing.py", line 182, in serialize_response
-    return field.serialize(
-           ~~~~~~~~~~~~~~~^
-        value,
-        ^^^^^^
-    ...<5 lines>...
-        exclude_none=exclude_none,
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\_compat.py", line 152, in serialize
-    return self._type_adapter.dump_python(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        value,
-        ^^^^^^
-    ...<6 lines>...
-        exclude_none=exclude_none,
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\pydantic\type_adapter.py", line 572, in dump_python
-    return self.serializer.to_python(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~^
-        instance,
-        ^^^^^^^^^
-    ...<11 lines>...
-        context=context,
-        ^^^^^^^^^^^^^^^^
-    )
-    ^
-pydantic_core._pydantic_core.PydanticSerializationError: Unable to serialize unknown type: <class 'numpy.bool'>
-
-================================================================================
-
-================================================================================
-GLOBAL EXCEPTION HANDLER CAUGHT:
-Error: Unable to serialize unknown type: <class 'numpy.bool'>
-Traceback:
-Traceback (most recent call last):
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
-    await self.app(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 716, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 736, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 290, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 78, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\routing.py", line 75, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\routing.py", line 328, in app
-    content = await serialize_response(
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<9 lines>...
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\routing.py", line 182, in serialize_response
-    return field.serialize(
-           ~~~~~~~~~~~~~~~^
-        value,
-        ^^^^^^
-    ...<5 lines>...
-        exclude_none=exclude_none,
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\_compat.py", line 152, in serialize
-    return self._type_adapter.dump_python(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        value,
-        ^^^^^^
-    ...<6 lines>...
-        exclude_none=exclude_none,
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\site-packages\pydantic\type_adapter.py", line 572, in dump_python
-    return self.serializer.to_python(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~^
-        instance,
-        ^^^^^^^^^
-    ...<11 lines>...
+    ...<12 lines>...
         context=context,
         ^^^^^^^^^^^^^^^^
     )

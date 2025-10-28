@@ -37,8 +37,8 @@ export default function SimpleStrategyForm({ onSubmit, isLoading, initialSymbols
   const [testPeriod, setTestPeriod] = useState('6months'); // 테스트 기간
 
   // 전략 조건
-  const [entryCondition, setEntryCondition] = useState('RSI < 30');
-  const [exitCondition, setExitCondition] = useState('RSI > 70');
+  const [entryCondition, setEntryCondition] = useState('');
+  const [exitCondition, setExitCondition] = useState('');
 
   // 리스크 관리
   const [stopLoss, setStopLoss] = useState(7); // 손절
@@ -262,21 +262,14 @@ export default function SimpleStrategyForm({ onSubmit, isLoading, initialSymbols
             </div>
           </div>
 
-          {/* 제출 버튼 */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="btn btn-primary w-full text-lg font-bold py-4 shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                백테스트 실행 중...
-              </span>
-            ) : (
-              '🚀 백테스트 실행'
-            )}
-          </button>
+          {/* 안내 메시지 */}
+          <div className="card bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 p-4">
+            <div className="text-sm text-blue-900">
+              <strong>💡 Tip:</strong> 조건을 설정하면 오른쪽에서 실시간으로 미리보기가 업데이트됩니다.
+              <br />
+              <strong>🚀 실행:</strong> 오른쪽 상단의 "백테스트 실행" 버튼을 클릭하세요!
+            </div>
+          </div>
 
           {/* 사용 가이드 (접을 수 있도록) */}
           <details className="card bg-gray-50 border border-gray-200 p-3">
@@ -294,8 +287,94 @@ export default function SimpleStrategyForm({ onSubmit, isLoading, initialSymbols
         </form>
       </div>
 
-      {/* 오른쪽: 차트 영역 */}
-      <div className="lg:col-span-8">
+      {/* 오른쪽: 전략 미리보기 + 차트 */}
+      <div className="lg:col-span-8 space-y-4">
+
+        {/* 실시간 전략 요약 (Sticky) */}
+        <div className="lg:sticky lg:top-4 z-10">
+          <div className="card bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <span className="text-2xl">📋</span>
+                전략 미리보기
+              </h3>
+              <button
+                onClick={handleSubmit}
+                disabled={isLoading}
+                className="btn btn-primary px-6 py-3 text-base font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    실행 중...
+                  </span>
+                ) : (
+                  '🚀 백테스트 실행'
+                )}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* 종목 & 기간 */}
+              <div className="bg-white bg-opacity-70 rounded-lg p-3 border border-indigo-200">
+                <div className="text-xs text-gray-600 font-medium mb-1">종목</div>
+                <div className="text-lg font-bold text-indigo-900">{symbol || '-'}</div>
+              </div>
+              <div className="bg-white bg-opacity-70 rounded-lg p-3 border border-indigo-200">
+                <div className="text-xs text-gray-600 font-medium mb-1">테스트 기간</div>
+                <div className="text-sm font-bold text-indigo-900">
+                  {testPeriod === '3months' && '최근 3개월'}
+                  {testPeriod === '6months' && '최근 6개월'}
+                  {testPeriod === '1year' && '최근 1년'}
+                  {testPeriod === '2years' && '최근 2년'}
+                  {testPeriod === '3years' && '최근 3년'}
+                </div>
+              </div>
+
+              {/* 매수 조건 */}
+              <div className="col-span-2 bg-green-50 bg-opacity-80 rounded-lg p-3 border-2 border-green-300">
+                <div className="text-xs text-green-700 font-bold mb-1 flex items-center gap-1">
+                  <span>🟢</span> 매수 조건 (Entry)
+                </div>
+                <div className="text-sm font-mono text-green-900 bg-white rounded px-2 py-1 break-all">
+                  {entryCondition || '조건 없음'}
+                </div>
+              </div>
+
+              {/* 매도 조건 */}
+              <div className="col-span-2 bg-red-50 bg-opacity-80 rounded-lg p-3 border-2 border-red-300">
+                <div className="text-xs text-red-700 font-bold mb-1 flex items-center gap-1">
+                  <span>🔴</span> 매도 조건 (Exit)
+                </div>
+                <div className="text-sm font-mono text-red-900 bg-white rounded px-2 py-1 break-all">
+                  {exitCondition || '조건 없음'}
+                </div>
+              </div>
+
+              {/* 리스크 관리 */}
+              <div className="bg-white bg-opacity-70 rounded-lg p-3 border border-red-300">
+                <div className="text-xs text-gray-600 font-medium mb-1">손절매</div>
+                <div className="text-lg font-bold text-red-600">-{stopLoss}%</div>
+              </div>
+              <div className="bg-white bg-opacity-70 rounded-lg p-3 border border-green-300">
+                <div className="text-xs text-gray-600 font-medium mb-1">익절매</div>
+                <div className="text-lg font-bold text-green-600">+{takeProfit}%</div>
+              </div>
+              <div className="bg-white bg-opacity-70 rounded-lg p-3 border border-blue-300">
+                <div className="text-xs text-gray-600 font-medium mb-1">최대 보유일</div>
+                <div className="text-lg font-bold text-blue-600">{holdingDays}일</div>
+              </div>
+              <div className="bg-white bg-opacity-70 rounded-lg p-3 border border-purple-300">
+                <div className="text-xs text-gray-600 font-medium mb-1">상태</div>
+                <div className="text-sm font-bold text-purple-600">
+                  {entryCondition && exitCondition ? '✅ 준비 완료' : '⚠️ 조건 설정 필요'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 차트 영역 */}
         <div className="card bg-white border border-gray-200 p-4">
           <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-blue-600" />

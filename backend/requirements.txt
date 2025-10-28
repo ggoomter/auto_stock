@@ -1,15 +1,28 @@
+# Core dependencies
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.10.0
 pydantic-settings>=2.1.0
-pandas>=2.2.0
-numpy>=1.26.0
-pandas-ta>=0.4.71b0
-scipy>=1.11.0
 python-multipart>=0.0.6
-python-jose[cryptography]>=3.3.0
 python-dotenv>=1.0.0
 httpx>=0.26.0
 requests>=2.31.0
+apscheduler>=3.10.0
+
+# Data science stack
+# Python 3.14 사용 시: pip install --only-binary :all: 옵션 필요
+numpy>=1.26.0
+pandas>=2.2.0
+scipy>=1.13.0
+
+# Technical analysis
+# Note: pandas-ta must be installed separately with --no-deps
+# pip install --no-deps pandas-ta==0.4.71b0
+# (pandas-ta is not in requirements.txt due to numba Python 3.14 incompatibility)
+
+# Finance data
 yfinance>=0.2.50
 finance-datareader>=0.9.96
+
+# Security
+python-jose[cryptography]>=3.3.0

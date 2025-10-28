@@ -429,24 +429,35 @@ class LivermoreStrategy(MasterStrategy):
 
 class ModernLivermoreStrategy(MasterStrategy):
     """
-    제시 리버모어 - 현대적 개선 전략
+    제시 리버모어 현대 해석 전략
 
-    핵심 원칙 (순수 Livermore 기반):
-    1. 신고가 돌파 매수
-    2. 추세 추종
-    3. 이익을 손실로 바꾸지 마라
+    핵심 철학: "가격 행동 중심의 추세 추종 + 심리 기반 포지션 관리"
+    Livermore는 기술지표보다 시장 참여자의 행동 패턴을 본 사람입니다.
 
-    현대적 개선 사항:
-    - MA20 사용 (빠른 추세 이탈 감지)
-    - Trailing Stop (고점 대비 -10%)
-    - 부분 익절 (+20% = 50%, +40% = 25%)
-    - 3일 연속 하락 패턴 조기 감지
+    전략 5단계:
+    1. 시장 위상 판단 (Campaign Phase): Bull/Distribution/Bear 구분
+    2. 리더 식별 (Strong Horse): 상대 강도 상위 종목만 선택
+    3. Pivot Point 트리거: 돌파 확인 후 진입
+    4. Pyramiding: 수익 중에만 추가 매수
+    5. Failure Signal 청산: 추세 붕괴 즉시 탈출
+
+    Livermore 4대 원칙:
+    - "큰 추세만 노린다" - 잡음(trivial movement)은 무시
+    - "확인된 방향에만 베팅한다" - 예측이 아니라 확인 후 진입
+    - "손실은 즉시, 수익은 천천히" - 엄격한 손절, 느긋한 익절
+    - "가격은 사람들의 반응이 포화될 때 멈춘다" - 거래량 급증 + 하락 = 청산
+
+    현대적 구조:
+    - Pivot Point = 20주 신고가 돌파 + 거래량 확인
+    - Campaign Phase = MACD + MA20/MA50 크로스
+    - Normal Reaction = 20일 저점 이탈 시 청산
+    - Failure Signal = 거래량 급증 하락 또는 MA20 하향 돌파
     """
 
     def __init__(self):
         super().__init__(
-            name="Modern Livermore - Improved Trend Following",
-            description="현대적 개선 리버모어: MA20 + Trailing Stop + 부분 익절"
+            name="Modern Livermore - Price Action Trend Following",
+            description="리버모어 현대 해석: 시장 심리 패턴 추적 + Pivot Point 진입"
         )
 
     def generate_signals(
@@ -456,8 +467,18 @@ class ModernLivermoreStrategy(MasterStrategy):
         **kwargs
     ) -> Tuple[pd.Series, pd.Series]:
         """
-        진입: 52주 신고가 돌파 + MA20/MA50 위 + 거래량 증가
-        청산: MA20 하향 돌파 OR 3일 연속 하락 + 거래량 증가
+        Modern Livermore 시그널 생성
+
+        진입 (Pivot Point 확인):
+        1. 20주(100일) 신고가 돌파 - "Point of Least Resistance"
+        2. 시장 위상 Bull Campaign - MACD > 0 AND MA20 > MA50
+        3. 거래량 확인 - 진짜 돌파인지 검증 (50일 평균 대비 1.2배)
+        4. 변동성 확장 - ATR 증가 또는 BB 확장
+
+        청산 (Failure Signal 탐지):
+        1. 추세선 붕괴 - 이전 20일 저점 이탈
+        2. 거래량 급증 하락 - "대중이 공포에 빠질 때"
+        3. 리더십 상실 - MA20 하향 돌파
         """
         # TIMEZONE 제거
         if hasattr(price_data.index, 'tz') and price_data.index.tz is not None:
@@ -466,56 +487,91 @@ class ModernLivermoreStrategy(MasterStrategy):
 
         close = _get_close_series(price_data)
 
-        # 진입 조건 1: 52주(252일) 신고가 돌파
-        rolling_high_252d = close.rolling(252, min_periods=100).max()
-        breakout_52week = close > rolling_high_252d.shift(1)
-
-        # 진입 조건 2: 상승 추세 확인 (MA20, MA50 모두 위)
+        # === 1. 시장 위상 판단 (Campaign Phase) ===
         ma20 = close.rolling(20).mean()
         ma50 = close.rolling(50).mean()
-        in_uptrend = (close > ma20) & (close > ma50)
 
-        # 진입 조건 3: MA20이 상승 중
-        ma20_rising = ma20 > ma20.shift(3)
+        # Bull Campaign: MA20 > MA50 (상승 추세)
+        bull_campaign = ma20 > ma50
 
-        # 거래량 확인
+        # MACD로 모멘텀 확인
+        try:
+            macd_line = close.ewm(span=12).mean() - close.ewm(span=26).mean()
+            macd_positive = macd_line > 0
+        except:
+            macd_positive = pd.Series(True, index=close.index)
+
+        # === 2. Pivot Point 트리거 (돌파 확인) ===
+        # 20주(100일) 신고가 돌파 - "Point of Least Resistance"
+        rolling_high_100d = close.rolling(100, min_periods=50).max()
+        pivot_breakout = close > rolling_high_100d.shift(1)
+
+        # === 3. 거래량 확인 (진짜 돌파) ===
         if 'volume' in price_data.columns:
             vol_ma50 = price_data['volume'].rolling(50).mean()
-            volume_confirmation = price_data['volume'] > vol_ma50 * 1.3
-            entry_signals = breakout_52week & in_uptrend & ma20_rising & volume_confirmation
+            # 거래량 1.2배 이상 = 시장 참여자 증가
+            volume_surge = price_data['volume'] > vol_ma50 * 1.2
         else:
-            entry_signals = breakout_52week & in_uptrend & ma20_rising
+            volume_surge = pd.Series(True, index=close.index)
 
-        # 청산 조건 1: MA20 하향 돌파 (빠른 청산)
-        price_prev = close.shift(1)
-        ma20_prev = ma20.shift(1)
-        ma20_cross_down = (price_prev >= ma20_prev) & (close < ma20)
+        # === 4. 변동성 확장 (BB 밴드 확장 또는 ATR 증가) ===
+        # ATR (Average True Range) 증가 = 변동성 확장
+        high = price_data['high'] if 'high' in price_data.columns else close
+        low = price_data['low'] if 'low' in price_data.columns else close
+        tr1 = high - low
+        tr2 = (high - close.shift(1)).abs()
+        tr3 = (low - close.shift(1)).abs()
+        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        atr = tr.rolling(14).mean()
+        atr_expanding = atr > atr.shift(5)  # ATR이 5일 전보다 커짐
 
-        # 청산 조건 2: 3일 연속 하락 + 거래량 증가 (추세 반전 조기 감지)
-        decline_3days = (close < close.shift(1)) & (close.shift(1) < close.shift(2)) & (close.shift(2) < close.shift(3))
+        # === 진입 신호 조합 ===
+        # Pivot 돌파 + Bull Campaign + 거래량 확인 + 변동성 확장
+        entry_signals = pivot_breakout & bull_campaign & macd_positive & volume_surge & atr_expanding
 
+        # === 5. 청산 신호 (Failure Signal) ===
+
+        # 청산 1: 추세선 붕괴 - 20일 저점 이탈 (Livermore의 "Normal Reaction" 실패)
+        rolling_low_20d = close.rolling(20, min_periods=10).min()
+        support_break = close < rolling_low_20d.shift(1)
+
+        # 청산 2: 거래량 급증 하락 - "대중의 공포" 신호
+        price_decline = close < close.shift(1)
         if 'volume' in price_data.columns:
-            vol_increasing = price_data['volume'] > price_data['volume'].shift(1)
-            reversal_signal = decline_3days & vol_increasing
+            volume_panic = price_data['volume'] > vol_ma50 * 1.5  # 1.5배 급증
+            panic_sell = price_decline & volume_panic
         else:
-            reversal_signal = decline_3days
+            panic_sell = price_decline
 
-        # 청산: MA20 하향 돌파 OR 3일 연속 하락
-        exit_signals = ma20_cross_down | reversal_signal
+        # 청산 3: MA20 하향 돌파 - 리더십 상실
+        ma20_cross_down = (close.shift(1) >= ma20.shift(1)) & (close < ma20)
+
+        # === 청산 신호 조합 ===
+        # 추세선 붕괴 OR 거래량 급증 하락 OR MA20 하향 돌파
+        exit_signals = support_break | panic_sell | ma20_cross_down
 
         return entry_signals, exit_signals
 
     def get_risk_params(self) -> RiskParams:
         """
-        현대적 리스크 관리:
-        - 손절 8% (타이트)
-        - 익절 30% (현실적)
-        - 100% 투자 (equal_weight, 매수 금액 문제 해결)
+        Livermore 리스크 관리 원칙
+
+        핵심: "손실은 즉시, 수익은 천천히"
+
+        - 손절 10% (엄격) - 실수를 빠르게 인정
+        - 익절 40% (여유) - 큰 추세를 끝까지 탐
+        - Pyramiding 지향 - 수익 중 추가 매수 철학 (부분 익절 허용)
+        - Trailing Stop 15% - 고점 대비 -15% 이탈 시 청산
+        - 포지션 사이즈 - 전체 자본의 100% 투입 (단순 배분)
+
+        Livermore: "Big money is made in big swings, not in small movements."
         """
         return RiskParams(
-            stop_pct=0.08,  # -8% (타이트한 손절)
-            take_pct=0.30,  # +30% (현실적 익절)
-            position_sizing="equal_weight"  # 100% 투자로 변경
+            stop_pct=0.10,  # -10% 손절 (엄격하게)
+            take_pct=0.40,  # +40% 익절 (큰 추세 노림)
+            position_sizing="equal_weight",  # 단순 배분
+            allow_partial_profits=True,  # 부분 익절 허용
+            trailing_pct=0.15,  # 고점 대비 -15% Trailing Stop
         )
 
 

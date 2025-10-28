@@ -8,6 +8,7 @@ interface Condition {
   operator: string;
   value: number;
   type: 'cross' | 'compare';
+  connector?: 'AND' | 'OR'; // 이 조건 뒤에 오는 논리 연산자
 }
 
 interface AdvancedStrategyBuilderProps {
@@ -82,8 +83,7 @@ export default function AdvancedStrategyBuilder({ type, onChange }: AdvancedStra
     };
   };
 
-  const [conditions, setConditions] = useState<Condition[]>([getInitialCondition()]);
-  const [logic, setLogic] = useState<'AND' | 'OR'>('AND');
+  const [conditions, setConditions] = useState<Condition[]>([]);
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
 
   // 지표별 디폴트 설정 (매수/매도별로 다른 기본값)
@@ -142,11 +142,17 @@ export default function AdvancedStrategyBuilder({ type, onChange }: AdvancedStra
   ];
 
   useEffect(() => {
-    updateStrategy(conditions, logic);
-  }, [conditions, logic]);
+    updateStrategy(conditions);
+  }, [conditions]);
 
   const addCondition = () => {
     const defaults = getIndicatorDefaults('RSI', type);
+
+    // 기존 마지막 조건에 connector 추가 (AND 기본값)
+    const updatedConditions = conditions.map((c, idx) =>
+      idx === conditions.length - 1 ? { ...c, connector: 'AND' as const } : c
+    );
+
     const newCondition: Condition = {
       id: Date.now().toString(),
       timeframe: 'daily',
@@ -155,11 +161,17 @@ export default function AdvancedStrategyBuilder({ type, onChange }: AdvancedStra
       value: defaults.value,
       type: 'compare',
     };
-    setConditions([...conditions, newCondition]);
+    setConditions([...updatedConditions, newCondition]);
   };
 
   const removeCondition = (id: string) => {
     const updated = conditions.filter((c) => c.id !== id);
+
+    // 마지막 조건의 connector 제거
+    if (updated.length > 0) {
+      updated[updated.length - 1].connector = undefined;
+    }
+
     setConditions(updated);
   };
 
@@ -189,28 +201,37 @@ export default function AdvancedStrategyBuilder({ type, onChange }: AdvancedStra
     setConditions(updated);
   };
 
-  const updateStrategy = (conds: Condition[], logicOp: 'AND' | 'OR') => {
+  const updateStrategy = (conds: Condition[]) => {
     if (conds.length === 0) {
       onChange('');
       return;
     }
 
-    const parts = conds.map((c) => {
+    const parts: string[] = [];
+
+    conds.forEach((c, idx) => {
       const prefix = c.timeframe === 'weekly' ? 'W_' : c.timeframe === 'monthly' ? 'M_' : '';
 
       // MACD 크로스 신호 처리
+      let conditionStr = '';
       if (c.indicator === 'MACD_cross_up') {
-        return `${prefix}MACD_cross_up == 1`;
-      }
-      if (c.indicator === 'MACD_cross_down') {
-        return `${prefix}MACD_cross_down == 1`;
+        conditionStr = `${prefix}MACD_cross_up == 1`;
+      } else if (c.indicator === 'MACD_cross_down') {
+        conditionStr = `${prefix}MACD_cross_down == 1`;
+      } else {
+        // 일반 지표 비교
+        conditionStr = `${prefix}${c.indicator} ${c.operator} ${c.value}`;
       }
 
-      // 일반 지표 비교
-      return `${prefix}${c.indicator} ${c.operator} ${c.value}`;
+      parts.push(conditionStr);
+
+      // 다음 조건이 있으면 connector 추가
+      if (idx < conds.length - 1 && c.connector) {
+        parts.push(c.connector);
+      }
     });
 
-    const result = parts.join(` ${logicOp} `);
+    const result = parts.join(' ');
     onChange(result);
   };
 
@@ -226,10 +247,10 @@ export default function AdvancedStrategyBuilder({ type, onChange }: AdvancedStra
       operator: c.operator,
       value: c.value,
       type: c.type,
+      connector: idx < preset.conditions.length - 1 ? 'AND' : undefined, // 마지막 조건 제외하고 AND
     }));
 
     setConditions(newConditions);
-    setLogic('AND');
   };
 
   const getTimeframeColor = (tf: string) => {
@@ -301,6 +322,14 @@ export default function AdvancedStrategyBuilder({ type, onChange }: AdvancedStra
       </div>
 
       {/* 조건 목록 */}
+      {conditions.length === 0 && (
+        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+          <p className="text-gray-600 mb-2">아직 조건이 없습니다</p>
+          <p className="text-sm text-gray-500">
+            위의 투자 대가 전략을 선택하거나, 아래 "조건 추가" 버튼을 눌러 직접 조건을 만들어보세요.
+          </p>
+        </div>
+      )}
       {conditions.map((condition, index) => {
         const tfColor = getTimeframeColor(condition.timeframe);
         return (
@@ -420,9 +449,9 @@ export default function AdvancedStrategyBuilder({ type, onChange }: AdvancedStra
                 <div className="flex gap-1">
                   <button
                     type="button"
-                    onClick={() => setLogic('AND')}
+                    onClick={() => updateCondition(condition.id, { connector: 'AND' })}
                     className={`px-3 py-1 text-xs font-medium rounded ${
-                      logic === 'AND'
+                      condition.connector === 'AND'
                         ? 'bg-primary-600 text-white'
                         : 'bg-gray-200 text-gray-600'
                     }`}
@@ -431,9 +460,9 @@ export default function AdvancedStrategyBuilder({ type, onChange }: AdvancedStra
                   </button>
                   <button
                     type="button"
-                    onClick={() => setLogic('OR')}
+                    onClick={() => updateCondition(condition.id, { connector: 'OR' })}
                     className={`px-3 py-1 text-xs font-medium rounded ${
-                      logic === 'OR'
+                      condition.connector === 'OR'
                         ? 'bg-primary-600 text-white'
                         : 'bg-gray-200 text-gray-600'
                     }`}

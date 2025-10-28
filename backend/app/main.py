@@ -42,6 +42,12 @@ ENCODERS_BY_TYPE[np.int32] = int
 ENCODERS_BY_TYPE[np.float64] = float
 ENCODERS_BY_TYPE[np.float32] = float
 
+# Python 3.13 호환성: numpy.bool은 deprecated되었지만 여전히 사용됨
+try:
+    ENCODERS_BY_TYPE[np.bool] = bool
+except AttributeError:
+    pass  # numpy.bool이 없는 경우 무시
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

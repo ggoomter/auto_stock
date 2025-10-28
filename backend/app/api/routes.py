@@ -29,7 +29,11 @@ import numpy as np
 
 router = APIRouter()
 
+
 def _normalize_numpy(value):
+    # numpy.bool (deprecated but still used in some pandas versions)
+    if hasattr(np, 'bool') and isinstance(value, np.bool):
+        return bool(value)
     if isinstance(value, (np.bool_, bool)):
         return bool(value)
     if isinstance(value, (np.integer, np.int64, np.int32)):
@@ -113,9 +117,14 @@ async def analyze_strategy(request: AnalysisRequest):
             trade_df = backtest_engine.get_trade_details()
             if not trade_df.empty:
                 for record in trade_df.to_dict("records"):
+                    # Numpy 타입 변환
                     entry_price = float(record.get("entry_price", 0.0))
                     exit_price = float(record.get("exit_price", 0.0))
                     shares = float(record.get("shares", 0.0))
+                    partial_val = record.get("partial", False)
+                    # numpy.bool을 Python bool로 변환
+                    partial = _normalize_numpy(partial_val)
+
                     trade_history.append({
                         "entry_date": pd.to_datetime(record.get("entry_date")).strftime("%Y-%m-%d"),
                         "exit_date": pd.to_datetime(record.get("exit_date")).strftime("%Y-%m-%d"),
@@ -127,7 +136,7 @@ async def analyze_strategy(request: AnalysisRequest):
                         "pnl_pct": float(record.get("pnl_pct", 0.0)) * 100,
                         "exit_reason": record.get("exit_reason"),
                         "holding_days": int(record.get("holding_days", 0)),
-                        "partial": bool(record.get("partial", False)),
+                        "partial": partial,
                         "symbol": symbol,
                     })
         except Exception as e:
@@ -365,7 +374,7 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
 
         # 초기 자본 설정 (100만원)
         initial_capital_krw = 1000000
-        initial_capital_usd = initial_capital_krw / usd_krw_rate  # 직접 계산
+        initial_capital_usd = initial_capital_krw / usd_krw_rate  # 환율 적용
 
         # 한국 주식 여부 확인 (.KS, .KQ 접미사 또는 6자리 숫자)
         symbol_base = symbol.replace('.KS', '').replace('.KQ', '')
@@ -438,6 +447,14 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
                     exit_price_krw = exit_price * conversion if currency_str == "USD" else exit_price
                     position_value_krw = position_value * conversion if currency_str == "USD" else position_value
                     pnl_krw = pnl * conversion if currency_str == "USD" else pnl
+                    # numpy.bool을 Python bool로 변환
+                    partial_val = record.get("partial", False)
+                    partial = _normalize_numpy(partial_val)
+
+                    # 거래 후 잔고
+                    balance_after = float(record.get("balance_after", 0.0))
+                    balance_after_krw = balance_after * conversion if currency_str == "USD" else balance_after
+
                     trade_history.append({
                         "entry_date": pd.to_datetime(record.get("entry_date")).strftime("%Y-%m-%d"),
                         "exit_date": pd.to_datetime(record.get("exit_date")).strftime("%Y-%m-%d"),
@@ -453,10 +470,12 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
                         "pnl_pct": pnl_pct,
                         "exit_reason": record.get("exit_reason"),
                         "holding_days": int(record.get("holding_days", 0)),
-                        "partial": bool(record.get("partial", False)),
+                        "partial": partial,
                         "symbol": symbol,
-                    "currency": currency_str,
-                })
+                        "currency": currency_str,
+                        "balance_after": balance_after,
+                        "balance_after_krw": balance_after_krw,
+                    })
             total_trades = len(backtest_engine.trades)
 
             logger.info(f"Backtest complete - Trades: {total_trades}, CAGR: {metrics.CAGR:.2%}, Sharpe: {metrics.Sharpe:.2f}, MaxDD: {metrics.MaxDD:.2%}")
@@ -475,40 +494,40 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
                 from ..models.schemas import ConditionCheck
                 analyzer = FundamentalAnalyzer(symbol)
                 if request.strategy_name == "buffett":
-                    fundamental_screen = {
+                    fundamental_screen = _normalize_numpy({
                         "metrics": analyzer.get_buffett_metrics(),
                         "criteria": analyzer.check_buffett_criteria()
-                    }
+                    })
                     condition_details = analyzer.get_buffett_condition_details()
                     condition_checks = [
                         ConditionCheck(**{**cond, "passed": bool(cond.get("passed", False))})
                         for cond in condition_details
                     ]
                 elif request.strategy_name == "lynch":
-                    fundamental_screen = {
+                    fundamental_screen = _normalize_numpy({
                         "metrics": analyzer.get_lynch_metrics(),
                         "criteria": analyzer.check_lynch_criteria()
-                    }
+                    })
                     condition_details = analyzer.get_lynch_condition_details()
                     condition_checks = [
                         ConditionCheck(**{**cond, "passed": bool(cond.get("passed", False))})
                         for cond in condition_details
                     ]
                 elif request.strategy_name == "graham":
-                    fundamental_screen = {
+                    fundamental_screen = _normalize_numpy({
                         "metrics": analyzer.get_graham_metrics(),
                         "criteria": analyzer.check_graham_criteria()
-                    }
+                    })
                     condition_details = analyzer.get_graham_condition_details()
                     condition_checks = [
                         ConditionCheck(**{**cond, "passed": bool(cond.get("passed", False))})
                         for cond in condition_details
                     ]
                 elif request.strategy_name == "oneil":
-                    fundamental_screen = {
+                    fundamental_screen = _normalize_numpy({
                         "metrics": analyzer.get_oneil_metrics(),
                         "criteria": analyzer.check_oneil_criteria()
-                    }
+                    })
                     condition_details = analyzer.get_oneil_condition_details()
                     condition_checks = [
                         ConditionCheck(**{**cond, "passed": bool(cond.get("passed", False))})
@@ -539,8 +558,10 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
 
         trade_history = []
         for idx, trade in enumerate(backtest_engine.trades):
-            print(f"\n[TRADE {idx+1}] Entry price from backtest: {trade['entry_price']:.2f}")
-            print(f"[TRADE {idx+1}] Shares: {trade['shares']:.4f}")
+            print(f"\n[TRADE {idx+1}] Entry: {trade['entry_date'].strftime('%Y-%m-%d')} @ {trade['entry_price']:.2f}")
+            print(f"[TRADE {idx+1}] Exit: {trade['exit_date'].strftime('%Y-%m-%d')} @ {trade['exit_price']:.2f}")
+            print(f"[TRADE {idx+1}] Shares: {trade['shares']:.4f}, Holding days: {trade['holding_days']}")
+            print(f"[TRADE {idx+1}] PnL: {trade['pnl']:.2f} ({trade['pnl_pct']*100:.2f}%), Reason: {trade['exit_reason']}")
             if is_korean_stock:
                 # 한국 주식: 이미 원화 가격
                 entry_price_krw = round(trade['entry_price'], 0)
@@ -650,7 +671,7 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
                 equity_curve=equity_curve_payload,
                 risk_summary=risk_report,
                 warnings=risk_report.get("warnings") if isinstance(risk_report, dict) else None,
-                trade_history=trade_history
+                trade_history=None  # Backtest에는 trade_history 넣지 않음 (MasterStrategyResponse에만)
             ),
             fundamental_screen=fundamental_screen,
             condition_checks=condition_checks,  # 조건 체크 상세 추가

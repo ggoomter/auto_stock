@@ -110,6 +110,27 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
     );
   };
 
+  // 대시보드 계산
+  const initialCapitalDisplay = isKoreanStock ? results.initial_capital_krw! : results.initial_capital;
+  const finalCapitalDisplay = isKoreanStock ? results.final_capital_krw! : results.final_capital!;
+  const totalReturn = ((finalCapitalDisplay - initialCapitalDisplay) / initialCapitalDisplay) * 100;
+  const totalPnL = finalCapitalDisplay - initialCapitalDisplay;
+  const winningTrades = trade_history?.filter(t => t.pnl_pct > 0) || [];
+  const losingTrades = trade_history?.filter(t => t.pnl_pct <= 0) || [];
+  const winRate = trade_history && trade_history.length > 0 ? (winningTrades.length / trade_history.length) * 100 : 0;
+
+  // 거래 0건 체크
+  const hasNoTrades = !trade_history || trade_history.length === 0;
+
+  // 디버깅: 거래 내역 확인
+  console.log('[MasterStrategyResults] Debug Info:', {
+    hasTradeHistory: !!trade_history,
+    tradeCount: trade_history?.length || 0,
+    trades: trade_history,
+    totalReturn,
+    hasNoTrades
+  });
+
   return (
     <div className="space-y-6">
       {/* 전략 정보 */}
@@ -131,8 +152,166 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
         </div>
       </div>
 
-      {/* 가격 차트 with 매수/매도 시점 */}
-      {price_data && price_data.length > 0 && (
+      {/* 거래 0건일 때 경고 메시지 */}
+      {hasNoTrades && (
+        <div className="card bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <AlertCircle className="w-12 h-12 text-red-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-red-900 mb-3">
+                ❌ 매수 조건 미충족 - 거래 0건
+              </h3>
+              <p className="text-red-800 mb-4">
+                백테스트 기간 동안 <strong>{strategy_info.name}</strong> 전략의 진입 조건을 충족하는 시점이 <strong>단 한 번도 없었습니다.</strong>
+              </p>
+
+              {/* 조건 체크 상세 (있을 경우) */}
+              {results.condition_checks && results.condition_checks.length > 0 ? (
+                <div className="bg-white bg-opacity-90 rounded-lg p-4 mb-4">
+                  <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <Target className="w-4 h-4 text-red-600" />
+                    📊 현재 시점 조건 체크 (참고용)
+                  </h4>
+                  <div className="space-y-2">
+                    {results.condition_checks.map((check, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                          check.passed
+                            ? 'bg-green-50 border-green-400'
+                            : 'bg-red-50 border-red-400'
+                        }`}
+                      >
+                        <div className="flex-1">
+                          <div className="text-sm font-bold text-gray-900 mb-1">
+                            {check.condition_name}
+                            <span className="ml-2 text-xs text-gray-500">({check.condition_name_en})</span>
+                          </div>
+                          <div className="text-xs text-gray-700 flex items-center gap-2">
+                            <span className="font-medium">필요:</span>
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-900 rounded font-mono">{check.required_value}</span>
+                            <span>→</span>
+                            <span className="font-medium">실제:</span>
+                            <span className={`px-2 py-0.5 rounded font-mono font-bold ${
+                              check.passed
+                                ? 'bg-green-100 text-green-900'
+                                : 'bg-red-100 text-red-900'
+                            }`}>
+                              {check.actual_value || '데이터 없음'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className={`ml-3 w-10 h-10 rounded-full flex items-center justify-center ${
+                          check.passed ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                          <span className="text-xl text-white font-bold">
+                            {check.passed ? '✓' : '✗'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900">
+                    <strong>📌 참고:</strong> 위 조건은 <strong>현재 시점</strong> 기준입니다. 백테스트 기간 중 이 조건들을 충족하는 시점이 한 번도 없었습니다.
+                    <br />
+                    <strong>통과율:</strong> {results.condition_checks.filter(c => c.passed).length} / {results.condition_checks.length}개 ({((results.condition_checks.filter(c => c.passed).length / results.condition_checks.length) * 100).toFixed(0)}%)
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white bg-opacity-70 rounded-lg p-3 text-sm text-amber-900">
+                  <strong>💡 가능한 원인:</strong>
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>선택한 기간에 펀더멘털 조건을 충족하지 못함</li>
+                    <li>기술적 지표(RSI, MACD 등)가 진입 신호를 발생시키지 않음</li>
+                    <li>해당 종목이 이 전략에 적합하지 않을 수 있음</li>
+                  </ul>
+                </div>
+              )}
+
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-300 rounded-lg text-sm text-amber-900">
+                <strong>🔧 해결 방법:</strong>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li><strong>다른 종목 선택:</strong> 이 전략에 더 적합한 종목을 찾아보세요</li>
+                  <li><strong>백테스트 기간 조정:</strong> 더 긴 기간으로 설정하거나, 다른 시기를 선택해보세요</li>
+                  <li><strong>다른 전략 시도:</strong> 해당 종목에 더 적합한 다른 대가의 전략을 시도해보세요</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 백테스트 요약 (거래가 있을 때만 표시) */}
+      {!hasNoTrades && (
+        <div className="card bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-300">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            💰 백테스트 요약
+          </h3>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* 시작 자본 */}
+            <div className="bg-white rounded-lg p-4 border-2 border-blue-200">
+              <div className="text-xs text-blue-700 font-medium mb-1">시작 자본</div>
+              <div className="text-2xl font-bold text-blue-900">
+                {formatPrice(initialCapitalDisplay, isKoreanStock)}{isKoreanStock ? '원' : ''}
+              </div>
+            </div>
+
+            {/* 최종 자본 */}
+            <div className={`rounded-lg p-4 border-2 ${
+              totalPnL === 0
+                ? 'bg-white border-blue-200'
+                : totalPnL > 0
+                  ? 'bg-green-50 border-green-300'
+                  : 'bg-red-50 border-red-300'
+            }`}>
+              <div className={`text-xs font-medium mb-1 ${
+                totalPnL === 0
+                  ? 'text-blue-700'
+                  : totalPnL > 0
+                    ? 'text-green-700'
+                    : 'text-red-700'
+              }`}>최종 자본</div>
+              <div className={`text-2xl font-bold ${
+                totalPnL === 0
+                  ? 'text-blue-900'
+                  : totalPnL > 0
+                    ? 'text-green-900'
+                    : 'text-red-900'
+              }`}>
+                {formatPrice(finalCapitalDisplay, isKoreanStock)}{isKoreanStock ? '원' : ''}
+              </div>
+            </div>
+
+            {/* 총 손익 */}
+            <div className={`rounded-lg p-4 border-2 ${totalPnL >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+              <div className={`text-xs font-medium mb-1 ${totalPnL >= 0 ? 'text-green-700' : 'text-red-700'}`}>총 손익</div>
+              <div className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-900' : 'text-red-900'}`}>
+                {totalPnL >= 0 ? '+' : ''}{formatPrice(totalPnL, isKoreanStock)}{isKoreanStock ? '원' : ''}
+              </div>
+              <div className={`text-sm font-semibold mt-1 ${totalPnL >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
+              </div>
+            </div>
+
+            {/* 총 거래 횟수 & 승률 */}
+            <div className="bg-white rounded-lg p-4 border-2 border-purple-200">
+              <div className="text-xs text-purple-700 font-medium mb-1">거래 성과</div>
+              <div className="text-2xl font-bold text-purple-900">
+                {trade_history?.length || 0}회
+              </div>
+              <div className="text-sm text-purple-700 mt-1">
+                승률 {winRate.toFixed(1)}% ({winningTrades.length}승 {losingTrades.length}패)
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 가격 차트 with 매수/매도 시점 (거래가 있을 때만 표시) */}
+      {!hasNoTrades && price_data && price_data.length > 0 && (
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Activity className="w-5 h-5 text-primary-600" />
@@ -158,15 +337,16 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
         </div>
       )}
 
-      {/* 백테스트 성과 */}
-      <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Activity className="w-5 h-5 text-primary-600" />
-          백테스트 성과
-        </h3>
+      {/* 백테스트 성과 (거래가 있을 때만 표시) */}
+      {!hasNoTrades && (
+        <div className="card">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-primary-600" />
+            백테스트 상세 지표
+          </h3>
 
-        {/* 성과 지표 - 한 줄로 컴팩트하게 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          {/* 성과 지표 - 한 줄로 컴팩트하게 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <div className="bg-green-50 border border-green-200 rounded-lg p-3">
             <div className="text-xs text-green-700 mb-1">연간 수익률 (CAGR)</div>
             <div className={`text-lg font-bold ${backtest.metrics.CAGR >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -316,9 +496,10 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
           </div>
         </div>
       </div>
+      )}
 
-      {/* 펀더멘털 스크리닝 결과 */}
-      {fundamental_screen && !fundamental_screen.error && (
+      {/* 펀더멘털 스크리닝 결과 (거래가 있을 때만 표시) */}
+      {!hasNoTrades && fundamental_screen && !fundamental_screen.error && (
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Target className="w-5 h-5 text-primary-600" />
@@ -374,7 +555,7 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
         </div>
       )}
 
-      {fundamental_screen?.error && (
+      {!hasNoTrades && fundamental_screen?.error && (
         <div className="card bg-yellow-50 border-yellow-200">
           <div className="flex items-start gap-2">
             <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
@@ -386,8 +567,8 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
         </div>
       )}
 
-      {/* 포트폴리오 차트 */}
-      {equity_curve && equity_curve.length > 0 && (
+      {/* 포트폴리오 차트 (거래가 있을 때만 표시) */}
+      {!hasNoTrades && equity_curve && equity_curve.length > 0 && (
         <PortfolioChart
           equityCurve={equity_curve}
           priceData={price_data}
@@ -397,18 +578,18 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
         />
       )}
 
-      {/* 거래 타임라인 */}
-      {results.trade_history && results.trade_history.length > 0 && (
+      {/* 거래 타임라인 (거래가 있을 때만 표시) */}
+      {!hasNoTrades && results.trade_history && results.trade_history.length > 0 && (
         <TradingTimeline
-          trades={results.trade_history}
+          trades={results.trade_history as any}
           initialCapital={isKoreanStock ? results.initial_capital_krw! : results.initial_capital}
           finalCapital={isKoreanStock ? results.final_capital_krw! : results.final_capital!}
           currency={isKoreanStock ? 'KRW' : 'USD'}
         />
       )}
 
-      {/* 거래 내역 테이블 (상세) */}
-      {results.trade_history && results.trade_history.length > 0 && (
+      {/* 거래 내역 테이블 (상세) - 거래가 있을 때만 표시 */}
+      {!hasNoTrades && results.trade_history && results.trade_history.length > 0 && (
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             📋 거래 내역 상세
@@ -425,6 +606,7 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
                   <th className="px-3 py-2 text-right">매수금액</th>
                   <th className="px-3 py-2 text-right">손익</th>
                   <th className="px-3 py-2 text-right">수익률</th>
+                  <th className="px-3 py-2 text-right bg-blue-50 border-l-2 border-blue-300">거래 후 잔고</th>
                   <th className="px-3 py-2 text-center">보유일</th>
                   <th className="px-3 py-2 text-center">청산사유</th>
                 </tr>
@@ -453,9 +635,9 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
                     </td>
                     <td className="px-3 py-2 text-right font-medium text-sm">
                       {trade.currency === 'KRW' ? (
-                        <>{formatPrice(trade.position_value_krw!, true)}원</>
+                        <>{formatPrice(trade.position_value_krw || 0, true)}원</>
                       ) : (
-                        <>${trade.position_value.toLocaleString()}<br/><span className="text-xs text-gray-500">({formatPrice(trade.position_value_krw!, true)}원)</span></>
+                        <>${(trade.position_value || 0).toLocaleString()}<br/><span className="text-xs text-gray-500">({formatPrice(trade.position_value_krw || 0, true)}원)</span></>
                       )}
                     </td>
                     <td className={`px-3 py-2 text-right font-bold text-sm ${trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -467,6 +649,13 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
                     </td>
                     <td className={`px-3 py-2 text-right font-bold ${trade.pnl_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {trade.pnl_pct >= 0 ? '+' : ''}{trade.pnl_pct.toFixed(2)}%
+                    </td>
+                    <td className="px-3 py-2 text-right bg-blue-50 border-l-2 border-blue-300 font-bold text-blue-900 text-sm">
+                      {trade.currency === 'KRW' ? (
+                        <>{formatPrice((trade as any).balance_after_krw || 0, true)}원</>
+                      ) : (
+                        <>${((trade as any).balance_after || 0).toLocaleString()}<br/><span className="text-xs text-gray-500">({formatPrice((trade as any).balance_after_krw || 0, true)}원)</span></>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-center">{trade.holding_days}일</td>
                     <td className="px-3 py-2 text-center text-xs">
@@ -482,8 +671,8 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
         </div>
       )}
 
-      {/* 실제 매수 시그널 (거래 내역에서) */}
-      {signal_examples && signal_examples.length > 0 && (
+      {/* 실제 매수 시그널 (거래가 있을 때만 표시) */}
+      {!hasNoTrades && signal_examples && signal_examples.length > 0 && (
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             📍 실제 매수 시그널 (최근 {signal_examples.length}건)

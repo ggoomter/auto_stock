@@ -166,6 +166,8 @@ class TradeDetail(BaseModel):
     holding_days: int
     exit_reason: str
     currency: str = "USD"  # 기준 통화
+    balance_after: Optional[float] = None  # 거래 후 잔고 (USD)
+    balance_after_krw: Optional[float] = None  # 거래 후 잔고 (원화)
 
 
 class ConditionCheck(BaseModel):

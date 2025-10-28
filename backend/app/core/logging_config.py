@@ -30,7 +30,7 @@ def setup_logging():
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
 
-    # 파일 핸들러 - 일별 로그
+    # 파일 핸들러 - 일별 로그 (경고/에러만)
     file_handler = TimedRotatingFileHandler(
         filename=log_dir / "app.log",
         when="midnight",  # 자정에 새 파일 생성
@@ -38,7 +38,7 @@ def setup_logging():
         backupCount=30,  # 30일치 보관
         encoding="utf-8"
     )
-    file_handler.setLevel(logging.INFO)
+    file_handler.setLevel(logging.WARNING)  # 경고, 에러만 파일에 저장
     file_handler.setFormatter(formatter)
     file_handler.suffix = "%Y-%m-%d"  # 파일명에 날짜 추가
 

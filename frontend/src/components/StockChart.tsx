@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, Bar, Cell } from 'recharts';
-import { Eye, EyeOff, BarChart3, TrendingUp } from 'lucide-react';
+import { Eye, EyeOff, BarChart3, TrendingUp, Maximize2, X } from 'lucide-react';
 import { globalEvents, companyEvents, eventColors, eventIcons, type GlobalEvent } from '../data/globalEvents';
 import { detectCandlePattern } from './Candlestick';
 
@@ -18,6 +18,7 @@ export default function StockChart({ symbol, startDate, endDate }: StockChartPro
   const [timeframe, setTimeframe] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [chartPeriod, setChartPeriod] = useState<'6months' | '1year' | '3years' | '5years' | 'all'>('5years');
   const [hoveredEventIdx, setHoveredEventIdx] = useState<number | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // 샘플 주가 데이터 생성 (실제로는 API에서 가져와야 함)
   const stockData = useMemo(() => {
@@ -322,12 +323,22 @@ export default function StockChart({ symbol, startDate, endDate }: StockChartPro
   };
 
   return (
-    <div className="card">
-      <div className="flex flex-col gap-3 mb-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">{symbol} 주가 차트</h3>
+    <>
+      <div className="card">
+        <div className="flex flex-col gap-3 mb-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold">{symbol} 주가 차트</h3>
 
-          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              {/* 전체화면 버튼 */}
+              <button
+                onClick={() => setIsFullscreen(true)}
+                className="flex items-center gap-1 px-3 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors text-sm font-medium"
+                title="차트 확대"
+              >
+                <Maximize2 className="w-4 h-4" />
+                확대
+              </button>
             {/* 차트 기간 선택 */}
             <select
               value={chartPeriod}
@@ -448,7 +459,7 @@ export default function StockChart({ symbol, startDate, endDate }: StockChartPro
       </div>
 
       {/* 차트 */}
-      <ResponsiveContainer width="100%" height={500}>
+      <ResponsiveContainer width="100%" height={700}>
         {chartType === 'line' ? (
           <LineChart data={stockData} margin={{ top: 120, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -984,5 +995,587 @@ export default function StockChart({ symbol, startDate, endDate }: StockChartPro
         </div>
       )}
     </div>
+
+    {/* 전체화면 모달 */}
+    {isFullscreen && (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4"
+        onClick={() => setIsFullscreen(false)}
+      >
+        <div
+          className="bg-white rounded-lg shadow-2xl w-full h-[90vh] max-w-[95vw] overflow-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* 모달 헤더 */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+            <h3 className="text-xl font-bold text-gray-900">{symbol} 주가 차트 (확대 모드)</h3>
+            <button
+              onClick={() => setIsFullscreen(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-gray-700 font-medium"
+            >
+              <X className="w-5 h-5" />
+              닫기
+            </button>
+          </div>
+
+          {/* 차트 컨트롤 */}
+          <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2">
+                  {/* 차트 기간 선택 */}
+                  <select
+                    value={chartPeriod}
+                    onChange={(e) => setChartPeriod(e.target.value as any)}
+                    className="input text-sm px-3 py-1"
+                  >
+                    <option value="6months">최근 6개월</option>
+                    <option value="1year">최근 1년</option>
+                    <option value="3years">최근 3년</option>
+                    <option value="5years">최근 5년 (권장) ⭐</option>
+                    <option value="all">전체 (2005~)</option>
+                  </select>
+
+                  {/* 시간프레임 선택 */}
+                  <div className="flex gap-1 bg-gray-100 p-1 rounded">
+                    <button
+                      onClick={() => setTimeframe('daily')}
+                      className={`px-3 py-1 text-sm rounded transition-colors ${
+                        timeframe === 'daily'
+                          ? 'bg-white text-primary-700 shadow font-semibold'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      일봉
+                    </button>
+                    <button
+                      onClick={() => setTimeframe('weekly')}
+                      className={`px-3 py-1 text-sm rounded transition-colors ${
+                        timeframe === 'weekly'
+                          ? 'bg-white text-primary-700 shadow font-semibold'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      주봉
+                    </button>
+                    <button
+                      onClick={() => setTimeframe('monthly')}
+                      className={`px-3 py-1 text-sm rounded transition-colors ${
+                        timeframe === 'monthly'
+                          ? 'bg-white text-primary-700 shadow font-semibold'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      월봉
+                    </button>
+                  </div>
+
+                  {/* 차트 타입 선택 */}
+                  <div className="flex gap-1 bg-gray-100 p-1 rounded">
+                    <button
+                      onClick={() => setChartType('line')}
+                      className={`flex items-center gap-1 px-3 py-1 text-sm rounded transition-colors ${
+                        chartType === 'line'
+                          ? 'bg-white text-primary-700 shadow'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      <TrendingUp className="w-4 h-4" />
+                      라인
+                    </button>
+                    <button
+                      onClick={() => setChartType('candlestick')}
+                      className={`flex items-center gap-1 px-3 py-1 text-sm rounded transition-colors ${
+                        chartType === 'candlestick'
+                          ? 'bg-white text-primary-700 shadow'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                      캔들
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* 이벤트 토글 */}
+                <button
+                  onClick={() => setShowGlobalEvents(!showGlobalEvents)}
+                  className={`flex items-center gap-1 px-3 py-1 text-sm rounded transition-colors ${
+                    showGlobalEvents
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {showGlobalEvents ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  글로벌 이벤트
+                </button>
+
+                <button
+                  onClick={() => setShowCompanyEvents(!showCompanyEvents)}
+                  className={`flex items-center gap-1 px-3 py-1 text-sm rounded transition-colors ${
+                    showCompanyEvents
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {showCompanyEvents ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  종목 이벤트
+                </button>
+
+                {/* 카테고리 필터 */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600 font-medium">이벤트 필터:</span>
+                  {categories.map(cat => (
+                    <button
+                      key={cat.value}
+                      onClick={() => setEventCategory(cat.value)}
+                      className={`px-2 py-1 text-xs rounded transition-colors ${
+                        eventCategory === cat.value
+                          ? 'bg-primary-600 text-white font-semibold'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 확대된 차트 */}
+          <div className="px-6 py-6">
+            <ResponsiveContainer width="100%" height={window.innerHeight * 0.65}>
+              {chartType === 'line' ? (
+                <LineChart data={stockData} margin={{ top: 120, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(date) => {
+                      const d = new Date(date);
+                      if (timeframe === 'monthly' || chartPeriod === '5years' || chartPeriod === 'all') {
+                        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+                      } else if (timeframe === 'weekly' || chartPeriod === '3years') {
+                        return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+                      }
+                      return `${d.getMonth() + 1}/${d.getDate()}`;
+                    }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `$${value}`}
+                    domain={yDomain}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                    }}
+                    labelFormatter={(date) => {
+                      const d = new Date(date);
+                      return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+                    }}
+                    formatter={(value: number) => [`$${value.toFixed(2)}`, '종가']}
+                  />
+                  <Legend />
+
+                  {/* 이벤트 세로선 */}
+                  {filteredEvents.map((event, idx) => {
+                    if (hoveredEventIdx === idx) return null;
+
+                    const symbolSpecificImpact = event.symbolImpacts?.[symbol];
+                    const finalImpact = symbolSpecificImpact || event.impact;
+                    const impactColor = finalImpact === 'negative' ? '#EF4444' :
+                                        finalImpact === 'positive' ? '#10B981' :
+                                        eventColors[event.category];
+                    const verticalLevel = idx % 3;
+
+                    return (
+                      <ReferenceLine
+                        key={idx}
+                        x={event.date}
+                        stroke={impactColor}
+                        strokeDasharray="3 3"
+                        strokeWidth={2}
+                        label={({ viewBox }: any) => {
+                          const { x, y } = viewBox;
+                          const labelY = y - 20 - (verticalLevel * 30);
+
+                          return (
+                            <g
+                              style={{ cursor: 'pointer' }}
+                              onMouseEnter={() => setHoveredEventIdx(idx)}
+                              onMouseLeave={() => setHoveredEventIdx(null)}
+                            >
+                              <rect
+                                x={x - 60}
+                                y={labelY - 12}
+                                width={120}
+                                height={24}
+                                fill="white"
+                                stroke={impactColor}
+                                strokeWidth={1.5}
+                                rx={4}
+                                opacity={0.95}
+                              />
+                              <text
+                                x={x - 50}
+                                y={labelY + 4}
+                                fontSize={11}
+                                fill={impactColor}
+                                fontWeight="bold"
+                                textAnchor="start"
+                              >
+                                {eventIcons[event.category]}
+                              </text>
+                              <text
+                                x={x - 35}
+                                y={labelY + 4}
+                                fontSize={10}
+                                fill={impactColor}
+                                fontWeight="600"
+                                textAnchor="start"
+                              >
+                                {event.title.length > 12 ? event.title.substring(0, 12) + '...' : event.title}
+                              </text>
+                              <line
+                                x1={x}
+                                y1={labelY + 12}
+                                x2={x}
+                                y2={y}
+                                stroke={impactColor}
+                                strokeWidth={1}
+                                opacity={0.3}
+                              />
+                            </g>
+                          );
+                        }}
+                      />
+                    );
+                  })}
+
+                  {hoveredEventIdx !== null && (() => {
+                    const idx = hoveredEventIdx;
+                    const event = filteredEvents[idx];
+                    const symbolSpecificImpact = event.symbolImpacts?.[symbol];
+                    const finalImpact = symbolSpecificImpact || event.impact;
+                    const impactColor = finalImpact === 'negative' ? '#EF4444' :
+                                        finalImpact === 'positive' ? '#10B981' :
+                                        eventColors[event.category];
+                    const verticalLevel = idx % 3;
+
+                    return (
+                      <ReferenceLine
+                        key={`hovered-${idx}`}
+                        x={event.date}
+                        stroke={impactColor}
+                        strokeDasharray="3 3"
+                        strokeWidth={3}
+                        label={({ viewBox }: any) => {
+                          const { x, y } = viewBox;
+                          const labelY = y - 20 - (verticalLevel * 30);
+
+                          return (
+                            <g
+                              style={{ cursor: 'pointer' }}
+                              onMouseEnter={() => setHoveredEventIdx(idx)}
+                              onMouseLeave={() => setHoveredEventIdx(null)}
+                            >
+                              {event.title.length > 12 && (
+                                <>
+                                  <rect
+                                    x={x - 80}
+                                    y={labelY - 45}
+                                    width={160}
+                                    height={28}
+                                    fill="#1f2937"
+                                    rx={6}
+                                    opacity={0.95}
+                                  />
+                                  <text
+                                    x={x}
+                                    y={labelY - 26}
+                                    fontSize={11}
+                                    fill="white"
+                                    fontWeight="600"
+                                    textAnchor="middle"
+                                  >
+                                    {event.title}
+                                  </text>
+                                </>
+                              )}
+                              <rect
+                                x={x - 60}
+                                y={labelY - 12}
+                                width={120}
+                                height={24}
+                                fill="white"
+                                stroke={impactColor}
+                                strokeWidth={2.5}
+                                rx={4}
+                                opacity={0.95}
+                                style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}
+                              />
+                              <text
+                                x={x - 50}
+                                y={labelY + 4}
+                                fontSize={12}
+                                fill={impactColor}
+                                fontWeight="bold"
+                                textAnchor="start"
+                              >
+                                {eventIcons[event.category]}
+                              </text>
+                              <text
+                                x={x - 35}
+                                y={labelY + 4}
+                                fontSize={11}
+                                fill={impactColor}
+                                fontWeight="600"
+                                textAnchor="start"
+                              >
+                                {event.title.length > 12 ? event.title.substring(0, 12) + '...' : event.title}
+                              </text>
+                              <line
+                                x1={x}
+                                y1={labelY + 12}
+                                x2={x}
+                                y2={y}
+                                stroke={impactColor}
+                                strokeWidth={2}
+                                opacity={0.6}
+                              />
+                            </g>
+                          );
+                        }}
+                      />
+                    );
+                  })()}
+
+                  <Line
+                    type="monotone"
+                    dataKey="price"
+                    stroke="#0ea5e9"
+                    strokeWidth={2}
+                    dot={false}
+                    name={`${symbol} 종가`}
+                  />
+                </LineChart>
+              ) : (
+                <ComposedChart data={candlePatterns} margin={{ top: 120, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(date) => {
+                      const d = new Date(date);
+                      if (timeframe === 'monthly' || chartPeriod === '5years' || chartPeriod === 'all') {
+                        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+                      } else if (timeframe === 'weekly' || chartPeriod === '3years') {
+                        return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+                      }
+                      return `${d.getMonth() + 1}/${d.getDate()}`;
+                    }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `$${value}`}
+                    domain={yDomain}
+                  />
+                  <Tooltip content={<CandlestickTooltip />} />
+                  <Legend />
+
+                  {/* 이벤트 세로선 */}
+                  {filteredEvents.map((event, idx) => {
+                    if (hoveredEventIdx === idx) return null;
+
+                    const symbolSpecificImpact = event.symbolImpacts?.[symbol];
+                    const finalImpact = symbolSpecificImpact || event.impact;
+                    const impactColor = finalImpact === 'negative' ? '#EF4444' :
+                                        finalImpact === 'positive' ? '#10B981' :
+                                        eventColors[event.category];
+                    const verticalLevel = idx % 3;
+
+                    return (
+                      <ReferenceLine
+                        key={idx}
+                        x={event.date}
+                        stroke={impactColor}
+                        strokeDasharray="3 3"
+                        strokeWidth={2}
+                        label={({ viewBox }: any) => {
+                          const { x, y } = viewBox;
+                          const labelY = y - 20 - (verticalLevel * 30);
+
+                          return (
+                            <g
+                              style={{ cursor: 'pointer' }}
+                              onMouseEnter={() => setHoveredEventIdx(idx)}
+                              onMouseLeave={() => setHoveredEventIdx(null)}
+                            >
+                              <rect
+                                x={x - 60}
+                                y={labelY - 12}
+                                width={120}
+                                height={24}
+                                fill="white"
+                                stroke={impactColor}
+                                strokeWidth={1.5}
+                                rx={4}
+                                opacity={0.95}
+                              />
+                              <text
+                                x={x - 50}
+                                y={labelY + 4}
+                                fontSize={11}
+                                fill={impactColor}
+                                fontWeight="bold"
+                                textAnchor="start"
+                              >
+                                {eventIcons[event.category]}
+                              </text>
+                              <text
+                                x={x - 35}
+                                y={labelY + 4}
+                                fontSize={10}
+                                fill={impactColor}
+                                fontWeight="600"
+                                textAnchor="start"
+                              >
+                                {event.title.length > 12 ? event.title.substring(0, 12) + '...' : event.title}
+                              </text>
+                              <line
+                                x1={x}
+                                y1={labelY + 12}
+                                x2={x}
+                                y2={y}
+                                stroke={impactColor}
+                                strokeWidth={1}
+                                opacity={0.3}
+                              />
+                            </g>
+                          );
+                        }}
+                      />
+                    );
+                  })}
+
+                  {hoveredEventIdx !== null && (() => {
+                    const idx = hoveredEventIdx;
+                    const event = filteredEvents[idx];
+                    const symbolSpecificImpact = event.symbolImpacts?.[symbol];
+                    const finalImpact = symbolSpecificImpact || event.impact;
+                    const impactColor = finalImpact === 'negative' ? '#EF4444' :
+                                        finalImpact === 'positive' ? '#10B981' :
+                                        eventColors[event.category];
+                    const verticalLevel = idx % 3;
+
+                    return (
+                      <ReferenceLine
+                        key={`hovered-${idx}`}
+                        x={event.date}
+                        stroke={impactColor}
+                        strokeDasharray="3 3"
+                        strokeWidth={3}
+                        label={({ viewBox }: any) => {
+                          const { x, y } = viewBox;
+                          const labelY = y - 20 - (verticalLevel * 30);
+
+                          return (
+                            <g
+                              style={{ cursor: 'pointer' }}
+                              onMouseEnter={() => setHoveredEventIdx(idx)}
+                              onMouseLeave={() => setHoveredEventIdx(null)}
+                            >
+                              {event.title.length > 12 && (
+                                <>
+                                  <rect
+                                    x={x - 80}
+                                    y={labelY - 45}
+                                    width={160}
+                                    height={28}
+                                    fill="#1f2937"
+                                    rx={6}
+                                    opacity={0.95}
+                                  />
+                                  <text
+                                    x={x}
+                                    y={labelY - 26}
+                                    fontSize={11}
+                                    fill="white"
+                                    fontWeight="600"
+                                    textAnchor="middle"
+                                  >
+                                    {event.title}
+                                  </text>
+                                </>
+                              )}
+                              <rect
+                                x={x - 60}
+                                y={labelY - 12}
+                                width={120}
+                                height={24}
+                                fill="white"
+                                stroke={impactColor}
+                                strokeWidth={2.5}
+                                rx={4}
+                                opacity={0.95}
+                                style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}
+                              />
+                              <text
+                                x={x - 50}
+                                y={labelY + 4}
+                                fontSize={12}
+                                fill={impactColor}
+                                fontWeight="bold"
+                                textAnchor="start"
+                              >
+                                {eventIcons[event.category]}
+                              </text>
+                              <text
+                                x={x - 35}
+                                y={labelY + 4}
+                                fontSize={11}
+                                fill={impactColor}
+                                fontWeight="600"
+                                textAnchor="start"
+                              >
+                                {event.title.length > 12 ? event.title.substring(0, 12) + '...' : event.title}
+                              </text>
+                              <line
+                                x1={x}
+                                y1={labelY + 12}
+                                x2={x}
+                                y2={y}
+                                stroke={impactColor}
+                                strokeWidth={2}
+                                opacity={0.6}
+                              />
+                            </g>
+                          );
+                        }}
+                      />
+                    );
+                  })()}
+
+                  {/* 캔들스틱 */}
+                  <Bar
+                    dataKey="high"
+                    shape={<CandleShape />}
+                    name={`${symbol} 캔들`}
+                  />
+                </ComposedChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   );
 }

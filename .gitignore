@@ -36,6 +36,11 @@ data/*.parquet
 # Cache
 backend/cache/
 
+# Logs
+logs/
+*.log
+backend/logs/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -4,6 +4,9 @@
 import re
 from typing import Dict, Any, List, Tuple
 import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class StrategyParser:
@@ -57,36 +60,59 @@ class StrategyParser:
             Boolean Series (True/False for each timestamp)
         """
         try:
+            logger.info(f"[Parser] 조건 평가 시작: {condition}")
+            logger.info(f"[Parser] 사용 가능한 컬럼: {list(indicators.columns)}")
+            logger.info(f"[Parser] 데이터 길이: {len(indicators)}")
+
             # 간단한 구현 - 실제로는 더 정교한 파서 필요
             result = pd.Series([True] * len(indicators), index=indicators.index)
 
-            # MACD cross_up 감지
-            if 'MACD.cross_up' in condition:
+            # MACD cross_up 감지 (MACD.cross_up 또는 MACD_cross_up)
+            if 'MACD' in condition and 'cross_up' in condition:
+                logger.info(f"[Parser] MACD cross_up 조건 감지")
                 if 'MACD' in indicators.columns and 'MACD_signal' in indicators.columns:
                     cross_up = (
                         (indicators['MACD'] > indicators['MACD_signal']) &
                         (indicators['MACD'].shift(1) <= indicators['MACD_signal'].shift(1))
                     )
+                    logger.info(f"[Parser] MACD cross_up 발생 일수: {cross_up.sum()}/{len(cross_up)}")
                     result &= cross_up
+                else:
+                    logger.warning(f"[Parser] MACD 또는 MACD_signal 컬럼이 없음")
 
-            # RSI < 30
-            if 'RSI < 30' in condition or 'RSI<30' in condition:
-                if 'RSI' in indicators.columns:
-                    result &= indicators['RSI'] < 30
+            # RSI 조건 (동적 파싱)
+            if 'RSI' in indicators.columns:
+                logger.info(f"[Parser] RSI 컬럼 확인됨")
+                # RSI < 숫자
+                rsi_less_pattern = r'RSI\s*<\s*(\d+(?:\.\d+)?)'
+                for match in re.finditer(rsi_less_pattern, condition):
+                    threshold = float(match.group(1))
+                    rsi_condition = indicators['RSI'] < threshold
+                    logger.info(f"[Parser] RSI < {threshold} 조건: {rsi_condition.sum()}/{len(rsi_condition)} 일")
+                    result &= rsi_condition
 
-            # RSI > 70
-            if 'RSI > 70' in condition or 'RSI>70' in condition:
-                if 'RSI' in indicators.columns:
-                    result &= indicators['RSI'] > 70
+                # RSI > 숫자
+                rsi_greater_pattern = r'RSI\s*>\s*(\d+(?:\.\d+)?)'
+                for match in re.finditer(rsi_greater_pattern, condition):
+                    threshold = float(match.group(1))
+                    rsi_condition = indicators['RSI'] > threshold
+                    logger.info(f"[Parser] RSI > {threshold} 조건: {rsi_condition.sum()}/{len(rsi_condition)} 일")
+                    result &= rsi_condition
+            else:
+                logger.warning(f"[Parser] RSI 컬럼이 indicators에 없음")
 
-            # MACD cross_down
-            if 'MACD.cross_down' in condition:
+            # MACD cross_down 감지 (MACD.cross_down 또는 MACD_cross_down)
+            if 'MACD' in condition and 'cross_down' in condition:
+                logger.info(f"[Parser] MACD cross_down 조건 감지")
                 if 'MACD' in indicators.columns and 'MACD_signal' in indicators.columns:
                     cross_down = (
                         (indicators['MACD'] < indicators['MACD_signal']) &
                         (indicators['MACD'].shift(1) >= indicators['MACD_signal'].shift(1))
                     )
+                    logger.info(f"[Parser] MACD cross_down 발생 일수: {cross_down.sum()}/{len(cross_down)}")
                     result &= cross_down
+                else:
+                    logger.warning(f"[Parser] MACD 또는 MACD_signal 컬럼이 없음")
 
             # +DI > -DI
             if '+DI > -DI' in condition or '+DI>-DI' in condition:
@@ -105,6 +131,10 @@ class StrategyParser:
                         indicators.index, events, event_name, window_days
                     )
                     result &= event_mask
+
+            logger.info(f"[Parser] 최종 결과: {result.sum()}/{len(result)} 일이 조건 충족")
+            if result.sum() > 0:
+                logger.info(f"[Parser] 조건 충족 날짜 예시 (최대 5개): {result[result].index[:5].tolist()}")
 
             return result
 

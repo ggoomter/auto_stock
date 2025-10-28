@@ -23,7 +23,7 @@ if errorlevel 1 (
 echo [OK] Dependencies ready
 
 echo.
-echo [2/2] Starting Vite dev server on http://localhost:4783
+echo [2/2] Starting Vite dev server on http://localhost:4783 (port 4783)
 
 echo Press Ctrl+C to stop the server when finished.
 echo.

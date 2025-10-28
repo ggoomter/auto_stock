@@ -14,6 +14,7 @@ export default defineConfig({
     port: 4783,
     host: "localhost",
     open: false,
+    strictPort: true,  // 포트가 사용 중이면 에러 발생 (자동 변경 방지)
     proxy: {
       "/api": {
         target: "http://localhost:8650",
