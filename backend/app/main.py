@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from .core.config import settings
 from .api.routes import router
-from .api.websocket import router as websocket_router, register_websocket_callbacks
+from .api.websocket_api import router as websocket_router, register_websocket_callbacks
 from .routers.events import router as events_router
 import traceback
 import numpy as np

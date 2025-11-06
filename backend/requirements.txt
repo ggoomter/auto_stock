@@ -23,6 +23,7 @@ scipy>=1.13.0
 # Finance data
 yfinance>=0.2.50
 finance-datareader>=0.9.96
+pykrx>=1.0.45  # 한국거래소 주식 데이터
 
 # Security
 python-jose[cryptography]>=3.3.0

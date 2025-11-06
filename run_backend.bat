@@ -1,7 +1,6 @@
 @echo off
 
 title Backend - FastAPI Server (8650)
-color 0A
 
 echo.
 echo ================================================

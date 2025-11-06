@@ -1,7 +1,6 @@
 @echo off
 
 title Financial Research Copilot
-color 0A
 
 echo.
 echo ========================================================

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
-import { Activity, Github, BookOpen, Users, Settings, BarChart3, Radio } from 'lucide-react';
+import { Activity, Github, BookOpen, Users, Settings, BarChart3, Radio, TrendingUp } from 'lucide-react';
 import SimpleStrategyForm from './components/SimpleStrategyForm';
 import MasterStrategySelector from './components/MasterStrategySelector';
 import ResultsDisplay from './components/ResultsDisplay';
@@ -9,6 +9,7 @@ import LearnMenu from './components/LearnMenu';
 import NewsFetchButton from './components/NewsFetchButton';
 import ComparisonPage from './pages/ComparisonPage';
 import RealtimeMonitor from './pages/RealtimeMonitor';
+import TradingDashboard from './components/TradingDashboard';
 import {
   analyzeStrategy,
   analyzeMasterStrategy,
@@ -21,7 +22,7 @@ import {
 const queryClient = new QueryClient();
 
 type StrategyType = 'custom' | 'master';
-type ActiveTab = 'strategy' | 'compare' | 'realtime' | 'learn';
+type ActiveTab = 'strategy' | 'compare' | 'realtime' | 'learn' | 'dashboard';
 
 function AppContent() {
   const [strategyType, setStrategyType] = useState<StrategyType>('master');
@@ -32,6 +33,7 @@ function AppContent() {
   const [pendingMasterRequest, setPendingMasterRequest] = useState<MasterStrategyRequest | null>(null);
   const [sharedSymbols, setSharedSymbols] = useState<string[]>([]);
   const [loadedTemplate, setLoadedTemplate] = useState<any>(null);  // 로드된 템플릿 저장
+  const [isAutoTrading, setIsAutoTrading] = useState(false);  // 자동매매 상태
 
   const mutation = useMutation({
     mutationFn: analyzeStrategy,
@@ -175,6 +177,19 @@ function AppContent() {
               학습 자료
             </div>
           </button>
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`px-6 py-3 font-semibold transition-colors ${
+              activeTab === 'dashboard'
+                ? 'text-primary-600 border-b-2 border-primary-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              자동매매 대시보드
+            </div>
+          </button>
         </div>
 
         {/* 전략 분석 탭 */}
@@ -300,6 +315,14 @@ function AppContent() {
           <div className="max-w-4xl mx-auto">
             <LearnMenu />
           </div>
+        )}
+
+        {/* 자동매매 대시보드 탭 */}
+        {activeTab === 'dashboard' && (
+          <TradingDashboard
+            isAutoTrading={isAutoTrading}
+            onToggleAutoTrading={setIsAutoTrading}
+          />
         )}
       </main>
 

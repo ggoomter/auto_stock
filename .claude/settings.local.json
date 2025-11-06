@@ -46,7 +46,12 @@
       "Bash(py -3.13 --version:*)",
       "Bash(if [ -f \"G:/ai_coding/auto_stock/backend/error_traceback.txt\" ])",
       "Bash(then tail -100 \"G:/ai_coding/auto_stock/backend/error_traceback.txt\")",
-      "Bash(if exist \"G:\\ai_coding\\auto_stock\\backend\\error_traceback.txt\" then tail -100 \"G:\\ai_coding\\auto_stock\\backend\\error_traceback.txt\")"
+      "Bash(if exist \"G:\\ai_coding\\auto_stock\\backend\\error_traceback.txt\" then tail -100 \"G:\\ai_coding\\auto_stock\\backend\\error_traceback.txt\")",
+      "Bash(venvScriptspip.exe install pykrx)",
+      "Bash(backend\\venv\\Scripts\\python.exe:*)",
+      "Bash(backend\\\\venv\\\\Scripts\\\\python.exe:*)",
+      "Bash(test_korean_direct.bat)",
+      "Bash(git remote add:*)"
     ],
     "deny": [],
     "ask": []

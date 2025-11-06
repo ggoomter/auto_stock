@@ -192,6 +192,15 @@ class FundamentalAnalyzer:
     # ========== 현재 시점 지표 (참고용) ==========
     def get_buffett_metrics(self) -> Dict:
         """현재 시점 워렌 버핏 지표 (참고용)"""
+        # 한국 주식인지 확인
+        if self.symbol and ('.KS' in self.symbol or '.KQ' in self.symbol or self.symbol in ['005930']):
+            # 한국 주식 전용 데이터 사용
+            from .korean_stock_data import get_korean_stock_fetcher
+            fetcher = get_korean_stock_fetcher()
+            korean_metrics = fetcher.get_buffett_metrics(self.symbol)
+            if korean_metrics:
+                return korean_metrics
+
         info = self.get_info()
 
         metrics = {}
@@ -669,6 +678,29 @@ class FundamentalAnalyzer:
         - 긍정적 현금흐름
         - P/E는 완화된 기준 (성장주도 인정)
         """
+        # 한국 주식인지 확인하고 실제 데이터 사용
+        if self.symbol and ('.KS' in self.symbol or '.KQ' in self.symbol or self.symbol in ['005930']):
+            from .korean_stock_data import get_korean_stock_fetcher
+            fetcher = get_korean_stock_fetcher()
+            metrics = fetcher.get_buffett_metrics(self.symbol)
+
+            if metrics:
+                roe = metrics.get('ROE', 0)  # 이미 퍼센트로 변환됨
+                debt_to_equity = metrics.get('debt_to_equity', 0)
+                fcf = metrics.get('free_cashflow', 0)
+                pe = metrics.get('PE', 0)
+                pb = metrics.get('PB', 0)
+
+                # 버핏 기준 체크 (한국 시장 특성 반영)
+                # 2024년 삼성전자 ROE 8.4% - 반도체 불황 회복기 고려
+                return (
+                    roe and roe > 8 and  # ROE > 8% (반도체 사이클 저점 고려)
+                    debt_to_equity is not None and debt_to_equity < 0.5 and  # 부채비율 < 50%
+                    fcf and fcf > 0 and  # 긍정적 현금흐름
+                    pe and 0 < pe < 25 and  # P/E < 25
+                    pb and pb < 3  # P/B < 3
+                )
+
         applicable_quarter = self._get_applicable_quarter(as_of_date)
 
         # 펀더멘털 데이터 없으면 기술적 분석만 사용

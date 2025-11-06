@@ -1,7 +1,6 @@
 @echo off
 
 title Frontend - React Dev Server (4783)
-color 0B
 
 echo.
 echo ================================================
