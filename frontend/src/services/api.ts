@@ -324,7 +324,165 @@ export const compareStrategies = async (
   return response.data;
 };
 
+// ============================================================
+// 자동매매 API
+// ============================================================
+
+export interface TradingStartRequest {
+  mode: 'paper' | 'live';  // 모의 거래 or 실전 거래
+  total_capital: number;  // 초기 자본 (KRW)
+  max_positions: number;  // 최대 포지션 수
+  max_position_size: number;  // 종목당 최대 비중 (0.2 = 20%)
+  max_risk_per_trade: number;  // 거래당 최대 리스크 (0.02 = 2%)
+  max_daily_loss: number;  // 일일 최대 손실 (0.05 = 5%)
+  enabled_strategies: string[];  // 활성화 전략 ["buffett", "lynch"]
+  trading_symbols: string[];  // 거래 종목
+  use_trailing_stop: boolean;
+  trailing_stop_percent: number;
+  order_type: 'market' | 'limit';
+  slippage_tolerance?: number;
+}
+
+export interface TradingStopRequest {
+  close_all_positions: boolean;  // 모든 포지션 청산 여부
+  reason: string;  // 중지 사유
+}
+
+export interface EmergencyStopRequest {
+  reason: string;
+}
+
+export interface TradingStatusResponse {
+  is_running: boolean;
+  mode: string;
+  uptime_seconds: number;
+  active_positions: number;
+  total_trades_today: number;
+  daily_pnl: number;
+  daily_pnl_pct: number;
+  enabled_strategies: string[];
+  risk_level: 'low' | 'medium' | 'high' | 'extreme';
+  last_update: string;
+}
+
+export interface PositionInfo {
+  symbol: string;
+  quantity: number;
+  entry_price: number;
+  entry_date: string;
+  current_price: number;
+  pnl: number;
+  pnl_pct: number;
+  stop_loss: number | null;
+  take_profit: number | null;
+  strategy: string;
+}
+
+export interface PortfolioStatusResponse {
+  total_value: number;
+  cash: number;
+  positions_value: number;
+  total_pnl: number;
+  total_pnl_pct: number;
+  positions: PositionInfo[];
+  risk_metrics: {
+    concentration_risk: number;
+    daily_var: number;
+    max_position_size: number;
+  };
+  last_update: string;
+}
+
+export interface TradingPerformanceResponse {
+  total_trades: number;
+  win_rate: number;
+  profit_factor: number;
+  sharpe_ratio: number;
+  max_drawdown: number;
+  average_win: number;
+  average_loss: number;
+  largest_win: number;
+  largest_loss: number;
+}
+
+export interface TradingHealthResponse {
+  timestamp: string;
+  system: {
+    cpu_percent: number;
+    memory_percent: number;
+    disk_percent: number;
+  };
+  trading: {
+    is_running: boolean;
+    engine_status: string;
+  };
+  checks: Array<{
+    status: string;
+    message: string;
+  }>;
+  overall_status: 'healthy' | 'warning' | 'error';
+}
+
+/**
+ * 자동매매 시작
+ */
+export const startTrading = async (
+  request: TradingStartRequest
+): Promise<any> => {
+  const response = await api.post('/trading/start', request);
+  return response.data;
+};
+
+/**
+ * 자동매매 중지
+ */
+export const stopTrading = async (
+  request: TradingStopRequest
+): Promise<any> => {
+  const response = await api.post('/trading/stop', request);
+  return response.data;
+};
+
+/**
+ * 자동매매 상태 조회
+ */
+export const getTradingStatus = async (): Promise<TradingStatusResponse> => {
+  const response = await api.get<TradingStatusResponse>('/trading/status');
+  return response.data;
+};
+
+/**
+ * 포트폴리오 상태 조회
+ */
+export const getPortfolioStatus = async (): Promise<PortfolioStatusResponse> => {
+  const response = await api.get<PortfolioStatusResponse>('/portfolio/status');
+  return response.data;
+};
+
+/**
+ * 긴급 정지 (킬 스위치)
+ */
+export const emergencyStop = async (
+  request: EmergencyStopRequest
+): Promise<any> => {
+  const response = await api.post('/trading/emergency-stop', request);
+  return response.data;
+};
+
+/**
+ * 거래 성과 조회
+ */
+export const getTradingPerformance = async (): Promise<TradingPerformanceResponse> => {
+  const response = await api.get<TradingPerformanceResponse>('/trading/performance');
+  return response.data;
+};
+
+/**
+ * 시스템 헬스 체크
+ */
+export const getTradingHealth = async (): Promise<TradingHealthResponse> => {
+  const response = await api.get<TradingHealthResponse>('/trading/health');
+  return response.data;
+};
+
 export default api;
-
-
-
