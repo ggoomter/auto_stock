@@ -23,6 +23,7 @@ from ..services.monte_carlo import MonteCarloSimulator
 from ..services.master_strategies import get_strategy, list_strategies
 from ..services.fundamental_analysis import FundamentalAnalyzer
 from ..services.exchange_rate import get_exchange_service
+from ..services.backtest_cache import get_cache
 from ..core.logging_config import logger
 import pandas as pd
 import numpy as np
@@ -1020,7 +1021,7 @@ class StrategyComparisonResponse(BaseModel):
 @router.post("/compare-strategies", response_model=StrategyComparisonResponse)
 async def compare_strategies(request: StrategyComparisonRequest):
     """
-    여러 대가 전략을 동시에 백테스트하고 비교
+    여러 대가 전략을 동시에 백테스트하고 비교 (캐싱 지원)
 
     Args:
         request: 전략 이름 리스트, 종목, 기간
@@ -1031,12 +1032,35 @@ async def compare_strategies(request: StrategyComparisonRequest):
     try:
         logger.info(f"전략 비교 시작: {request.strategy_names}")
 
+        # 캐시 인스턴스 가져오기
+        cache = get_cache()
+
         results = []
         best_cagr = -float('inf')
         best_strategy_name = ""
 
         for strategy_name in request.strategy_names:
             try:
+                # 캐시 확인
+                cached_result = cache.get(
+                    symbols=request.symbols,
+                    start_date=request.start_date,
+                    end_date=request.end_date,
+                    strategy_name=strategy_name,
+                    initial_capital=request.initial_capital
+                )
+
+                if cached_result:
+                    # 캐시된 결과 사용
+                    logger.info(f"✅ 캐시 히트: {strategy_name}")
+                    results.append(StrategyComparisonResult(**cached_result))
+
+                    # 최고 전략 갱신
+                    if cached_result["metrics"]["CAGR"] > best_cagr:
+                        best_cagr = cached_result["metrics"]["CAGR"]
+                        best_strategy_name = strategy_name
+
+                    continue
                 # 각 전략 실행
                 strategy_class = get_strategy(strategy_name)
                 if not strategy_class:
@@ -1125,8 +1149,8 @@ async def compare_strategies(request: StrategyComparisonRequest):
                     best_cagr = avg_cagr
                     best_strategy_name = strategy_name
 
-                # 결과 추가
-                results.append(StrategyComparisonResult(
+                # 결과 객체 생성
+                strategy_result = StrategyComparisonResult(
                     strategy_name=strategy_name,
                     strategy_description=strategy.description,
                     metrics={
@@ -1141,7 +1165,21 @@ async def compare_strategies(request: StrategyComparisonRequest):
                     final_equity=float(final_equity),
                     total_return_pct=float(total_return_pct),
                     trade_count=int(total_trades)
-                ))
+                )
+
+                # 결과 추가
+                results.append(strategy_result)
+
+                # 캐시에 저장
+                cache.set(
+                    symbols=request.symbols,
+                    start_date=request.start_date,
+                    end_date=request.end_date,
+                    strategy_name=strategy_name,
+                    initial_capital=request.initial_capital,
+                    result=strategy_result.dict()
+                )
+                logger.info(f"💾 캐시 저장 완료: {strategy_name}")
 
             except Exception as e:
                 logger.error(f"전략 {strategy_name} 실행 오류: {e}")

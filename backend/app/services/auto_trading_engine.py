@@ -144,16 +144,26 @@ class AutoTradingEngine:
         # WebSocket 클라이언트 (대시보드 연동)
         self.ws_clients: Set = set()
 
+        # 시작 시간 및 관심 종목
+        self.start_time: Optional[datetime] = None
+        self.watchlist: List[str] = []
+
         logger.info(f"자동매매 엔진 초기화 (모드: {self.config.mode.value})")
 
-    async def start(self):
+    async def start(self, symbols: List[str] = None):
         """자동매매 시작"""
         if self.is_running:
             logger.warning("자동매매가 이미 실행 중입니다")
             return
 
         self.is_running = True
-        logger.info("자동매매 엔진 시작")
+        self.start_time = datetime.now()
+
+        # 거래 종목 설정
+        if symbols:
+            self.watchlist = symbols
+
+        logger.info(f"자동매매 엔진 시작 (종목: {self.watchlist if symbols else '기본'})")
 
         # 비동기 태스크 실행
         tasks = [
@@ -170,14 +180,14 @@ class AutoTradingEngine:
         finally:
             self.is_running = False
 
-    async def stop(self):
+    async def stop(self, close_positions: bool = False):
         """자동매매 중지"""
-        logger.info("자동매매 엔진 중지 요청")
+        logger.info(f"자동매매 엔진 중지 요청 (포지션 청산: {close_positions})")
         self.is_running = False
 
-        # 모든 포지션 청산 (선택적)
-        if self.config.mode == TradingMode.LIVE:
-            await self._close_all_positions("자동매매 중지")
+        # 포지션 청산 (옵션)
+        if close_positions:
+            await self._close_all_positions("자동매매 중지 - 사용자 요청")
 
     async def _monitor_market(self):
         """시장 모니터링 및 신호 생성"""
@@ -649,8 +659,8 @@ class AutoTradingEngine:
 
     def _get_watchlist(self) -> List[str]:
         """관심 종목 리스트"""
-        # 임시로 하드코딩 (실제로는 DB나 설정에서 가져옴)
-        return ["AAPL", "MSFT", "GOOGL", "005930.KS", "035720.KS"]
+        # 사용자가 지정한 watchlist가 있으면 사용, 없으면 기본값
+        return self.watchlist if self.watchlist else ["AAPL", "MSFT", "GOOGL", "005930.KS", "035720.KS"]
 
     def _check_risk_limits(self) -> bool:
         """리스크 한도 확인"""
@@ -689,14 +699,137 @@ class AutoTradingEngine:
 
     def get_status(self) -> Dict:
         """현재 상태 반환"""
+        uptime = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
+
+        # 일일 손익률 계산
+        daily_pnl_pct = (self.daily_pnl / self.config.total_capital) * 100 if self.config.total_capital > 0 else 0
+
+        # 오늘 거래 수 계산
+        today = datetime.now().date()
+        total_trades_today = sum(1 for trade in self.trade_history if trade.get('exit_time', datetime.min).date() == today)
+
+        # 리스크 레벨 계산 (간단 버전)
+        risk_level = "low"
+        if abs(daily_pnl_pct) > 3:
+            risk_level = "high"
+        elif abs(daily_pnl_pct) > 2:
+            risk_level = "medium"
+
         return {
             "is_running": self.is_running,
             "mode": self.config.mode.value,
+            "uptime_seconds": uptime,
             "active_positions": len(self.active_positions),
-            "pending_orders": len(self.pending_orders),
+            "total_trades_today": total_trades_today,
             "daily_pnl": self.daily_pnl,
-            "total_trades": len(self.trade_history),
-            "config": asdict(self.config) if hasattr(self.config, '__dataclass_fields__') else {}
+            "daily_pnl_pct": daily_pnl_pct,
+            "enabled_strategies": self.config.enabled_strategies,
+            "risk_level": risk_level
+        }
+
+    def get_portfolio_summary(self) -> Dict:
+        """포트폴리오 요약"""
+        # 포지션 가치 계산 (현재가 필요 - 임시로 entry_price 사용)
+        total_positions_value = sum(
+            pos.get('entry_price', 0) * pos.get('shares', 0)
+            for pos in self.active_positions.values()
+        )
+
+        # 현금 잔고 (초기 자본 - 투자금)
+        cash = self.config.total_capital - total_positions_value
+
+        # 총 자산
+        total_value = cash + total_positions_value
+
+        # 총 손익
+        total_pnl = total_value - self.config.total_capital
+        total_pnl_pct = (total_pnl / self.config.total_capital) * 100 if self.config.total_capital > 0 else 0
+
+        # 포지션 상세 정보
+        positions = []
+        for symbol, pos in self.active_positions.items():
+            # 현재가 (임시로 entry_price 사용)
+            current_price = pos.get('entry_price', 0)
+            entry_price = pos.get('entry_price', 0)
+            quantity = pos.get('shares', 0)
+
+            pnl = (current_price - entry_price) * quantity
+            pnl_pct = ((current_price / entry_price) - 1) * 100 if entry_price > 0 else 0
+
+            positions.append({
+                "symbol": symbol,
+                "quantity": quantity,
+                "entry_price": entry_price,
+                "entry_date": pos.get('entry_time', datetime.now()).strftime('%Y-%m-%d'),
+                "current_price": current_price,
+                "pnl": pnl,
+                "pnl_pct": pnl_pct,
+                "stop_loss": pos.get('stop_loss'),
+                "take_profit": pos.get('take_profit'),
+                "strategy": pos.get('strategy', 'unknown')
+            })
+
+        # 리스크 지표 (간단 버전)
+        risk_metrics = {
+            "concentration_risk": len(self.active_positions) / self.config.max_positions if self.config.max_positions > 0 else 0,
+            "daily_var": abs(self.daily_pnl) / self.config.total_capital if self.config.total_capital > 0 else 0,
+            "max_position_size": max([pos.get('shares', 0) * pos.get('entry_price', 0) for pos in self.active_positions.values()]) if self.active_positions else 0
+        }
+
+        return {
+            "total_value": total_value,
+            "cash": cash,
+            "positions_value": total_positions_value,
+            "total_pnl": total_pnl,
+            "total_pnl_pct": total_pnl_pct,
+            "positions": positions,
+            "risk_metrics": risk_metrics
+        }
+
+    async def emergency_stop(self, reason: str = "emergency") -> Dict:
+        """긴급 정지"""
+        logger.warning(f"🚨 긴급 정지 실행: {reason}")
+
+        # 모든 포지션 즉시 청산
+        closed_positions = 0
+        for symbol in list(self.active_positions.keys()):
+            try:
+                position = self.active_positions[symbol]
+
+                # 긴급 청산 신호 생성
+                signal = TradingSignal(
+                    timestamp=datetime.now(),
+                    symbol=symbol,
+                    action="sell",
+                    strategy_name="emergency_stop",
+                    confidence=1.0,
+                    entry_price=0,
+                    stop_loss=0,
+                    take_profit=0,
+                    position_size=position['shares'],
+                    reason=f"긴급 정지: {reason}"
+                )
+
+                # 시장가로 즉시 청산
+                order = await self._execute_order(signal)
+                if order and order.status == OrderStatus.FILLED:
+                    closed_positions += 1
+
+            except Exception as e:
+                logger.error(f"긴급 청산 실패 ({symbol}): {e}")
+
+        # 엔진 중지
+        self.is_running = False
+
+        # 최종 포트폴리오 상태
+        final_portfolio = self.get_portfolio_summary()
+
+        logger.warning(f"🛑 긴급 정지 완료 (청산: {closed_positions}개 포지션)")
+
+        return {
+            "closed_positions": closed_positions,
+            "final_portfolio": final_portfolio,
+            "reason": reason
         }
 
     def get_performance_metrics(self) -> Dict:
