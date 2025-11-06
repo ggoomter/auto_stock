@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from .core.config import settings
 from .api.routes import router
 from .api.websocket_api import router as websocket_router, register_websocket_callbacks
+from .api.trading_routes import router as trading_router
 from .routers.events import router as events_router
 import traceback
 import numpy as np
@@ -84,6 +85,7 @@ app.add_middleware(
 app.include_router(router, prefix=settings.API_V1_STR, tags=["analysis"])
 app.include_router(events_router)
 app.include_router(websocket_router, prefix=settings.API_V1_STR, tags=["websocket"])
+app.include_router(trading_router, prefix=settings.API_V1_STR, tags=["trading"])
 
 
 @app.on_event("startup")
