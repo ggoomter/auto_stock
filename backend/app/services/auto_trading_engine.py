@@ -14,7 +14,7 @@ import numpy as np
 from ..core.logging_config import logger
 from .backtest import BacktestEngine
 from .parser import StrategyParser
-from .indicators import TechnicalIndicators
+from .indicators import IndicatorCalculator
 from .master_strategies import MASTER_STRATEGIES
 from .advanced_risk_manager import AdvancedRiskManager, RiskLevel
 from .broker_api import KoreaInvestmentAPI

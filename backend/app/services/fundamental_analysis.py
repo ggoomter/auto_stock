@@ -707,12 +707,28 @@ class FundamentalAnalyzer:
         if applicable_quarter is None:
             return True  # 데이터 제약으로 통과 처리
 
-        info = self.get_info()
-
-        # 핵심 지표
-        roe = info.get('returnOnEquity', 0)
-        fcf = info.get('freeCashflow', 0)
-        pe = info.get('trailingPE', 0)
+        # DART API 사용 (한국 주식) 또는 yfinance fallback
+        if self.is_korean and self.dart_client:
+            metrics = self.dart_client.get_metrics_at_date(
+                self.ticker.replace('.KS', '').replace('.KQ', ''),
+                as_of_date
+            )
+            if metrics and not metrics.get('error'):
+                roe = metrics.get('roe', 0)
+                fcf = metrics.get('fcf', 0)
+                pe = metrics.get('per', 0)
+            else:
+                # DART 실패 시 yfinance fallback
+                info = self.get_info()
+                roe = info.get('returnOnEquity', 0)
+                fcf = info.get('freeCashflow', 0)
+                pe = info.get('trailingPE', 0)
+        else:
+            # 미국 주식은 yfinance 사용
+            info = self.get_info()
+            roe = info.get('returnOnEquity', 0)
+            fcf = info.get('freeCashflow', 0)
+            pe = info.get('trailingPE', 0)
 
         # 현대 버핏 기준: 질적 우수성 중심
         return (
@@ -733,11 +749,25 @@ class FundamentalAnalyzer:
             # 펀더멘털 데이터가 없으면 기술적 분석만 진행 (골든크로스)
             return True  # 기술적 조건만으로 매매
 
-        # get_lynch_metrics()를 사용하여 계산된 PEG 포함 모든 지표 가져오기
-        metrics = self.get_lynch_metrics()
-
-        peg = metrics.get('PEG')  # yfinance 또는 계산된 PEG
-        earnings_growth_pct = metrics.get('earnings_growth')  # 성장률 (%)
+        # DART API 사용 (한국 주식) 또는 yfinance fallback
+        if self.is_korean and self.dart_client:
+            metrics = self.dart_client.get_metrics_at_date(
+                self.ticker.replace('.KS', '').replace('.KQ', ''),
+                as_of_date
+            )
+            if metrics and not metrics.get('error'):
+                peg = metrics.get('peg')
+                earnings_growth_pct = metrics.get('earnings_growth_yoy')
+            else:
+                # DART 실패 시 yfinance fallback
+                lynch_metrics = self.get_lynch_metrics()
+                peg = lynch_metrics.get('PEG')
+                earnings_growth_pct = lynch_metrics.get('earnings_growth')
+        else:
+            # 미국 주식은 yfinance 사용
+            lynch_metrics = self.get_lynch_metrics()
+            peg = lynch_metrics.get('PEG')
+            earnings_growth_pct = lynch_metrics.get('earnings_growth')
 
         # PEG 있으면 (yfinance 제공 또는 계산됨) PEG와 성장률 모두 체크
         if peg and peg > 0:
@@ -760,9 +790,25 @@ class FundamentalAnalyzer:
         if applicable_quarter is None:
             return False
 
-        info = self.get_info()
-        pb = info.get('priceToBook', None)
-        current_ratio = info.get('currentRatio', None)
+        # DART API 사용 (한국 주식) 또는 yfinance fallback
+        if self.is_korean and self.dart_client:
+            metrics = self.dart_client.get_metrics_at_date(
+                self.ticker.replace('.KS', '').replace('.KQ', ''),
+                as_of_date
+            )
+            if metrics and not metrics.get('error'):
+                pb = metrics.get('pbr')
+                current_ratio = metrics.get('current_ratio')
+            else:
+                # DART 실패 시 yfinance fallback
+                info = self.get_info()
+                pb = info.get('priceToBook', None)
+                current_ratio = info.get('currentRatio', None)
+        else:
+            # 미국 주식은 yfinance 사용
+            info = self.get_info()
+            pb = info.get('priceToBook', None)
+            current_ratio = info.get('currentRatio', None)
 
         # P/B 있으면: 둘 다 체크, 없으면: current_ratio만 체크
         if pb is not None:
