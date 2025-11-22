@@ -14,10 +14,12 @@
     "chart.js": "^4.5.1",
     "date-fns": "^3.0.6",
     "framer-motion": "^12.23.24",
+    "lightweight-charts": "^5.0.9",
     "lucide-react": "^0.309.0",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.9.6",
     "recharts": "^2.10.3",
     "zustand": "^4.4.7"
   },

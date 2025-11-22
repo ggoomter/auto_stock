@@ -16,9 +16,9 @@ pandas>=2.2.0
 scipy>=1.13.0
 
 # Technical analysis
-# Note: pandas-ta must be installed separately with --no-deps
-# pip install --no-deps pandas-ta==0.4.71b0
-# (pandas-ta is not in requirements.txt due to numba Python 3.14 incompatibility)
+# Python 3.11: pandas-ta-classic (community fork)
+# Python 3.12+: pandas-ta (official, requires Python 3.12+)
+pandas-ta-classic>=0.3.37
 
 # Finance data
 yfinance>=0.2.50

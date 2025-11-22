@@ -2,7 +2,26 @@
   "permissions": {
     "allow": [
       "Bash(backend\\venv\\Scripts\\python.exe:*)",
-      "Bash(\"backend/venv/Scripts/python.exe\" test_samsung_data.py)"
+      "Bash(\"backend/venv/Scripts/python.exe\" test_samsung_data.py)",
+      "Bash(dir /B C:UsersggoomOneDrive문서auto_stock*.bat)",
+      "Bash(dir /B C:UsersggoomOneDrive문서auto_stocktest_*.py)",
+      "Bash(\"venv/Scripts/python.exe\" -m pip:*)",
+      "Bash(\"venv/Scripts/python.exe\" -m pip install pandas_ta)",
+      "Bash(\"venv/Scripts/python.exe\" --version)",
+      "Bash(\"venv/Scripts/python.exe\" -m pip install --no-deps pandas-ta)",
+      "Bash(\"venv/Scripts/python.exe\" -m pip search pandas-ta)",
+      "Bash(\"venv/Scripts/python.exe\" -m pip install \"pandas-ta<0.4\")",
+      "Bash(\"venv/Scripts/python.exe\" -m pip install \"pandas-ta==0.3.14b\")",
+      "Bash(\"venv/Scripts/python.exe\" -m pip install git+https://github.com/twopirllc/pandas-ta.git)",
+      "Bash(\"venv/Scripts/python.exe\" -m pip list)",
+      "Bash(\"venv/Scripts/python.exe\" -c \"import sys; print(sys.version); import pandas as pd; print(f''pandas: {pd.__version__}'')\")",
+      "Bash(\"venv/Scripts/python.exe\" -m pip install pandas-ta --upgrade --force-reinstall)",
+      "WebSearch",
+      "Bash(\"venv/Scripts/python.exe\" -m pip install pandas-ta-classic)",
+      "Bash(\"venv/Scripts/python.exe\" -c \"import pandas_ta as ta; print(''pandas_ta 설치 성공!''); print(f''버전: {ta.__version__}'')\")",
+      "Bash(\"venv/Scripts/python.exe\":*)",
+      "Bash(taskkill:*)",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

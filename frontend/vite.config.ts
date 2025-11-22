@@ -11,13 +11,13 @@ export default defineConfig({
     },
   },
   server: {
-    port: 4783,
+    port: 5173,
     host: "localhost",
     open: false,
     strictPort: true,  // 포트가 사용 중이면 에러 발생 (자동 변경 방지)
     proxy: {
       "/api": {
-        target: "http://localhost:8650",
+        target: "http://localhost:8000",
         changeOrigin: true,
       },
     },
