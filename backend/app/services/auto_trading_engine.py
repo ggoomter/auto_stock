@@ -20,6 +20,13 @@ from .advanced_risk_manager import AdvancedRiskManager, RiskLevel
 from .broker_api import KoreaInvestmentAPI
 from .realtime_data import RealtimeDataCollector
 from .position_manager import PositionManager
+from .position_scaling import (
+    PositionScalingManager,
+    ScalingConfig,
+    ScalingType,
+    ExitStrategy
+)
+from .stock_screener import StockScreener, ScreenerType
 
 
 class TradingMode(Enum):
@@ -102,6 +109,18 @@ class AutoTradingConfig:
     # 시간 설정
     trading_hours: Dict[str, str] = None  # {"start": "09:00", "end": "15:30"}
 
+    # 분할 매수/매도 설정 (신규!)
+    use_position_scaling: bool = True              # 분할 매수/매도 활성화
+    scaling_type: ScalingType = ScalingType.DCA    # DCA, PYRAMID, GRID
+    num_entries: int = 3                           # 분할 매수 횟수
+    entry_interval_pct: float = 2.0                # 추가 매수 간격 (%)
+    exit_strategy: ExitStrategy = ExitStrategy.FIXED_LEVELS
+
+    # 종목 발굴 설정 (신규!)
+    use_stock_screener: bool = True                # 자동 종목 발굴
+    screener_type: ScreenerType = ScreenerType.BUFFETT  # 스크리너 유형
+    screener_update_hours: int = 24                # 스크리닝 주기 (시간)
+
     def __post_init__(self):
         if self.enabled_strategies is None:
             self.enabled_strategies = ["buffett", "lynch", "custom"]
@@ -128,6 +147,13 @@ class AutoTradingEngine:
         self.position_manager = PositionManager()
         self.broker_api = KoreaInvestmentAPI() if self.config.mode == TradingMode.LIVE else None
 
+        # 분할 매수/매도 관리자 (신규!)
+        self.scaling_manager = PositionScalingManager()
+
+        # 종목 스크리너 (신규!)
+        self.stock_screener = StockScreener()
+        self.last_screening_time: Optional[datetime] = None
+
         # 전략 파서
         self.strategy_parsers: Dict[str, StrategyParser] = {}
         self.master_strategies = MASTER_STRATEGIES
@@ -149,6 +175,8 @@ class AutoTradingEngine:
         self.watchlist: List[str] = []
 
         logger.info(f"자동매매 엔진 초기화 (모드: {self.config.mode.value})")
+        logger.info(f"분할 매수/매도: {'활성화' if self.config.use_position_scaling else '비활성화'}")
+        logger.info(f"자동 종목 발굴: {'활성화' if self.config.use_stock_screener else '비활성화'}")
 
     async def start(self, symbols: List[str] = None):
         """자동매매 시작"""
@@ -172,6 +200,10 @@ class AutoTradingEngine:
             asyncio.create_task(self._manage_positions()),
             asyncio.create_task(self._risk_monitor())
         ]
+
+        # 자동 종목 발굴 태스크 추가 (선택적)
+        if self.config.use_stock_screener:
+            tasks.append(asyncio.create_task(self._auto_stock_discovery()))
 
         try:
             await asyncio.gather(*tasks)
@@ -881,3 +913,59 @@ class AutoTradingEngine:
             "max_drawdown": max_drawdown,
             "total_pnl": trades['pnl'].sum()
         }
+
+    async def _auto_stock_discovery(self):
+        """자동 종목 발굴 (백그라운드)"""
+        while self.is_running:
+            try:
+                # 스크리닝 주기 확인
+                should_screen = False
+                if self.last_screening_time is None:
+                    should_screen = True
+                else:
+                    hours_since_last = (datetime.now() - self.last_screening_time).total_seconds() / 3600
+                    if hours_since_last >= self.config.screener_update_hours:
+                        should_screen = True
+
+                if should_screen:
+                    logger.info("🔍 자동 종목 발굴 시작")
+
+                    # 스크리닝할 종목 풀 (예: S&P 500, KOSPI 200 등)
+                    # 여기서는 간단하게 watchlist를 사용
+                    symbols_to_screen = self.watchlist if self.watchlist else [
+                        "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA",
+                        "NVDA", "META", "BRK-B", "JPM", "V",
+                        "005930.KS", "000660.KS", "035720.KS"  # 삼성전자, SK하이닉스, 카카오
+                    ]
+
+                    # 스크리닝 실행
+                    best_stocks = self.stock_screener.screen_stocks(
+                        symbols=symbols_to_screen,
+                        screener_type=self.config.screener_type,
+                        top_n=5
+                    )
+
+                    if best_stocks:
+                        logger.info(f"✅ {len(best_stocks)}개 우량 종목 발견:")
+                        for i, stock in enumerate(best_stocks, 1):
+                            logger.info(
+                                f"  {i}. {stock.symbol} ({stock.name}) - "
+                                f"점수: {stock.score:.1f}, "
+                                f"PER: {stock.pe_ratio:.1f if stock.pe_ratio else 'N/A'}, "
+                                f"ROE: {stock.roe:.1f if stock.roe else 'N/A'}%"
+                            )
+
+                        # watchlist에 자동 추가 (중복 제거)
+                        for stock in best_stocks:
+                            if stock.symbol not in self.watchlist:
+                                self.watchlist.append(stock.symbol)
+                                logger.info(f"  → {stock.symbol} watchlist에 추가")
+
+                    self.last_screening_time = datetime.now()
+
+                # 다음 스크리닝까지 대기 (1시간)
+                await asyncio.sleep(3600)
+
+            except Exception as e:
+                logger.error(f"자동 종목 발굴 오류: {e}")
+                await asyncio.sleep(3600)
