@@ -288,27 +288,25 @@ class AutoTradingEngine:
         if strategy_name in self.master_strategies:
             strategy = self.master_strategies[strategy_name]
 
-            # 백테스트 엔진으로 조건 확인
-            backtest = BacktestEngine(
-                symbols=[symbol],
-                start_date=(datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'),
-                end_date=datetime.now().strftime('%Y-%m-%d'),
-                initial_capital=self.config.total_capital
-            )
-
-            # 조건 충족 확인
-            is_signal = backtest._evaluate_condition(
-                strategy.entry_condition, data.iloc[-1], data
-            )
+            # 전략 실행 (시그널 생성)
+            try:
+                entry_signals, _ = strategy.generate_signals(symbol, data)
+                is_signal = entry_signals.iloc[-1] if not entry_signals.empty else False
+            except Exception as e:
+                logger.error(f"전략 실행 오류 ({strategy_name}): {e}")
+                is_signal = False
 
             if is_signal:
+                # 리스크 파라미터 가져오기
+                risk_params = strategy.get_risk_params()
+                
                 # 포지션 크기 계산
                 sizing_result = self.risk_manager.calculate_position_size(
                     symbol=symbol,
                     entry_price=current_price,
-                    stop_loss=current_price * (1 - strategy.stop_loss_pct / 100),
-                    strategy_win_rate=0.5,  # 기본값
-                    avg_win_loss_ratio=2.0,  # 기본값
+                    stop_loss=current_price * (1 - risk_params.stop_pct),
+                    strategy_win_rate=0.5,  # 추후 백테스트 결과 연동 필요
+                    avg_win_loss_ratio=2.0,
                     current_positions=list(self.active_positions.values())
                 )
 
@@ -317,11 +315,11 @@ class AutoTradingEngine:
                     symbol=symbol,
                     action="buy",
                     strategy_name=strategy_name,
-                    confidence=0.8,  # 신뢰도 계산 필요
+                    confidence=0.8,
                     entry_price=current_price,
-                    stop_loss=sizing_result.stop_loss_price,
-                    take_profit=sizing_result.take_profit_price,
-                    position_size=sizing_result.recommended_shares,
+                    stop_loss=sizing_result.손절가,
+                    take_profit=sizing_result.목표가,
+                    position_size=sizing_result.추천_주식수,
                     reason=f"{strategy_name} 진입 조건 충족"
                 )
 
@@ -376,15 +374,13 @@ class AutoTradingEngine:
         if strategy_name in self.master_strategies:
             strategy = self.master_strategies[strategy_name]
 
-            backtest = BacktestEngine(
-                symbols=[symbol],
-                start_date=(datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'),
-                end_date=datetime.now().strftime('%Y-%m-%d')
-            )
-
-            is_exit = backtest._evaluate_condition(
-                strategy.exit_condition, data.iloc[-1], data
-            )
+            # 전략 실행 (청산 시그널 확인)
+            try:
+                _, exit_signals = strategy.generate_signals(symbol, data)
+                is_exit = exit_signals.iloc[-1] if not exit_signals.empty else False
+            except Exception as e:
+                logger.error(f"전략 실행 오류 ({strategy_name}): {e}")
+                is_exit = False
 
             if is_exit:
                 return TradingSignal(
@@ -915,7 +911,7 @@ class AutoTradingEngine:
         }
 
     async def _auto_stock_discovery(self):
-        """자동 종목 발굴 (백그라운드)"""
+        """자동 종목 발굴 (백그라운드) - 전체 시장 스캔"""
         while self.is_running:
             try:
                 # 스크리닝 주기 확인
@@ -928,19 +924,12 @@ class AutoTradingEngine:
                         should_screen = True
 
                 if should_screen:
-                    logger.info("🔍 자동 종목 발굴 시작")
+                    logger.info("🔍 자동 종목 발굴 시작 (전체 시장 스캔)")
 
-                    # 스크리닝할 종목 풀 (예: S&P 500, KOSPI 200 등)
-                    # 여기서는 간단하게 watchlist를 사용
-                    symbols_to_screen = self.watchlist if self.watchlist else [
-                        "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA",
-                        "NVDA", "META", "BRK-B", "JPM", "V",
-                        "005930.KS", "000660.KS", "035720.KS"  # 삼성전자, SK하이닉스, 카카오
-                    ]
-
-                    # 스크리닝 실행
-                    best_stocks = self.stock_screener.screen_stocks(
-                        symbols=symbols_to_screen,
+                    # 전체 시장 스크리닝 (KOSPI + KOSDAQ)
+                    # screener_type은 설정에 따름
+                    best_stocks = self.stock_screener.screen_market(
+                        market="ALL",
                         screener_type=self.config.screener_type,
                         top_n=5
                     )
@@ -960,7 +949,8 @@ class AutoTradingEngine:
                             if stock.symbol not in self.watchlist:
                                 self.watchlist.append(stock.symbol)
                                 logger.info(f"  → {stock.symbol} watchlist에 추가")
-
+                    
+                    # 스크리닝 시간 업데이트
                     self.last_screening_time = datetime.now()
 
                 # 다음 스크리닝까지 대기 (1시간)

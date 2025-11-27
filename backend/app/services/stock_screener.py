@@ -17,6 +17,8 @@ import yfinance as yf
 from datetime import datetime, timedelta
 
 from ..core.logging_config import logger
+from .korean_stock_data import get_korean_stock_fetcher
+
 
 
 class ScreenerType(Enum):
@@ -226,6 +228,87 @@ class StockScreener:
         logger.info(f"스크리닝 완료: {len(results)}개 종목 발견")
 
         return results[:top_n]
+
+    def screen_market(
+        self,
+        market: str = "ALL",
+        screener_type: ScreenerType = ScreenerType.BUFFETT,
+        top_n: int = 10
+    ) -> List[StockScore]:
+        """
+        전체 시장 스크리닝 (Bulk Data 사용으로 고속 처리)
+        
+        Args:
+            market: "KOSPI", "KOSDAQ", "ALL"
+            screener_type: 스크리너 유형
+            top_n: 상위 N개 종목
+            
+        Returns:
+            StockScore 리스트
+        """
+        logger.info(f"전체 시장 스크리닝 시작 ({market}, {screener_type.value})")
+        
+        fetcher = get_korean_stock_fetcher()
+        
+        # 1. 전체 펀더멘털 데이터 가져오기 (고속)
+        df = fetcher.get_market_fundamentals(market=market)
+        if df.empty:
+            logger.warning("시장 데이터를 가져올 수 없습니다.")
+            return []
+            
+        # 2. 1차 필터링 (Vectorized)
+        criteria = PRESET_SCREENERS.get(screener_type, ScreenerCriteria())
+        
+        # PER 필터
+        if criteria.max_pe:
+            df = df[df['PER'] <= criteria.max_pe]
+        if criteria.min_pe:
+            df = df[df['PER'] >= criteria.min_pe]
+            
+        # PBR 필터
+        if criteria.max_pb:
+            df = df[df['PBR'] <= criteria.max_pb]
+            
+        # 배당수익률 필터
+        if criteria.min_dividend_yield:
+            df = df[df['DIV'] >= criteria.min_dividend_yield]
+            
+        # ROE 필터 (PyKrx 데이터에는 ROE가 없을 수 있음, 있으면 필터링)
+        if 'ROE' in df.columns and criteria.min_roe:
+            df = df[df['ROE'] >= criteria.min_roe / 100.0] # PyKrx ROE 단위 확인 필요
+            
+        candidates = df.index.tolist()
+        logger.info(f"1차 필터링 결과: {len(candidates)}개 종목")
+        
+        # 3. 후보군에 대해 상세 분석 (기존 로직 재사용)
+        # 너무 많으면 상위 50개만 분석 (시가총액 순 등 정렬이 필요하지만 여기선 단순 절삭)
+        if len(candidates) > 50:
+            # PBR이나 PER 순으로 정렬해서 자르기
+            if screener_type in [ScreenerType.VALUE, ScreenerType.BUFFETT, ScreenerType.GRAHAM]:
+                # 저평가 순
+                candidates = df.sort_values(by='PER').head(50).index.tolist()
+            else:
+                candidates = candidates[:50]
+                
+        # 종목 코드에 .KS, .KQ 붙이기
+        final_candidates = []
+        for ticker in candidates:
+            if market == "KOSPI":
+                final_candidates.append(f"{ticker}.KS")
+            elif market == "KOSDAQ":
+                final_candidates.append(f"{ticker}.KQ")
+            else:
+                # market 정보가 df에 있으면 사용
+                if 'market' in df.columns:
+                    m = df.loc[ticker, 'market']
+                    suffix = ".KS" if m == "KOSPI" else ".KQ"
+                    final_candidates.append(f"{ticker}{suffix}")
+                else:
+                    # 모르면 둘 다 시도하거나 생략
+                    final_candidates.append(f"{ticker}.KS")
+
+        return self.screen_stocks(final_candidates, screener_type, top_n=top_n)
+
 
     def _get_stock_data(self, symbol: str) -> Optional[Dict]:
         """종목 데이터 가져오기 (캐싱)"""

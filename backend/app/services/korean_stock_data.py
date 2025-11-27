@@ -117,6 +117,79 @@ class KoreanStockDataFetcher:
 
         return None
 
+    def get_all_tickers(self, market: str = "ALL") -> List[str]:
+        """
+        전체 종목 코드 리스트 가져오기 (PyKrx)
+        
+        Args:
+            market: "KOSPI", "KOSDAQ", "ALL"
+            
+        Returns:
+            종목 코드 리스트 (예: ["005930", "000660", ...])
+        """
+        if not PYKRX_AVAILABLE:
+            logger.warning("PyKrx 미설치로 기본 종목만 반환합니다.")
+            return ["005930", "000660", "035420", "035720", "051910"]
+            
+        try:
+            tickers = []
+            if market in ["KOSPI", "ALL"]:
+                tickers.extend(stock.get_market_ticker_list(market="KOSPI"))
+            if market in ["KOSDAQ", "ALL"]:
+                tickers.extend(stock.get_market_ticker_list(market="KOSDAQ"))
+                
+            return sorted(list(set(tickers)))
+        except Exception as e:
+            logger.error(f"종목 리스트 가져오기 실패: {e}")
+            return []
+
+    def get_market_fundamentals(self, date: str = None, market: str = "ALL") -> pd.DataFrame:
+        """
+        시장 전체 펀더멘털 데이터 한 번에 가져오기 (PyKrx)
+        
+        Args:
+            date: 조회 날짜 (YYYYMMDD), None이면 오늘
+            market: "KOSPI", "KOSDAQ", "ALL"
+            
+        Returns:
+            DataFrame columns: [BPS, PER, PBR, EPS, DIV, DPS]
+        """
+        if not PYKRX_AVAILABLE:
+            return pd.DataFrame()
+            
+        try:
+            if date is None:
+                date = datetime.now().strftime("%Y%m%d")
+                
+            # KOSPI & KOSDAQ 데이터 병합
+            dfs = []
+            if market in ["KOSPI", "ALL"]:
+                df_kospi = stock.get_market_fundamental_by_ticker(date=date, market="KOSPI")
+                df_kospi['market'] = 'KOSPI'
+                dfs.append(df_kospi)
+                
+            if market in ["KOSDAQ", "ALL"]:
+                df_kosdaq = stock.get_market_fundamental_by_ticker(date=date, market="KOSDAQ")
+                df_kosdaq['market'] = 'KOSDAQ'
+                dfs.append(df_kosdaq)
+                
+            if not dfs:
+                return pd.DataFrame()
+                
+            full_df = pd.concat(dfs)
+            
+            # 0을 NaN으로 변환 (PER=0 등)
+            cols_to_check = ['PER', 'PBR', 'ROE', 'DIV']
+            for col in cols_to_check:
+                if col in full_df.columns:
+                    full_df[col] = full_df[col].replace(0, float('nan'))
+                    
+            return full_df
+            
+        except Exception as e:
+            logger.error(f"시장 전체 데이터 가져오기 실패: {e}")
+            return pd.DataFrame()
+
     def _enhance_samsung_data(self, data: Dict[str, Any], ticker_code: str) -> Dict[str, Any]:
         """
         삼성전자 데이터 보강
