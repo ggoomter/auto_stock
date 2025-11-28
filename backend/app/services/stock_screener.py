@@ -197,21 +197,26 @@ class StockScreener:
         # 조건 설정
         criteria = custom_criteria or PRESET_SCREENERS.get(screener_type, ScreenerCriteria())
 
+        # 데이터 수집 (Batch Optimization)
+        fetcher = get_korean_stock_fetcher()
+        stocks_data = fetcher.get_multiple_stocks_data(symbols)
+
         # 각 종목 분석
         results = []
-        for symbol in symbols:
+        for symbol, data in stocks_data.items():
             try:
-                # 데이터 가져오기
-                data = self._get_stock_data(symbol)
                 if not data:
                     continue
 
+                # 데이터 매핑 (Fetcher -> Screener format)
+                mapped_data = self._map_fetcher_data(symbol, data)
+
                 # 조건 확인
-                if not self._meets_criteria(data, criteria):
+                if not self._meets_criteria(mapped_data, criteria):
                     continue
 
                 # 점수 계산
-                score = self._calculate_score(data, screener_type)
+                score = self._calculate_score(mapped_data, screener_type)
                 results.append(score)
 
             except Exception as e:
@@ -228,6 +233,42 @@ class StockScreener:
         logger.info(f"스크리닝 완료: {len(results)}개 종목 발견")
 
         return results[:top_n]
+
+    def _map_fetcher_data(self, symbol: str, data: Dict) -> Dict:
+        """Fetcher 데이터를 Screener 내부 포맷으로 변환"""
+        metrics = data.get('metrics', {})
+        
+        # ROE 단위 보정 (0.15 -> 15.0)
+        roe = metrics.get("ROE")
+        if roe and roe < 1.0: roe *= 100
+        
+        # 순이익률 단위 보정
+        margin = metrics.get("net_margin")
+        if margin and margin < 1.0: margin *= 100
+        
+        # 부채비율 단위 보정 (0.5 -> 50.0)
+        debt = metrics.get("debt_to_equity")
+        if debt and debt < 10.0: debt *= 100 # 보통 100% 이상도 나오므로 10 미만이면 소수점으로 간주
+
+        return {
+            "symbol": symbol,
+            "name": data.get("name", symbol),
+            "current_price": data.get("current_price", 0),
+            "market_cap": data.get("market_cap"),
+            "pe_ratio": metrics.get("PE"),
+            "pb_ratio": metrics.get("PB"),
+            "roe": roe,
+            "debt_to_equity": debt,
+            "current_ratio": metrics.get("current_ratio"),
+            "profit_margin": margin,
+            "dividend_yield": metrics.get("dividend_yield"), 
+            "revenue_growth": None, # Fetcher에서 제공하지 않을 수 있음
+            "earnings_growth": None,
+            "peg_ratio": None,
+            "52w_high": None, 
+            "price_change_52w": None,
+            "info": data
+        }
 
     def screen_market(
         self,
@@ -311,69 +352,12 @@ class StockScreener:
 
 
     def _get_stock_data(self, symbol: str) -> Optional[Dict]:
-        """종목 데이터 가져오기 (캐싱)"""
-        # 캐시 확인
-        if symbol in self.cache:
-            expiry = self.cache_expiry.get(symbol)
-            if expiry and datetime.now() < expiry:
-                return self.cache[symbol]
-
-        try:
-            ticker = yf.Ticker(symbol)
-            info = ticker.info
-
-            # 필수 데이터 확인
-            if not info or 'currentPrice' not in info:
-                logger.warning(f"데이터 없음: {symbol}")
-                return None
-
-            # 재무제표
-            financials = ticker.financials
-            balance_sheet = ticker.balance_sheet
-            quarterly_financials = ticker.quarterly_financials
-
-            # 가격 데이터 (52주)
-            history = ticker.history(period="1y")
-
-            # 데이터 정리
-            data = {
-                "symbol": symbol,
-                "name": info.get("longName", symbol),
-                "current_price": info.get("currentPrice", 0),
-                "market_cap": info.get("marketCap"),
-                "pe_ratio": info.get("trailingPE"),
-                "forward_pe": info.get("forwardPE"),
-                "pb_ratio": info.get("priceToBook"),
-                "ps_ratio": info.get("priceToSalesTrailing12Months"),
-                "peg_ratio": info.get("pegRatio"),
-                "roe": info.get("returnOnEquity", 0) * 100 if info.get("returnOnEquity") else None,
-                "roa": info.get("returnOnAssets", 0) * 100 if info.get("returnOnAssets") else None,
-                "profit_margin": info.get("profitMargins", 0) * 100 if info.get("profitMargins") else None,
-                "revenue_growth": info.get("revenueGrowth", 0) * 100 if info.get("revenueGrowth") else None,
-                "earnings_growth": info.get("earningsGrowth", 0) * 100 if info.get("earningsGrowth") else None,
-                "debt_to_equity": info.get("debtToEquity"),
-                "current_ratio": info.get("currentRatio"),
-                "dividend_yield": info.get("dividendYield", 0) * 100 if info.get("dividendYield") else None,
-                "payout_ratio": info.get("payoutRatio", 0) * 100 if info.get("payoutRatio") else None,
-                "avg_volume": info.get("averageVolume"),
-                "beta": info.get("beta"),
-                "52w_high": info.get("fiftyTwoWeekHigh"),
-                "52w_low": info.get("fiftyTwoWeekLow"),
-                "price_change_52w": self._calculate_52w_return(history),
-                "info": info,
-                "financials": financials,
-                "balance_sheet": balance_sheet
-            }
-
-            # 캐시 저장
-            self.cache[symbol] = data
-            self.cache_expiry[symbol] = datetime.now() + timedelta(hours=self.cache_duration_hours)
-
-            return data
-
-        except Exception as e:
-            logger.error(f"데이터 가져오기 실패 ({symbol}): {e}")
-            return None
+        """Deprecated: Use fetcher.get_stock_data instead"""
+        fetcher = get_korean_stock_fetcher()
+        data = fetcher.get_stock_data(symbol)
+        if data:
+            return self._map_fetcher_data(symbol, data)
+        return None
 
     def _calculate_52w_return(self, history: pd.DataFrame) -> Optional[float]:
         """52주 수익률 계산"""

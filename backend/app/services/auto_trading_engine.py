@@ -123,9 +123,9 @@ class AutoTradingConfig:
 
     def __post_init__(self):
         if self.enabled_strategies is None:
-            self.enabled_strategies = ["buffett", "lynch", "custom"]
+            self.enabled_strategies = ["buffett", "modern_livermore", "super_momentum"]
         if self.strategy_weights is None:
-            self.strategy_weights = {"buffett": 0.4, "lynch": 0.3, "custom": 0.3}
+            self.strategy_weights = {"buffett": 0.3, "modern_livermore": 0.3, "super_momentum": 0.4}
         if self.trading_hours is None:
             self.trading_hours = {"start": "09:00", "end": "15:30"}
 

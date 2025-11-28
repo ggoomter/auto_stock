@@ -973,6 +973,79 @@ class ChanosStrategy(MasterStrategy):
         )
 
 
+class SuperMomentumStrategy(MasterStrategy):
+    """
+    슈퍼 모멘텀 전략 (Super Momentum)
+
+    핵심 원칙:
+    1. 강력한 상승 추세 (MA20 > MA50 > MA200)
+    2. 52주 신고가 돌파
+    3. 거래량 폭발 (기관 수급)
+    4. 변동성 돌파 (Volatility Breakout)
+
+    목표: "가장 강한 종목에 올라타서 끝까지 먹는다"
+    """
+
+    def __init__(self):
+        super().__init__(
+            name="Super Momentum - Aggressive Trend Following",
+            description="강력한 추세와 거래량을 동반한 급등주 공략"
+        )
+
+    def generate_signals(
+        self,
+        symbol: str,
+        price_data: pd.DataFrame,
+        **kwargs
+    ) -> Tuple[pd.Series, pd.Series]:
+        """
+        진입: 정배열 + 신고가 + 거래량 폭발
+        청산: MA20 이탈 OR Trailing Stop
+        """
+        # TIMEZONE 제거
+        if hasattr(price_data.index, 'tz') and price_data.index.tz is not None:
+            price_data = price_data.copy()
+            price_data.index = price_data.index.tz_localize(None)
+
+        close = _get_close_series(price_data)
+
+        # 이동평균
+        ma20 = close.rolling(20).mean()
+        ma50 = close.rolling(50).mean()
+        ma200 = close.rolling(200).mean()
+
+        # 정배열 확인 (Strong Uptrend)
+        alignment = (ma20 > ma50) & (ma50 > ma200)
+
+        # 52주 신고가
+        rolling_high = close.rolling(252, min_periods=100).max()
+        breakout = close > rolling_high.shift(1)
+
+        # 거래량 폭발 (20일 평균 대비 2배)
+        if 'volume' in price_data.columns:
+            vol_ma20 = price_data['volume'].rolling(20).mean()
+            vol_surge = price_data['volume'] > vol_ma20 * 2.0
+        else:
+            vol_surge = pd.Series([True] * len(price_data), index=price_data.index)
+
+        # 진입 신호
+        entry_signals = alignment & breakout & vol_surge
+
+        # 청산 신호: MA20 하향 이탈 (추세 약화)
+        exit_signals = close < ma20
+
+        return entry_signals, exit_signals
+
+    def get_risk_params(self) -> RiskParams:
+        """공격적 투자 리스크 관리"""
+        return RiskParams(
+            stop_pct=0.07,  # -7% (칼손절)
+            take_pct=0.50,  # +50% (추세 추종)
+            position_sizing="vol_target_20",  # 변동성 기반 비중 조절
+            trailing_pct=0.10  # 10% 트레일링 스탑
+        )
+
+
 # 전략 레지스트리
 MASTER_STRATEGIES = {
     "buffett": BuffettStrategy(),
@@ -985,6 +1058,7 @@ MASTER_STRATEGIES = {
     "oneil": ONeilStrategy(),
     "wood": WoodStrategy(),  # 캐시 우드 - 혁신 기술 투자
     "chanos": ChanosStrategy(),
+    "super_momentum": SuperMomentumStrategy(),  # ✅ 신규 추가
 }
 
 

@@ -21,7 +21,10 @@
       "Bash(\"venv/Scripts/python.exe\" -c \"import pandas_ta as ta; print(''pandas_ta 설치 성공!''); print(f''버전: {ta.__version__}'')\")",
       "Bash(\"venv/Scripts/python.exe\":*)",
       "Bash(taskkill:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
