@@ -64,22 +64,6 @@ class KoreanStockDataFetcher:
             return self.cached_data[symbol]
 
         # yfinance 우선 사용 (더 완전한 데이터)
-        yf_data = self._get_yfinance_data(symbol)
-
-        # PyKrx로 보충 (PER, PBR 등 실시간 데이터)
-        if PYKRX_AVAILABLE and yf_data:
-            pykrx_data = self._get_pykrx_supplement(symbol)
-            if pykrx_data:
-                # PyKrx의 PER, PBR로 업데이트
-                if pykrx_data.get('PE') and not yf_data['metrics'].get('PE'):
-                    yf_data['metrics']['PE'] = pykrx_data['PE']
-                if pykrx_data.get('PB') and not yf_data['metrics'].get('PB'):
-                    yf_data['metrics']['PB'] = pykrx_data['PB']
-
-                logger.info(f"{symbol}: yfinance + PyKrx 데이터 병합 완료")
-
-        # 캐시 저장
-        if yf_data:
             self.cached_data[symbol] = yf_data
             self.cache_timestamp[symbol] = datetime.now().timestamp()
 

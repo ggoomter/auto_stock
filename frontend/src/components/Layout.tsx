@@ -49,12 +49,12 @@ export default function Layout() {
   ];
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'dark:bg-gray-900 dark:text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`flex min-h-screen transition-colors duration-300 ${isDarkMode ? 'dark:bg-gray-900 dark:text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       {/* Sidebar */}
       <aside 
-        className={`fixed top-0 left-0 z-40 h-screen transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 ${
-          isSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'
-        } lg:translate-x-0 lg:static lg:block`}
+        className={`fixed lg:sticky top-0 left-0 z-40 h-screen flex-shrink-0 transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 ${
+          isSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 lg:w-0 lg:translate-x-0 lg:overflow-hidden'
+        }`}
       >
         <div className="h-full flex flex-col">
           <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
@@ -106,7 +106,7 @@ export default function Layout() {
       </aside>
 
       {/* Main Content Wrapper */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isSidebarOpen ? 'lg:ml-0' : ''}`}>
+      <div className="flex-1 flex flex-col min-h-screen min-w-0">
         {/* Header */}
         <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 px-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
