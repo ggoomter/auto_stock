@@ -20,11 +20,31 @@ const AVAILABLE_STRATEGIES = [
   { id: 'oneil', name: '윌리엄 오닐', description: 'CAN SLIM' }
 ];
 
+interface SymbolInfo {
+  symbol: string;
+  name?: string;
+}
+
 export default function ComparisonPage() {
+  // 올해 1월 1일부터 오늘까지 기본값 설정
+  const getDefaultStartDate = () => {
+    const today = new Date();
+    return `${today.getFullYear()}-01-01`;
+  };
+  
+  const getDefaultEndDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>(['buffett', 'lynch', 'graham']);
   const [symbols, setSymbols] = useState<string[]>(['AAPL']);
-  const [startDate, setStartDate] = useState('2020-01-01');
-  const [endDate, setEndDate] = useState('2024-12-31');
+  const [symbolNames, setSymbolNames] = useState<Record<string, string>>({});
+  const [startDate, setStartDate] = useState(getDefaultStartDate());
+  const [endDate, setEndDate] = useState(getDefaultEndDate());
   const [initialCapital, setInitialCapital] = useState(1000000);
   const [results, setResults] = useState<StrategyComparisonResponse | null>(null);
 
@@ -124,16 +144,24 @@ export default function ComparisonPage() {
             <div className="flex gap-2 flex-wrap mb-2">
               {symbols.map(sym => (
                 <div key={sym} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2">
-                  {sym}
-                  <button onClick={() => setSymbols(symbols.filter(s => s !== sym))} className="text-blue-600 hover:text-blue-800">✕</button>
+                  {symbolNames[sym] ? `${symbolNames[sym]} (${sym})` : sym}
+                  <button onClick={() => {
+                    setSymbols(symbols.filter(s => s !== sym));
+                    const newNames = { ...symbolNames };
+                    delete newNames[sym];
+                    setSymbolNames(newNames);
+                  }} className="text-blue-600 hover:text-blue-800">✕</button>
                 </div>
               ))}
             </div>
             <StockAutocomplete
               value=""
-              onChange={(symbol) => {
+              onChange={(symbol, stockName) => {
                 if (symbol && !symbols.includes(symbol)) {
                   setSymbols([...symbols, symbol]);
+                  if (stockName) {
+                    setSymbolNames({ ...symbolNames, [symbol]: stockName });
+                  }
                 }
               }}
             />

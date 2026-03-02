@@ -14,7 +14,7 @@
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700;
+    @apply bg-primary-600 text-white hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {

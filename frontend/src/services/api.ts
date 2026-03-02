@@ -67,6 +67,14 @@ export interface AnalysisResponse {
       TotalTrades?: number;
       WinTrades?: number;
       LossTrades?: number;
+      statistical_significance?: {
+        confidence: string;
+        warning?: string;
+        p_value?: number;
+        t_statistic?: number;
+        mean_return_pct?: number;
+      };
+      min_trades_warning?: string;
     };
     cost_assumptions_bps: Record<string, number>;
     equity_curve_ref?: string;
@@ -175,6 +183,14 @@ export interface MasterStrategyResponse {
       TotalTrades?: number;
       WinTrades?: number;
       LossTrades?: number;
+      statistical_significance?: {
+        confidence: string;
+        warning?: string;
+        p_value?: number;
+        t_statistic?: number;
+        mean_return_pct?: number;
+      };
+      min_trades_warning?: string;
     };
     cost_assumptions_bps: Record<string, number>;
     equity_curve_ref?: string;

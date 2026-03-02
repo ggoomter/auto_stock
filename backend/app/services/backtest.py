@@ -1,10 +1,10 @@
 ﻿"""
-Backtesting engine for rule-based strategies with realistic execution and risk controls.
+규칙 기반 전략을 위한 현실적인 실행 및 리스크 제어 기능을 갖춘 백테스팅 엔진.
 """
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -22,37 +22,43 @@ def _holding_days(entry_date: pd.Timestamp, exit_date: pd.Timestamp) -> int:
 
 
 class BacktestEngine:
-    """Backtest execution engine with risk guardrails."""
+    """리스크 가드레일이 포함된 백테스트 실행 엔진."""
 
     def __init__(
         self,
-        data: pd.DataFrame,
-        entry_signals: pd.Series,
-        exit_signals: pd.Series,
+        data: Union[pd.DataFrame, Dict[str, pd.DataFrame]],
+        entry_signals: Union[pd.Series, Dict[str, pd.Series]],
+        exit_signals: Union[pd.Series, Dict[str, pd.Series]],
         risk_params: RiskParams,
         transaction_cost_bps: int = 10,
         slippage_bps: int = 5,
         initial_capital: float = 100000.0,
         is_korean_stock: bool = False,
+        korean_sell_tax_bps: int = 23,
     ) -> None:
-        if data.empty:
-            raise ValueError("Price data is empty.")
+        # 단일 종목일 경우 딕셔너리로 변환하여 통일된 처리
+        if isinstance(data, pd.DataFrame):
+            self.data = {"DEFAULT": data.sort_index().copy()}
+            self.entry_signals = {"DEFAULT": entry_signals.reindex(data.index, fill_value=False).astype(bool)}
+            self.exit_signals = {"DEFAULT": exit_signals.reindex(data.index, fill_value=False).astype(bool)}
+        else:
+            self.data = {k: v.sort_index().copy() for k, v in data.items()}
+            self.entry_signals = {k: v.reindex(self.data[k].index, fill_value=False).astype(bool) for k, v in entry_signals.items()}
+            self.exit_signals = {k: v.reindex(self.data[k].index, fill_value=False).astype(bool) for k, v in exit_signals.items()}
 
-        self.data = data.sort_index().copy()
-        self.entry_signals = entry_signals.reindex(self.data.index, fill_value=False).astype(bool)
-        self.exit_signals = exit_signals.reindex(self.data.index, fill_value=False).astype(bool)
+        if not self.data:
+            raise ValueError("가격 데이터가 비어있습니다.")
+
         self.risk_params = risk_params
         self.transaction_cost = transaction_cost_bps / 10000.0
         self.slippage = slippage_bps / 10000.0
         self.initial_capital = float(initial_capital)
         self.is_korean_stock = is_korean_stock
+        self.korean_sell_tax = korean_sell_tax_bps / 10000.0 if is_korean_stock else 0.0
 
-        (
-            self.close_col,
-            self.open_col,
-            self.high_col,
-            self.low_col,
-        ) = self._resolve_price_columns(self.data)
+        # 모든 종목의 날짜 합집합 생성 (전체 타임라인)
+        all_dates = sorted(list(set().union(*[df.index for df in self.data.values()])))
+        self.dates = pd.DatetimeIndex(all_dates)
 
         self.trades: List[Dict[str, Any]] = []
         self.equity_curve: Optional[pd.Series] = None
@@ -67,21 +73,24 @@ class BacktestEngine:
 
     def run(self) -> Tuple[BacktestMetrics, pd.Series, Dict[str, Any]]:
         logger.info(
-            "Backtest started for period %s → %s",
-            self.data.index[0].date(),
-            self.data.index[-1].date(),
+            "백테스트 시작: %s → %s",
+            self.dates[0].date(),
+            self.dates[-1].date(),
         )
 
         cash = float(self.initial_capital)
         equity = float(self.initial_capital)
         previous_equity = equity
 
-        position: Optional[Dict[str, Any]] = None
-        pending_entry_idx: Optional[int] = None
-        pending_entry_fraction: float = 0.0
-        pending_exit_idx: Optional[int] = None
-        cooldown = 0
-        consecutive_losses = 0
+        # 포트폴리오 상태 관리: {symbol: position_dict}
+        positions: Dict[str, Dict[str, Any]] = {}
+        
+        # 각 종목별 상태
+        pending_entries: Dict[str, Dict[str, Any]] = {} # {symbol: {idx, fraction}}
+        pending_exits: Dict[str, int] = {} # {symbol: idx}
+        cooldowns: Dict[str, int] = {sym: 0 for sym in self.data.keys()}
+        consecutive_losses: Dict[str, int] = {sym: 0 for sym in self.data.keys()}
+        
         max_consecutive_losses_observed = 0
         trading_halted = False
         halt_reason: Optional[str] = None
@@ -94,163 +103,54 @@ class BacktestEngine:
         drawdown_halt_level = self.initial_capital * (1 - self.risk_params.max_portfolio_drawdown_pct)
         scale_down_level = self.initial_capital * (1 - self.risk_params.scale_down_after_drawdown_pct)
 
-        dates = self.data.index
+        # 컬럼 매핑 캐싱
+        col_maps = {sym: self._resolve_price_columns(df) for sym, df in self.data.items()}
 
-        for i, date in enumerate(dates):
-            row = self.data.iloc[i]
-            open_price = float(row[self.open_col])
-            high_price = float(row[self.high_col])
-            low_price = float(row[self.low_col])
-            close_price = float(row[self.close_col])
+        for current_date in self.dates:
+            # 1. 현재 자산 평가 (Mark to Market)
+            portfolio_value = 0.0
+            for sym, pos in positions.items():
+                # 해당 날짜의 종가가 있으면 업데이트, 없으면 이전 가치 유지 (또는 0)
+                # 여기서는 간단히 해당 날짜 데이터가 없으면 이전 종가(pos에 저장된)를 사용한다고 가정하거나
+                # 데이터가 있는 경우에만 업데이트.
+                if current_date in self.data[sym].index:
+                    row = self.data[sym].loc[current_date]
+                    close_col = col_maps[sym][0]
+                    current_price = float(row[close_col])
+                    portfolio_value += pos["shares"] * current_price
+                else:
+                    # 데이터가 없는 날(휴장일 등)은 직전 평가액 유지
+                    # 정확한 처리를 위해선 forward fill된 데이터가 필요하지만,
+                    # 여기서는 entry_price 등으로 추정하기보다 직전 루프의 가격을 저장해두는 것이 좋음.
+                    # 편의상 현재는 보수적으로 진입가 또는 직전 평가가 사용
+                    # (실제로는 데이터 전처리가 되어있어야 함)
+                    pass 
+            
+            # 정확한 일별 Equity 계산을 위해, 데이터가 있는 종목만 업데이트하고 나머지는 유지해야 함.
+            # 하지만 구조상 loop 안에서 처리하므로, 아래 로직에서 개별 종목 처리 후 합산.
+            
+            daily_equity = cash
+            for sym, pos in positions.items():
+                if current_date in self.data[sym].index:
+                    row = self.data[sym].loc[current_date]
+                    close_col = col_maps[sym][0]
+                    price = float(row[close_col])
+                    daily_equity += pos["shares"] * price
+                else:
+                    # 데이터 없는 날은 이전 가격 기준 가치 (대략적)
+                    # pos에 'last_price'를 저장해두면 좋음
+                    daily_equity += pos["shares"] * pos.get("last_close", pos["entry_price"])
 
-            if any(pd.isna(v) for v in (open_price, high_price, low_price, close_price)):
-                warning = f"{date.date()} skipped due to missing OHLC data."
-                self.warnings.append(warning)
-                equity_history.append(equity)
-                self.daily_returns.append(0.0)
-                continue
-
+            equity = daily_equity
+            
+            # 2. 리스크 체크 (Drawdown)
             if not trading_halted and equity <= drawdown_halt_level:
                 trading_halted = True
                 halt_reason = (
-                    f"Trading halted on {date.date()} after reaching max drawdown "
+                    f"{current_date.date()} 최대 낙폭 도달로 거래 중지 "
                     f"{1 - equity / self.initial_capital:.2%}."
                 )
                 self.warnings.append(halt_reason)
-
-            if position and pending_exit_idx == i:
-                exit_price = self._execute_exit_price(open_price)
-                cash, equity, pnl, pnl_pct = self._close_position(position, exit_price, date, "exit_signal_open", cash)
-                position = None
-                pending_exit_idx = None
-                if pnl <= 0 and self.risk_params.cooldown_days_after_loss > 0:
-                    cooldown = max(cooldown, self.risk_params.cooldown_days_after_loss)
-                consecutive_losses = 0 if pnl > 0 else consecutive_losses + 1
-                max_consecutive_losses_observed = max(max_consecutive_losses_observed, consecutive_losses)
-
-            if position is None and pending_entry_idx == i and not trading_halted and cooldown == 0:
-                entry_price = self._execute_entry_price(open_price)
-                shares, capital_used, _ = self._determine_shares(
-                    cash,
-                    equity,
-                    entry_price,
-                    pending_entry_fraction,
-                    size_multiplier,
-                )
-                if shares > 0:
-                    position = {
-                        "shares": shares,
-                        "entry_price": entry_price,
-                        "entry_date": date,
-                        "stop_loss": entry_price * (1 - self.risk_params.stop_pct),
-                        "take_profit": entry_price * (1 + self.risk_params.take_pct),
-                        "highest_price": entry_price,
-                        "invested_capital": capital_used,
-                        "pending_exit": False,
-                        "partial_flags": {rule["flag"]: False for rule in self.partial_rules},
-                    }
-                    cash -= capital_used
-                    logger.info(
-                        "Entered position on %s @ %.2f (%s shares)",
-                        date.strftime("%Y-%m-%d"),
-                        entry_price,
-                        shares,
-                    )
-                    logger.info(
-                        "  💵 Entry Detail - Capital used: %.2f, Cash before: %.2f, Cash after: %.2f, Equity: %.2f",
-                        capital_used,
-                        cash + capital_used,
-                        cash,
-                        cash,  # equity는 진입 직후 cash와 동일 (포지션은 다음 날부터 평가)
-                    )
-                else:
-                    self.warnings.append(
-                        f"{date.date()} entry skipped (capital or risk budget insufficient)."
-                    )
-                pending_entry_idx = None
-
-            if position:
-                if high_price > position["highest_price"]:
-                    position["highest_price"] = high_price
-
-                trailing_stop = position["highest_price"] * (1 - self.risk_params.trailing_pct)
-                if trailing_stop > position["stop_loss"]:
-                    position["stop_loss"] = trailing_stop
-
-                closed_by_partial, cash, equity = self._evaluate_partial_exits(
-                    position,
-                    high_price,
-                    close_price,
-                    date,
-                    cash,
-                )
-                if closed_by_partial:
-                    position = None
-                    pending_exit_idx = None
-                else:
-                    exit_triggered = False
-                    exit_reason = ""
-                    exit_price_level = 0.0
-
-                    if low_price <= position["stop_loss"]:
-                        exit_triggered = True
-                        exit_reason = "stop_loss"
-                        exit_price_level = position["stop_loss"]
-                    elif high_price >= position["take_profit"]:
-                        exit_triggered = True
-                        exit_reason = "take_profit"
-                        exit_price_level = position["take_profit"]
-
-                    if exit_triggered:
-                        execution_price = self._execute_exit_price(exit_price_level)
-                        cash, equity, pnl, pnl_pct = self._close_position(
-                            position,
-                            execution_price,
-                            date,
-                            exit_reason,
-                            cash,
-                        )
-                        position = None
-                        pending_exit_idx = None
-                        if pnl <= 0 and self.risk_params.cooldown_days_after_loss > 0:
-                            cooldown = max(cooldown, self.risk_params.cooldown_days_after_loss)
-                        consecutive_losses = 0 if pnl > 0 else consecutive_losses + 1
-                        max_consecutive_losses_observed = max(max_consecutive_losses_observed, consecutive_losses)
-                    else:
-                        equity = cash + position["shares"] * close_price
-            else:
-                equity = cash
-
-            if position and not pending_exit_idx and self.exit_signals.iloc[i] and i + 1 < len(dates):
-                pending_exit_idx = i + 1
-                position["pending_exit"] = True
-
-            if (
-                position is None
-                and pending_entry_idx is None
-                and not trading_halted
-                and cooldown == 0
-                and i + 1 < len(dates)
-                and self.entry_signals.iloc[i]
-            ):
-                position_fraction = self._calculate_position_size(equity, close_price, self.data.iloc[: i + 1])
-                pending_entry_idx = i + 1
-                pending_entry_fraction = max(0.0, min(1.0, position_fraction))
-
-            daily_return = (equity - previous_equity) / previous_equity if previous_equity else 0.0
-            self.daily_returns.append(float(daily_return))
-            equity_history.append(equity)
-            previous_equity = equity
-
-            if (
-                daily_return <= -self.risk_params.daily_loss_limit_pct
-                and self.risk_params.cooldown_days_after_loss > 0
-            ):
-                cooldown = max(cooldown, self.risk_params.cooldown_days_after_loss)
-                self.warnings.append(
-                    f"{date.date()} daily loss {daily_return:.2%} breached limit "
-                    f"{self.risk_params.daily_loss_limit_pct:.2%}; applying cooldown."
-                )
 
             if (
                 not scale_down_active
@@ -260,39 +160,204 @@ class BacktestEngine:
                 scale_down_active = True
                 size_multiplier = self.risk_params.scale_down_factor
                 self.warnings.append(
-                    f"Position sizing scaled to {size_multiplier:.0%} after reaching drawdown buffer on {date.date()}."
+                    f"{current_date.date()} 낙폭 버퍼 도달로 포지션 크기 축소 ({size_multiplier:.0%})."
                 )
 
+            # 3. 종목별 로직 수행
+            for sym in self.data.keys():
+                if current_date not in self.data[sym].index:
+                    continue
+
+                row = self.data[sym].loc[current_date]
+                close_col, open_col, high_col, low_col = col_maps[sym]
+                
+                open_price = float(row[open_col])
+                high_price = float(row[high_col])
+                low_price = float(row[low_col])
+                close_price = float(row[close_col])
+
+                if any(pd.isna(v) for v in (open_price, high_price, low_price, close_price)):
+                    continue
+
+                # 쿨다운 감소
+                if cooldowns[sym] > 0:
+                    cooldowns[sym] -= 1
+
+                # --- 포지션 청산 (Exit) ---
+                if sym in positions:
+                    pos = positions[sym]
+                    pos["last_close"] = close_price # 평가용 업데이트
+
+                    # 고가 갱신 (트레일링 스탑용)
+                    if high_price > pos["highest_price"]:
+                        pos["highest_price"] = high_price
+
+                    # 트레일링 스탑 업데이트
+                    trailing_stop = pos["highest_price"] * (1 - self.risk_params.trailing_pct)
+                    if trailing_stop > pos["stop_loss"]:
+                        pos["stop_loss"] = trailing_stop
+
+                    # 1) 시그널에 의한 청산 (Pending Exit)
+                    if sym in pending_exits:
+                        exit_price = self._execute_exit_price(open_price)
+                        cash, pnl, pnl_pct = self._close_position_logic(pos, exit_price, current_date, "exit_signal_open")
+                        
+                        self._record_trade(sym, pos, exit_price, current_date, "exit_signal_open", pnl, pnl_pct, cash + self._get_positions_value(positions, sym)) # 잔고는 근사치
+                        
+                        del positions[sym]
+                        del pending_exits[sym]
+                        
+                        if pnl <= 0 and self.risk_params.cooldown_days_after_loss > 0:
+                            cooldowns[sym] = max(cooldowns[sym], self.risk_params.cooldown_days_after_loss)
+                        consecutive_losses[sym] = 0 if pnl > 0 else consecutive_losses[sym] + 1
+                        max_consecutive_losses_observed = max(max_consecutive_losses_observed, consecutive_losses[sym])
+                        continue # 포지션 청산했으므로 다음 종목으로
+
+                    # 2) 부분 청산 (Partial Exit)
+                    closed_by_partial, cash_proceeds = self._evaluate_partial_exits(
+                        sym, pos, high_price, current_date
+                    )
+                    cash += cash_proceeds
+                    if closed_by_partial:
+                        del positions[sym]
+                        if sym in pending_exits: del pending_exits[sym]
+                        continue
+
+                    # 3) 손절/익절 (Stop Loss / Take Profit)
+                    exit_triggered = False
+                    exit_reason = ""
+                    exit_price_level = 0.0
+
+                    # 진입일에는 손절/익절 체크 스킵 (현실적 타이밍)
+                    if pos.get("entry_bar", False):
+                        pos["entry_bar"] = False
+                    else:
+                        if low_price <= pos["stop_loss"]:
+                            exit_triggered = True
+                            exit_reason = "stop_loss"
+                            # 갭 리스크: 시가가 이미 손절가 아래면 시가에서 청산
+                            exit_price_level = min(open_price, pos["stop_loss"])
+                        elif high_price >= pos["take_profit"]:
+                            exit_triggered = True
+                            exit_reason = "take_profit"
+                            # 갭 리스크: 시가가 이미 익절가 위면 시가에서 청산
+                            exit_price_level = max(open_price, pos["take_profit"])
+
+                    if exit_triggered:
+                        execution_price = self._execute_exit_price(exit_price_level)
+                        cash, pnl, pnl_pct = self._close_position_logic(pos, execution_price, current_date, exit_reason)
+                        
+                        self._record_trade(sym, pos, execution_price, current_date, exit_reason, pnl, pnl_pct, cash + self._get_positions_value(positions, sym))
+                        
+                        del positions[sym]
+                        if sym in pending_exits: del pending_exits[sym]
+
+                        if pnl <= 0 and self.risk_params.cooldown_days_after_loss > 0:
+                            cooldowns[sym] = max(cooldowns[sym], self.risk_params.cooldown_days_after_loss)
+                        consecutive_losses[sym] = 0 if pnl > 0 else consecutive_losses[sym] + 1
+                        max_consecutive_losses_observed = max(max_consecutive_losses_observed, consecutive_losses[sym])
+                        continue
+
+                # --- 포지션 진입 (Entry) ---
+                # 포지션이 없고, 진입 대기 중이며, 거래 중지가 아니고, 쿨다운이 없을 때
+                if (sym not in positions) and (sym in pending_entries) and (not trading_halted) and (cooldowns[sym] == 0):
+                    entry_info = pending_entries[sym]
+                    entry_price = self._execute_entry_price(open_price)
+                    
+                    # 20일 평균 거래량 계산 (거래량 제약용)
+                    avg_vol = 0.0
+                    vol_col = None
+                    for vc in ('volume', 'Volume', 'VOLUME'):
+                        if vc in self.data[sym].columns:
+                            vol_col = vc
+                            break
+                    if vol_col:
+                        vol_data = self.data[sym].loc[:current_date, vol_col]
+                        if len(vol_data) >= 20:
+                            avg_vol = float(vol_data.iloc[-20:].mean())
+
+                    shares, capital_used, _ = self._determine_shares(
+                        cash,
+                        equity,
+                        entry_price,
+                        entry_info["fraction"],
+                        size_multiplier,
+                        avg_daily_volume=avg_vol,
+                    )
+
+                    if shares > 0:
+                        positions[sym] = {
+                            "shares": shares,
+                            "entry_price": entry_price,
+                            "entry_date": current_date,
+                            "stop_loss": entry_price * (1 - self.risk_params.stop_pct),
+                            "take_profit": entry_price * (1 + self.risk_params.take_pct),
+                            "highest_price": entry_price,
+                            "invested_capital": capital_used,
+                            "last_close": close_price,
+                            "partial_flags": {rule["flag"]: False for rule in self.partial_rules},
+                            "entry_bar": True,  # 진입일 플래그 (손절/익절 스킵용)
+                        }
+                        cash -= capital_used
+                        logger.info(
+                            "[%s] 포지션 진입 %s @ %.2f (%s주)",
+                            sym,
+                            current_date.strftime("%Y-%m-%d"),
+                            entry_price,
+                            shares,
+                        )
+                    else:
+                        # 자금 부족 등으로 진입 실패 시 경고
+                        # self.warnings.append(f"{current_date.date()} {sym} 진입 실패 (자금 부족).")
+                        pass
+                    
+                    del pending_entries[sym]
+
+                # --- 시그널 확인 (다음 날을 위한) ---
+                # 현재 포지션이 있고, 아직 청산 대기가 없으며, 오늘 청산 신호가 떴다면 -> 내일 시가 청산 예약
+                if sym in positions and sym not in pending_exits:
+                    if self.exit_signals[sym].get(current_date, False):
+                        pending_exits[sym] = True # 값은 중요하지 않음
+
+                # 현재 포지션이 없고, 진입 대기도 없으며, 쿨다운/중지 아님, 오늘 진입 신호 -> 내일 시가 진입 예약
+                if (sym not in positions) and (sym not in pending_entries) and (not trading_halted) and (cooldowns[sym] == 0):
+                    if self.entry_signals[sym].get(current_date, False):
+                        # 포지션 사이징 계산
+                        position_fraction = self._calculate_position_size(equity, close_price, self.data[sym].loc[:current_date])
+                        pending_entries[sym] = {
+                            "fraction": max(0.0, min(1.0, position_fraction))
+                        }
+
+            # 일별 수익률 기록
+            daily_return = (equity - previous_equity) / previous_equity if previous_equity else 0.0
+            self.daily_returns.append(float(daily_return))
+            equity_history.append(equity)
+            previous_equity = equity
+
+            # 일일 손실 한도 체크 (전체 포트폴리오 기준)
             if (
-                consecutive_losses >= self.risk_params.max_consecutive_losses
-                and self.risk_params.max_consecutive_losses > 0
+                daily_return <= -self.risk_params.daily_loss_limit_pct
+                and self.risk_params.cooldown_days_after_loss > 0
             ):
-                if self.risk_params.cooldown_days_after_loss > 0:
-                    cooldown = max(cooldown, self.risk_params.cooldown_days_after_loss)
+                # 전체 쿨다운을 걸거나, 경고만? 여기서는 경고만 추가
                 self.warnings.append(
-                    f"{date.date()} consecutive loss limit reached; triggering cooldown."
+                    f"{current_date.date()} 일일 손실 {daily_return:.2%} 한도 초과."
                 )
-                consecutive_losses = 0
 
-            if cooldown > 0:
-                cooldown -= 1
-
-        if position:
-            final_close = float(self.data.iloc[-1][self.close_col])
+        # 마지막 날 강제 청산 (평가용)
+        final_date = self.dates[-1]
+        for sym, pos in list(positions.items()):
+            if final_date in self.data[sym].index:
+                final_close = float(self.data[sym].loc[final_date][col_maps[sym][0]])
+            else:
+                final_close = pos["last_close"]
+                
             execution_price = self._execute_exit_price(final_close)
-            cash, equity, pnl, pnl_pct = self._close_position(
-                position,
-                execution_price,
-                dates[-1],
-                "final_exit",
-                cash,
-            )
-            consecutive_losses = 0 if pnl > 0 else consecutive_losses + 1
-            max_consecutive_losses_observed = max(max_consecutive_losses_observed, consecutive_losses)
-            position = None
-            equity_history[-1] = equity
+            cash, pnl, pnl_pct = self._close_position_logic(pos, execution_price, final_date, "final_exit")
+            self._record_trade(sym, pos, execution_price, final_date, "final_exit", pnl, pnl_pct, cash)
+            del positions[sym]
 
-        self.equity_curve = pd.Series(equity_history, index=dates)
+        self.equity_curve = pd.Series(equity_history, index=self.dates)
         metrics = self._calculate_metrics(self.initial_capital, self.daily_returns)
         self.risk_summary = self._build_risk_summary(
             metrics,
@@ -302,15 +367,54 @@ class BacktestEngine:
         )
         return metrics, self.equity_curve, self.risk_summary
 
+    def _get_positions_value(self, positions: Dict[str, Any], exclude_sym: str = None) -> float:
+        val = 0.0
+        for sym, pos in positions.items():
+            if sym == exclude_sym: continue
+            val += pos["shares"] * pos["last_close"]
+        return val
+
+    def _close_position_logic(self, position: Dict[str, Any], exit_price: float, date: pd.Timestamp, reason: str) -> Tuple[float, float, float]:
+        shares = position["shares"]
+        proceeds = exit_price * shares
+        pnl = (exit_price - position["entry_price"]) * shares
+        pnl_pct = (exit_price / position["entry_price"]) - 1 if position["entry_price"] else 0.0
+        return proceeds, pnl, pnl_pct # cash는 외부에서 더함
+
+    def _record_trade(self, symbol: str, position: Dict[str, Any], exit_price: float, exit_date: pd.Timestamp, reason: str, pnl: float, pnl_pct: float, balance_after: float):
+        trade = {
+            "symbol": symbol,
+            "entry_date": position["entry_date"],
+            "exit_date": exit_date,
+            "entry_price": position["entry_price"],
+            "exit_price": exit_price,
+            "shares": position["shares"],
+            "pnl": pnl,
+            "pnl_pct": pnl_pct,
+            "exit_reason": reason,
+            "holding_days": _holding_days(position["entry_date"], exit_date),
+            "partial": False,
+            "balance_after": balance_after,
+        }
+        self.trades.append(trade)
+        logger.info(
+            "[%s] 청산 %s @ %.2f (PnL %s)",
+            symbol,
+            reason,
+            exit_price,
+            f"{pnl:+.0f}",
+        )
+
     def _evaluate_partial_exits(
         self,
+        symbol: str,
         position: Dict[str, Any],
         intraday_high: float,
-        close_price: float,
         date: pd.Timestamp,
-        cash: float,
-    ) -> Tuple[bool, float, float]:
+    ) -> Tuple[bool, float]:
         closed = False
+        total_proceeds = 0.0
+        
         for rule in self.partial_rules:
             if position["partial_flags"].get(rule["flag"], False):
                 continue
@@ -321,14 +425,16 @@ class BacktestEngine:
                 if shares_to_exit <= 0:
                     position["partial_flags"][rule["flag"]] = True
                     continue
+                
                 exit_price = self._execute_exit_price(target_price)
                 proceeds = exit_price * shares_to_exit
-                cash += proceeds
+                total_proceeds += proceeds
+                
                 pnl = (exit_price - position["entry_price"]) * shares_to_exit
                 pnl_pct = (exit_price / position["entry_price"]) - 1 if position["entry_price"] else 0.0
-                # 부분 청산 후 equity 계산 (현금 + 남은 주식 가치)
-                equity_after_partial = cash + (position["shares"] - shares_to_exit) * close_price
+                
                 trade = {
+                    "symbol": symbol,
                     "entry_date": position["entry_date"],
                     "exit_date": date,
                     "entry_price": position["entry_price"],
@@ -339,27 +445,30 @@ class BacktestEngine:
                     "exit_reason": rule["flag"],
                     "holding_days": _holding_days(position["entry_date"], date),
                     "partial": True,
-                    "balance_after": equity_after_partial,  # 거래 후 잔고
+                    "balance_after": 0.0, # 부분 청산 시 잔고 계산 복잡하므로 생략 혹은 추후 개선
                 }
                 self.trades.append(trade)
+                
                 position["shares"] -= shares_to_exit
                 position["invested_capital"] = max(
                     0.0,
                     position["invested_capital"] - shares_to_exit * position["entry_price"],
                 )
                 position["partial_flags"][rule["flag"]] = True
+                
                 logger.info(
-                    "Partial exit %s on %s: sold %s shares @ %.2f",
+                    "[%s] 부분 청산 %s @ %.2f (%s주)",
+                    symbol,
                     rule["flag"],
-                    date.strftime("%Y-%m-%d"),
-                    shares_to_exit,
                     exit_price,
+                    shares_to_exit,
                 )
+                
                 if position["shares"] <= 0:
                     closed = True
                     break
-        equity = cash if closed else cash + position["shares"] * close_price
-        return closed, cash, equity
+                    
+        return closed, total_proceeds
 
     def _determine_shares(
         self,
@@ -368,6 +477,7 @@ class BacktestEngine:
         entry_price: float,
         position_fraction: float,
         size_multiplier: float,
+        avg_daily_volume: float = 0.0,
     ) -> Tuple[int, float, float]:
         if entry_price <= 0:
             return 0, 0.0, 0.0
@@ -379,6 +489,13 @@ class BacktestEngine:
         shares_by_risk = risk_budget / risk_per_share if risk_per_share > 0 else shares_by_capital
         shares_by_cash = cash / entry_price
         shares = min(shares_by_capital, shares_by_risk, shares_by_cash)
+
+        # 거래량 제약: 20일 평균 거래량의 10% 초과 불가
+        if avg_daily_volume > 0:
+            max_shares_by_volume = avg_daily_volume * 0.10
+            if shares > max_shares_by_volume:
+                shares = max_shares_by_volume
+
         shares = int(math.floor(shares))
         if shares <= 0:
             return 0, 0.0, risk_per_share
@@ -393,6 +510,8 @@ class BacktestEngine:
     def _execute_exit_price(self, price: float) -> float:
         adjusted = price * (1 - self.slippage)
         adjusted *= (1 - self.transaction_cost)
+        if self.korean_sell_tax > 0:
+            adjusted *= (1 - self.korean_sell_tax)  # 한국 주식 매도세 (KOSPI 0.23%)
         return round_to_tick_down(adjusted, self.is_korean_stock)
 
     def _calculate_position_size(
@@ -402,19 +521,22 @@ class BacktestEngine:
         historical_data: pd.DataFrame,
     ) -> float:
         if self.risk_params.position_sizing == "equal_weight":
-            logger.debug("Position sizing equal_weight -> 100%%")
-            return 1.0
+            return 1.0 # 기본적으로 100%가 아니라, 호출하는 쪽에서 1/N 등을 고려해야 함. 여기서는 단일 종목 비중.
+            # 포트폴리오 레벨에서는 N개 종목이면 1/N이 되어야 함.
+            # 현재 구조상 외부에서 fraction을 제어하거나 여기서 하드코딩해야 함.
+            # 일단 1.0으로 두고 determine_shares에서 cash 제한을 받도록 함.
+        
         if self.risk_params.position_sizing == "vol_target_10":
             if "VOL_annualized" in historical_data.columns:
                 current_vol = historical_data["VOL_annualized"].iloc[-1]
                 if current_vol > 0:
                     target_vol = 0.10
                     size = min(target_vol / current_vol, 1.0)
-                    logger.debug("Position sizing vol_target_10 (vol %.2f) -> %.2f", current_vol, size)
                     return float(size)
-            logger.debug("Position sizing vol_target_10 fallback -> 100%%")
             return 1.0
+            
         if self.risk_params.position_sizing == "kelly":
+            # 켈리 공식은 승률과 손익비가 필요함. 초기에는 데이터가 없으므로 1.0
             if len(self.trades) >= 10:
                 wins = [t for t in self.trades if t.get("pnl", 0) > 0]
                 win_rate = len(wins) / len(self.trades) if self.trades else 0.0
@@ -422,97 +544,96 @@ class BacktestEngine:
                 avg_loss = np.mean([abs(t["pnl_pct"]) for t in self.trades if t.get("pnl", 0) <= 0]) or 0.0
                 if avg_loss > 0 and avg_win > 0:
                     kelly = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
-                    size = max(0.0, min(kelly * 0.5, 1.0))
-                    logger.debug("Position sizing kelly -> %.2f", size)
+                    size = max(0.0, min(kelly * 0.5, 1.0)) # 하프 켈리
                     return float(size)
-            logger.debug("Position sizing kelly fallback -> 100%%")
             return 1.0
-        logger.debug("Unknown position sizing -> default 100%%")
+            
         return 1.0
-
-    def _close_position(
-        self,
-        position: Dict[str, Any],
-        exit_price: float,
-        exit_date: pd.Timestamp,
-        exit_reason: str,
-        cash: float,
-    ) -> Tuple[float, float, float, float]:
-        shares = position.get("shares", 0)
-        if shares <= 0:
-            return cash, cash, 0.0, 0.0
-        proceeds = exit_price * shares
-        cash += proceeds
-        pnl = (exit_price - position["entry_price"]) * shares
-        pnl_pct = (exit_price / position["entry_price"]) - 1 if position["entry_price"] else 0.0
-        equity = cash  # 거래 후 자산 = 현금
-        trade = {
-            "entry_date": position["entry_date"],
-            "exit_date": exit_date,
-            "entry_price": position["entry_price"],
-            "exit_price": exit_price,
-            "shares": shares,
-            "pnl": pnl,
-            "pnl_pct": pnl_pct,
-            "exit_reason": exit_reason,
-            "holding_days": _holding_days(position["entry_date"], exit_date),
-            "partial": False,
-            "balance_after": equity,  # 거래 후 잔고
-        }
-        self.trades.append(trade)
-        logger.info(
-            "Exit %s on %s @ %.2f (%s shares, PnL %s, Balance %.0f)",
-            exit_reason,
-            exit_date.strftime("%Y-%m-%d"),
-            exit_price,
-            shares,
-            f"{pnl:+.0f}",
-            equity,
-        )
-        logger.info(
-            "  💰 Trade Detail - Entry: %.2f, Exit: %.2f, Proceeds: %.2f, Cash before: %.2f, Cash after: %.2f",
-            position["entry_price"],
-            exit_price,
-            proceeds,
-            cash - proceeds,
-            cash,
-        )
-        return cash, equity, pnl, pnl_pct
 
     def _calculate_metrics(self, initial_capital: float, daily_returns: List[float]) -> BacktestMetrics:
         if not self.trades or self.equity_curve is None or self.equity_curve.empty:
             return BacktestMetrics(
-                CAGR=0.0,
-                Sharpe=0.0,
-                MaxDD=0.0,
-                HitRatio=0.0,
-                AvgWin=0.0,
-                AvgLoss=0.0,
-                TotalTrades=len(self.trades),
-                WinTrades=0,
-                LossTrades=0,
+                CAGR=0.0, Sharpe=0.0, MaxDD=0.0, HitRatio=0.0,
+                AvgWin=0.0, AvgLoss=0.0, TotalTrades=len(self.trades),
+                WinTrades=0, LossTrades=0,
+                Sortino=0.0, Calmar=0.0, TailRatio=0.0 # New Metrics
             )
 
         total_return = (self.equity_curve.iloc[-1] / initial_capital) - 1
-        period_days = (self.data.index[-1] - self.data.index[0]).days
+        period_days = (self.dates[-1] - self.dates[0]).days
         years = period_days / 365.25 if period_days > 0 else 0.0
-        cagr = (1 + total_return) ** (1 / years) - 1 if years > 0 else total_return
+        
+        # CAGR 계산: 기간이 1년 미만이면 총 수익률을 연환산하지 않고 그대로 사용
+        # (짧은 기간의 연환산은 부정확할 수 있음)
+        if years < 1.0:
+            # 1년 미만 기간은 총 수익률을 그대로 사용 (연환산하지 않음)
+            cagr = total_return
+        else:
+            cagr = (1 + total_return) ** (1 / years) - 1 if years > 0 else total_return
 
         returns_series = pd.Series(daily_returns).replace([np.inf, -np.inf], np.nan).dropna()
+        
+        # Sharpe Ratio
         if returns_series.empty:
             sharpe = 0.0
+            sortino = 0.0
         else:
             excess = returns_series - (self.risk_params.risk_free_rate / 252.0)
-            sharpe = float(excess.mean() / excess.std() * np.sqrt(252)) if excess.std() > 0 else 0.0
+            std_dev = excess.std()
+            sharpe = float(excess.mean() / std_dev * np.sqrt(252)) if std_dev > 0 else 0.0
+            
+            # Sortino Ratio (Downside Deviation)
+            downside_returns = returns_series[returns_series < 0]
+            downside_std = downside_returns.std()
+            sortino = float(excess.mean() / downside_std * np.sqrt(252)) if downside_std > 0 else 0.0
 
+        # Max Drawdown
         drawdown = (self.equity_curve / self.equity_curve.cummax()) - 1
         max_dd = float(drawdown.min()) if not drawdown.empty else 0.0
+        
+        # Calmar Ratio (CAGR / MaxDD)
+        calmar = abs(cagr / max_dd) if max_dd != 0 else 0.0
+
+        # Tail Ratio (95th percentile / 5th percentile absolute)
+        if not returns_series.empty:
+            p95 = returns_series.quantile(0.95)
+            p5 = abs(returns_series.quantile(0.05))
+            tail_ratio = float(p95 / p5) if p5 != 0 else 0.0
+        else:
+            tail_ratio = 0.0
 
         wins = [t for t in self.trades if t["pnl"] > 0]
         losses = [t for t in self.trades if t["pnl"] <= 0]
         hit_ratio = len(wins) / len(self.trades) if self.trades else 0.0
         avg_win = float(np.mean([t["pnl_pct"] for t in wins])) if wins else 0.0
         avg_loss = float(np.mean([t["pnl_pct"] for t in losses])) if losses else 0.0
+
+        # 통계적 신뢰도 계산
+        significance: Dict[str, Any] = {}
+        min_trades_warning: Optional[str] = None
+
+        if len(self.trades) < 5:
+            significance = {"confidence": "very_low", "warning": "거래 5건 미만 - 통계적 의미 없음"}
+            min_trades_warning = "거래 횟수가 너무 적어 결과의 신뢰도가 매우 낮습니다."
+        elif len(self.trades) < 10:
+            significance = {"confidence": "very_low", "warning": "거래 10건 미만 - 통계적 의미 제한적"}
+            min_trades_warning = "거래 횟수 부족으로 통계적 의미가 제한적입니다."
+        elif len(self.trades) < 30:
+            significance = {"confidence": "low", "warning": "거래 30건 미만 - 표본 크기 작음"}
+            min_trades_warning = "표본 크기가 작아 결과에 주의가 필요합니다."
+        else:
+            try:
+                from scipy import stats as scipy_stats
+                pnl_pcts = [t["pnl_pct"] for t in self.trades]
+                t_stat, p_value = scipy_stats.ttest_1samp(pnl_pcts, 0)
+                significance = {
+                    "confidence": "high" if p_value < 0.05 else "moderate" if p_value < 0.1 else "low",
+                    "t_statistic": round(float(t_stat), 3),
+                    "p_value": round(float(p_value), 4),
+                    "sample_size": len(self.trades),
+                }
+            except ImportError:
+                significance = {"confidence": "unknown", "warning": "scipy 미설치 - 신뢰도 계산 불가"}
 
         return BacktestMetrics(
             CAGR=round(float(cagr), 4),
@@ -524,6 +645,11 @@ class BacktestEngine:
             TotalTrades=len(self.trades),
             WinTrades=len(wins),
             LossTrades=len(losses),
+            Sortino=round(float(sortino), 2),
+            Calmar=round(float(calmar), 2),
+            TailRatio=round(float(tail_ratio), 2),
+            statistical_significance=significance if significance else None,
+            min_trades_warning=min_trades_warning,
         )
 
     def _build_risk_summary(
@@ -562,7 +688,12 @@ class BacktestEngine:
                     mapping[base] = candidate
                     break
             if mapping[base] is None:
-                raise ValueError(f"'{base}' column not found. Available columns: {list(df.columns)}")
+                # Fallback: if OHLC not found, try to use Close for all or error
+                # For robustness, if only Close exists, use it for all
+                if base != "close" and mapping["close"]:
+                     mapping[base] = mapping["close"]
+                else:
+                     raise ValueError(f"'{base}' 컬럼을 찾을 수 없습니다. 사용 가능 컬럼: {list(df.columns)}")
         return mapping["close"], mapping["open"], mapping["high"], mapping["low"]
 
     def get_trade_details(self) -> pd.DataFrame:
@@ -573,5 +704,3 @@ class BacktestEngine:
             df["entry_date"] = pd.to_datetime(df["entry_date"])
             df["exit_date"] = pd.to_datetime(df["exit_date"])
         return df
-
-

@@ -115,6 +115,9 @@ class Prediction(BaseModel):
 class BacktestMetrics(BaseModel):
     CAGR: float
     Sharpe: float
+    Sortino: Optional[float] = None
+    Calmar: Optional[float] = None
+    TailRatio: Optional[float] = None
     MaxDD: float
     HitRatio: float
     AvgWin: Optional[float] = None
@@ -122,6 +125,8 @@ class BacktestMetrics(BaseModel):
     TotalTrades: Optional[int] = None
     WinTrades: Optional[int] = None
     LossTrades: Optional[int] = None
+    statistical_significance: Optional[Dict[str, Any]] = None
+    min_trades_warning: Optional[str] = None
 
 
 class Backtest(BaseModel):
@@ -210,6 +215,3 @@ class AnalysisResponse(BaseModel):
     monte_carlo: MonteCarloResult
     signal_examples: List[SignalExample]
     limitations: List[str]
-
-
-

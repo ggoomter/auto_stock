@@ -12,6 +12,48 @@ from .routers.events import router as events_router
 import traceback
 import numpy as np
 import sys
+import os
+import shutil
+import tempfile
+import certifi
+
+# -----------------------------------------------------------------------------
+# SSL 인증서 경로 한글 문제 해결 (Windows)
+# -----------------------------------------------------------------------------
+# certifi의 cacert.pem 경로에 한글('문서' 등)이 포함된 경우 curl/requests가 인식 못하는 문제 해결
+# 인증서 파일을 임시 폴더(영문 경로)로 복사하여 환경 변수 설정
+try:
+    cert_path = certifi.where()
+    
+    # 경로에 non-ascii 문자가 있는지 확인
+    try:
+        cert_path.encode('ascii')
+        is_ascii = True
+    except UnicodeEncodeError:
+        is_ascii = False
+        
+    if not is_ascii and os.name == 'nt':
+        # 임시 파일 생성 (자동으로 삭제되지 않도록 delete=False)
+        # Windows 임시 폴더는 보통 영문 경로임 (C:\Users\User\AppData\Local\Temp)
+        temp_cert = tempfile.NamedTemporaryFile(delete=False, suffix='.pem')
+        temp_cert.close()
+        
+        # 인증서 내용 복사
+        shutil.copy(cert_path, temp_cert.name)
+        
+        # 환경 변수 설정
+        os.environ['REQUESTS_CA_BUNDLE'] = temp_cert.name
+        os.environ['SSL_CERT_FILE'] = temp_cert.name
+        
+        print(f"SSL Cert copied to safe path: {temp_cert.name}")
+    else:
+        # 한글 경로가 아니면 그대로 설정 (명시적으로 설정해주는 것이 안전)
+        os.environ['REQUESTS_CA_BUNDLE'] = cert_path
+        os.environ['SSL_CERT_FILE'] = cert_path
+
+except Exception as e:
+    print(f"Warning: Failed to setup SSL certificate path: {e}")
+# -----------------------------------------------------------------------------
 
 
 def convert_numpy_types(obj):

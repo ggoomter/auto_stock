@@ -13,6 +13,7 @@ import numpy as np
 from typing import Dict, Tuple, Optional
 from .fundamental_analysis import FundamentalAnalyzer
 from ..models.schemas import RiskParams
+from ..core.logging_config import logger
 
 
 def _get_close_series(df: pd.DataFrame) -> pd.Series:
@@ -99,18 +100,26 @@ class BuffettStrategy(MasterStrategy):
         exit_signals = pd.Series([False] * len(price_data), index=price_data.index)
 
         # 안전마진: 52주 최저가 대비 +20% 이내 (저평가 구간)
-        rolling_low_252 = close.rolling(252, min_periods=100).min()
+        # .shift(1): 전일까지의 최저가만 사용 (lookahead bias 방지)
+        rolling_low_252 = close.rolling(252, min_periods=100).min().shift(1)
         safety_margin = close < (rolling_low_252 * 1.20)
 
-        # 각 날짜별로 펀더멘털 체크
+        # 각 날짜별로 펀더멘털 체크 (버핏 원칙: 지속적인 기업 가치 모니터링)
+        # 버핏은 "기업의 본질이 변하면 팔아라"는 원칙
         for date in price_data.index:
-            passes_fundamental = analyzer.check_buffett_criteria_at_date(date)
+            try:
+                passes_fundamental = analyzer.check_buffett_criteria_at_date(date)
+            except Exception as e:
+                # 펀더멘털 데이터 없으면 보수적으로 기각 (lookahead bias 방지)
+                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}")
+                passes_fundamental = False
 
             if passes_fundamental and safety_margin.loc[date]:
                 # 진입: 펀더멘털 OK + 안전마진 (저평가)
                 entry_signals.loc[date] = True
             elif not passes_fundamental:
-                # 청산: 펀더멘털 악화
+                # 청산: 펀더멘털 악화 (기업의 본질이 변함)
+                # 버핏 원칙: "기업의 본질이 변하면 팔아라"
                 exit_signals.loc[date] = True
 
         return entry_signals, exit_signals
@@ -177,15 +186,22 @@ class LynchStrategy(MasterStrategy):
         golden_cross = (ma20 > ma50) & (ma20_prev <= ma50_prev)
         death_cross = (ma20 < ma50) & (ma20_prev >= ma50_prev)
 
-        # 각 날짜별로 펀더멘털 체크
+        # 각 날짜별로 펀더멘털 체크 (피터 린치 원칙: 지속적인 펀더멘털 모니터링)
+        # 린치는 "회사가 변하면 팔아라"는 원칙을 가지고 있음
         for date in price_data.index:
-            passes_fundamental = analyzer.check_lynch_criteria_at_date(date)
+            try:
+                passes_fundamental = analyzer.check_lynch_criteria_at_date(date)
+            except Exception as e:
+                # 펀더멘털 데이터 없으면 보수적으로 기각 (lookahead bias 방지)
+                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}")
+                passes_fundamental = False
 
             if passes_fundamental and golden_cross.loc[date]:
                 # 진입: PEG < 1.0 + 골든크로스 (추세 시작)
                 entry_signals.loc[date] = True
             elif not passes_fundamental or death_cross.loc[date]:
-                # 청산: PEG > 2.0 OR 데드크로스
+                # 청산: PEG > 2.0 OR 데드크로스 (성장 둔화 OR 추세 이탈)
+                # 린치 원칙: "회사가 변하면 팔아라"
                 exit_signals.loc[date] = True
 
         return entry_signals, exit_signals
@@ -241,7 +257,8 @@ class GrahamStrategy(MasterStrategy):
         exit_signals = pd.Series([False] * len(price_data), index=price_data.index)
 
         # 기술적 조건: 52주 최저가 + 골든크로스 (반등 시작)
-        rolling_low = close.rolling(252, min_periods=100).min()
+        # .shift(1): 전일까지의 최저가만 사용 (lookahead bias 방지)
+        rolling_low = close.rolling(252, min_periods=100).min().shift(1)
         near_low = close < rolling_low * 1.15  # 저점 대비 +15% 이내
 
         ma20 = close.rolling(20).mean()
@@ -252,15 +269,22 @@ class GrahamStrategy(MasterStrategy):
         golden_cross = (ma20 > ma50) & (ma20_prev <= ma50_prev)
         death_cross = (ma20 < ma50) & (ma20_prev >= ma50_prev)
 
-        # 각 날짜별로 펀더멘털 체크
+        # 각 날짜별로 펀더멘털 체크 (그레이엄 원칙: 안전마진 지속 확인)
+        # 그레이엄은 "안전마진이 사라지면 팔아라"는 원칙
         for date in price_data.index:
-            passes_fundamental = analyzer.check_graham_criteria_at_date(date)
+            try:
+                passes_fundamental = analyzer.check_graham_criteria_at_date(date)
+            except Exception as e:
+                # 펀더멘털 데이터 없으면 보수적으로 기각 (lookahead bias 방지)
+                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}")
+                passes_fundamental = False
 
             if passes_fundamental and near_low.loc[date] and golden_cross.loc[date]:
                 # 진입: P/B < 0.67 + 저점 + 골든크로스
                 entry_signals.loc[date] = True
             elif not passes_fundamental or death_cross.loc[date]:
-                # 청산: P/B > 1.0 OR 데드크로스
+                # 청산: P/B > 1.0 OR 데드크로스 (안전마진 사라짐 OR 추세 이탈)
+                # 그레이엄 원칙: "안전마진이 사라지면 팔아라"
                 exit_signals.loc[date] = True
 
         return entry_signals, exit_signals
@@ -973,6 +997,79 @@ class ChanosStrategy(MasterStrategy):
         )
 
 
+class SuperMomentumStrategy(MasterStrategy):
+    """
+    슈퍼 모멘텀 전략 (Super Momentum)
+
+    핵심 원칙:
+    1. 강력한 상승 추세 (MA20 > MA50 > MA200)
+    2. 52주 신고가 돌파
+    3. 거래량 폭발 (기관 수급)
+    4. 변동성 돌파 (Volatility Breakout)
+
+    목표: "가장 강한 종목에 올라타서 끝까지 먹는다"
+    """
+
+    def __init__(self):
+        super().__init__(
+            name="Super Momentum - Aggressive Trend Following",
+            description="강력한 추세와 거래량을 동반한 급등주 공략"
+        )
+
+    def generate_signals(
+        self,
+        symbol: str,
+        price_data: pd.DataFrame,
+        **kwargs
+    ) -> Tuple[pd.Series, pd.Series]:
+        """
+        진입: 정배열 + 신고가 + 거래량 폭발
+        청산: MA20 이탈 OR Trailing Stop
+        """
+        # TIMEZONE 제거
+        if hasattr(price_data.index, 'tz') and price_data.index.tz is not None:
+            price_data = price_data.copy()
+            price_data.index = price_data.index.tz_localize(None)
+
+        close = _get_close_series(price_data)
+
+        # 이동평균
+        ma20 = close.rolling(20).mean()
+        ma50 = close.rolling(50).mean()
+        ma200 = close.rolling(200).mean()
+
+        # 정배열 확인 (Strong Uptrend)
+        alignment = (ma20 > ma50) & (ma50 > ma200)
+
+        # 52주 신고가
+        rolling_high = close.rolling(252, min_periods=100).max()
+        breakout = close > rolling_high.shift(1)
+
+        # 거래량 폭발 (20일 평균 대비 2배)
+        if 'volume' in price_data.columns:
+            vol_ma20 = price_data['volume'].rolling(20).mean()
+            vol_surge = price_data['volume'] > vol_ma20 * 2.0
+        else:
+            vol_surge = pd.Series([True] * len(price_data), index=price_data.index)
+
+        # 진입 신호
+        entry_signals = alignment & breakout & vol_surge
+
+        # 청산 신호: MA20 하향 이탈 (추세 약화)
+        exit_signals = close < ma20
+
+        return entry_signals, exit_signals
+
+    def get_risk_params(self) -> RiskParams:
+        """공격적 투자 리스크 관리"""
+        return RiskParams(
+            stop_pct=0.07,  # -7% (칼손절)
+            take_pct=0.50,  # +50% (추세 추종)
+            position_sizing="vol_target_20",  # 변동성 기반 비중 조절
+            trailing_pct=0.10  # 10% 트레일링 스탑
+        )
+
+
 # 전략 레지스트리
 MASTER_STRATEGIES = {
     "buffett": BuffettStrategy(),
@@ -985,6 +1082,7 @@ MASTER_STRATEGIES = {
     "oneil": ONeilStrategy(),
     "wood": WoodStrategy(),  # 캐시 우드 - 혁신 기술 투자
     "chanos": ChanosStrategy(),
+    "super_momentum": SuperMomentumStrategy(),  # ✅ 신규 추가
 }
 
 

@@ -26,6 +26,8 @@ class KoreanStockDataFetcher:
         self.cached_data = {}
         self.cache_timestamp = {}
         self.cache_duration = 3600  # 1시간 캐시
+        self.market_fundamentals_cache = {} # 시장 전체 펀더멘털 캐시
+        self.market_fundamentals_timestamp = 0
 
         if not PYKRX_AVAILABLE:
             logger.error("PyKrx가 설치되지 않았습니다.")
@@ -60,23 +62,41 @@ class KoreanStockDataFetcher:
         """
         # 캐시 확인
         if self._is_cache_valid(symbol):
-            logger.info(f"캐시에서 {symbol} 데이터 반환")
+            # logger.info(f"캐시에서 {symbol} 데이터 반환")
             return self.cached_data[symbol]
 
-        # yfinance 우선 사용 (더 완전한 데이터)
+        # 1. 시장 전체 데이터 캐시 확인 (Batch Fetching 결과 활용)
+        ticker = self._get_ticker_from_symbol(symbol)
+        batch_data = self._get_from_market_cache(ticker)
+
+        # 2. yfinance 데이터 가져오기 (기본)
         yf_data = self._get_yfinance_data(symbol)
 
-        # PyKrx로 보충 (PER, PBR 등 실시간 데이터)
-        if PYKRX_AVAILABLE and yf_data:
+        # 3. 데이터 병합 (Batch Data가 있으면 우선 사용)
+        if batch_data:
+            if not yf_data:
+                yf_data = self._create_empty_stock_data(symbol)
+
+            # PyKrx Batch 데이터로 업데이트 (더 최신/정확)
+            metrics = yf_data.get('metrics', {})
+            if batch_data.get('PER'): metrics['PE'] = batch_data['PER']
+            if batch_data.get('PBR'): metrics['PB'] = batch_data['PBR']
+            if batch_data.get('ROE'): metrics['ROE'] = batch_data['ROE']
+            if batch_data.get('DIV'): metrics['dividend_yield'] = batch_data['DIV']
+            if batch_data.get('EPS'): metrics['EPS'] = batch_data['EPS']
+            if batch_data.get('BPS'): metrics['BPS'] = batch_data['BPS']
+
+            yf_data['metrics'] = metrics
+            # logger.info(f"{symbol}: Batch 데이터 병합 완료")
+
+        # 4. 개별 PyKrx 보충 (Batch에도 없고 yfinance에도 없는 경우)
+        elif PYKRX_AVAILABLE and yf_data:
             pykrx_data = self._get_pykrx_supplement(symbol)
             if pykrx_data:
-                # PyKrx의 PER, PBR로 업데이트
                 if pykrx_data.get('PE') and not yf_data['metrics'].get('PE'):
                     yf_data['metrics']['PE'] = pykrx_data['PE']
                 if pykrx_data.get('PB') and not yf_data['metrics'].get('PB'):
                     yf_data['metrics']['PB'] = pykrx_data['PB']
-
-                logger.info(f"{symbol}: yfinance + PyKrx 데이터 병합 완료")
 
         # 캐시 저장
         if yf_data:
@@ -84,6 +104,31 @@ class KoreanStockDataFetcher:
             self.cache_timestamp[symbol] = datetime.now().timestamp()
 
         return yf_data or {}
+
+    def _get_from_market_cache(self, ticker: str) -> Optional[Dict]:
+        """시장 전체 캐시에서 특정 종목 데이터 찾기"""
+        if not self.market_fundamentals_cache:
+            return None
+            
+        # 캐시 유효성 (1시간)
+        if datetime.now().timestamp() - self.market_fundamentals_timestamp > 3600:
+            self.market_fundamentals_cache = {}
+            return None
+            
+        if ticker in self.market_fundamentals_cache:
+            return self.market_fundamentals_cache[ticker]
+        return None
+
+    def _create_empty_stock_data(self, symbol: str) -> Dict:
+        """빈 데이터 구조 생성"""
+        return {
+            "name": symbol,
+            "current_price": 0,
+            "metrics": {},
+            "financials": {},
+            "balance_sheet": {},
+            "cashflow": {}
+        }
 
     def _get_pykrx_supplement(self, symbol: str) -> Optional[Dict[str, Any]]:
         """
@@ -113,9 +158,83 @@ class KoreanStockDataFetcher:
                 }
 
         except Exception as e:
-            logger.warning(f"PyKrx 보충 데이터 실패: {e}")
+            # logger.warning(f"PyKrx 보충 데이터 실패: {e}")
+            pass
 
         return None
+
+    def get_all_tickers(self, market: str = "ALL") -> List[str]:
+        """
+        전체 종목 코드 리스트 가져오기 (PyKrx)
+        
+        Args:
+            market: "KOSPI", "KOSDAQ", "ALL"
+            
+        Returns:
+            종목 코드 리스트 (예: ["005930", "000660", ...])
+        """
+        if not PYKRX_AVAILABLE:
+            logger.warning("PyKrx 미설치로 기본 종목만 반환합니다.")
+            return ["005930", "000660", "035420", "035720", "051910"]
+            
+        try:
+            tickers = []
+            if market in ["KOSPI", "ALL"]:
+                tickers.extend(stock.get_market_ticker_list(market="KOSPI"))
+            if market in ["KOSDAQ", "ALL"]:
+                tickers.extend(stock.get_market_ticker_list(market="KOSDAQ"))
+                
+            return sorted(list(set(tickers)))
+        except Exception as e:
+            logger.error(f"종목 리스트 가져오기 실패: {e}")
+            return []
+
+    def get_market_fundamentals(self, date: str = None, market: str = "ALL") -> pd.DataFrame:
+        """
+        시장 전체 펀더멘털 데이터 한 번에 가져오기 (PyKrx)
+        
+        Args:
+            date: 조회 날짜 (YYYYMMDD), None이면 오늘
+            market: "KOSPI", "KOSDAQ", "ALL"
+            
+        Returns:
+            DataFrame columns: [BPS, PER, PBR, EPS, DIV, DPS]
+        """
+        if not PYKRX_AVAILABLE:
+            return pd.DataFrame()
+            
+        try:
+            if date is None:
+                date = datetime.now().strftime("%Y%m%d")
+                
+            # KOSPI & KOSDAQ 데이터 병합
+            dfs = []
+            if market in ["KOSPI", "ALL"]:
+                df_kospi = stock.get_market_fundamental_by_ticker(date=date, market="KOSPI")
+                df_kospi['market'] = 'KOSPI'
+                dfs.append(df_kospi)
+                
+            if market in ["KOSDAQ", "ALL"]:
+                df_kosdaq = stock.get_market_fundamental_by_ticker(date=date, market="KOSDAQ")
+                df_kosdaq['market'] = 'KOSDAQ'
+                dfs.append(df_kosdaq)
+                
+            if not dfs:
+                return pd.DataFrame()
+                
+            full_df = pd.concat(dfs)
+            
+            # 0을 NaN으로 변환 (PER=0 등)
+            cols_to_check = ['PER', 'PBR', 'DIV'] # ROE는 없을 수 있음
+            for col in cols_to_check:
+                if col in full_df.columns:
+                    full_df[col] = full_df[col].replace(0, float('nan'))
+                    
+            return full_df
+            
+        except Exception as e:
+            logger.error(f"시장 전체 데이터 가져오기 실패: {e}")
+            return pd.DataFrame()
 
     def _enhance_samsung_data(self, data: Dict[str, Any], ticker_code: str) -> Dict[str, Any]:
         """
@@ -232,7 +351,8 @@ class KoreanStockDataFetcher:
                         data['metrics']['PB'] = data['current_price'] / data['metrics']['BPS']
 
             except Exception as e:
-                logger.warning(f"재무제표 추가 계산 실패: {e}")
+                # logger.warning(f"재무제표 추가 계산 실패: {e}")
+                pass
 
             # 한국 주식 특별 처리
             if symbol in ["005930.KS", "005930"]:  # 삼성전자
@@ -241,7 +361,7 @@ class KoreanStockDataFetcher:
             return data
 
         except Exception as e:
-            logger.error(f"{symbol} yfinance 데이터 로드 실패: {e}")
+            # logger.error(f"{symbol} yfinance 데이터 로드 실패: {e}")
             return {}
 
     def calculate_metrics(self, data: Dict[str, Any]) -> Dict[str, float]:
@@ -357,7 +477,7 @@ class KoreanStockDataFetcher:
 
     def get_multiple_stocks_data(self, symbols: List[str]) -> Dict[str, Dict[str, Any]]:
         """
-        여러 종목의 데이터를 한 번에 가져오기
+        여러 종목의 데이터를 한 번에 가져오기 (Batch Optimization)
 
         Args:
             symbols: 종목 코드 리스트
@@ -366,13 +486,28 @@ class KoreanStockDataFetcher:
             종목별 데이터 딕셔너리
         """
         result = {}
+        
+        # 1. 시장 전체 데이터 Batch Fetching (캐시 업데이트)
+        if PYKRX_AVAILABLE and len(symbols) > 5: # 5개 이상일 때만 Batch 사용
+            logger.info("Batch Fetching 시장 데이터...")
+            try:
+                df = self.get_market_fundamentals(market="ALL")
+                if not df.empty:
+                    # DataFrame을 딕셔너리로 변환하여 캐시에 저장
+                    self.market_fundamentals_cache = df.to_dict(orient='index')
+                    self.market_fundamentals_timestamp = datetime.now().timestamp()
+                    logger.info(f"시장 데이터 캐시 완료: {len(self.market_fundamentals_cache)} 종목")
+            except Exception as e:
+                logger.error(f"Batch Fetching 실패: {e}")
 
+        # 2. 개별 종목 데이터 구성
         for symbol in symbols:
             try:
+                # get_stock_data 내부에서 캐시된 Batch 데이터를 우선 사용함
                 data = self.get_stock_data(symbol)
                 if data:
                     result[symbol] = data
-                    logger.info(f"{symbol}: 데이터 수집 성공")
+                    # logger.info(f"{symbol}: 데이터 수집 성공")
             except Exception as e:
                 logger.error(f"{symbol}: 데이터 수집 실패 - {e}")
                 result[symbol] = {}
