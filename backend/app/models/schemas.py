@@ -125,6 +125,8 @@ class BacktestMetrics(BaseModel):
     TotalTrades: Optional[int] = None
     WinTrades: Optional[int] = None
     LossTrades: Optional[int] = None
+    statistical_significance: Optional[Dict[str, Any]] = None
+    min_trades_warning: Optional[str] = None
 
 
 class Backtest(BaseModel):

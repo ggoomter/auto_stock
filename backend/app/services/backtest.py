@@ -34,6 +34,7 @@ class BacktestEngine:
         slippage_bps: int = 5,
         initial_capital: float = 100000.0,
         is_korean_stock: bool = False,
+        korean_sell_tax_bps: int = 23,
     ) -> None:
         # 단일 종목일 경우 딕셔너리로 변환하여 통일된 처리
         if isinstance(data, pd.DataFrame):
@@ -53,6 +54,7 @@ class BacktestEngine:
         self.slippage = slippage_bps / 10000.0
         self.initial_capital = float(initial_capital)
         self.is_korean_stock = is_korean_stock
+        self.korean_sell_tax = korean_sell_tax_bps / 10000.0 if is_korean_stock else 0.0
 
         # 모든 종목의 날짜 합집합 생성 (전체 타임라인)
         all_dates = sorted(list(set().union(*[df.index for df in self.data.values()])))
@@ -226,14 +228,20 @@ class BacktestEngine:
                     exit_reason = ""
                     exit_price_level = 0.0
 
-                    if low_price <= pos["stop_loss"]:
-                        exit_triggered = True
-                        exit_reason = "stop_loss"
-                        exit_price_level = pos["stop_loss"]
-                    elif high_price >= pos["take_profit"]:
-                        exit_triggered = True
-                        exit_reason = "take_profit"
-                        exit_price_level = pos["take_profit"]
+                    # 진입일에는 손절/익절 체크 스킵 (현실적 타이밍)
+                    if pos.get("entry_bar", False):
+                        pos["entry_bar"] = False
+                    else:
+                        if low_price <= pos["stop_loss"]:
+                            exit_triggered = True
+                            exit_reason = "stop_loss"
+                            # 갭 리스크: 시가가 이미 손절가 아래면 시가에서 청산
+                            exit_price_level = min(open_price, pos["stop_loss"])
+                        elif high_price >= pos["take_profit"]:
+                            exit_triggered = True
+                            exit_reason = "take_profit"
+                            # 갭 리스크: 시가가 이미 익절가 위면 시가에서 청산
+                            exit_price_level = max(open_price, pos["take_profit"])
 
                     if exit_triggered:
                         execution_price = self._execute_exit_price(exit_price_level)
@@ -256,12 +264,25 @@ class BacktestEngine:
                     entry_info = pending_entries[sym]
                     entry_price = self._execute_entry_price(open_price)
                     
+                    # 20일 평균 거래량 계산 (거래량 제약용)
+                    avg_vol = 0.0
+                    vol_col = None
+                    for vc in ('volume', 'Volume', 'VOLUME'):
+                        if vc in self.data[sym].columns:
+                            vol_col = vc
+                            break
+                    if vol_col:
+                        vol_data = self.data[sym].loc[:current_date, vol_col]
+                        if len(vol_data) >= 20:
+                            avg_vol = float(vol_data.iloc[-20:].mean())
+
                     shares, capital_used, _ = self._determine_shares(
                         cash,
                         equity,
                         entry_price,
                         entry_info["fraction"],
                         size_multiplier,
+                        avg_daily_volume=avg_vol,
                     )
 
                     if shares > 0:
@@ -275,6 +296,7 @@ class BacktestEngine:
                             "invested_capital": capital_used,
                             "last_close": close_price,
                             "partial_flags": {rule["flag"]: False for rule in self.partial_rules},
+                            "entry_bar": True,  # 진입일 플래그 (손절/익절 스킵용)
                         }
                         cash -= capital_used
                         logger.info(
@@ -455,6 +477,7 @@ class BacktestEngine:
         entry_price: float,
         position_fraction: float,
         size_multiplier: float,
+        avg_daily_volume: float = 0.0,
     ) -> Tuple[int, float, float]:
         if entry_price <= 0:
             return 0, 0.0, 0.0
@@ -466,6 +489,13 @@ class BacktestEngine:
         shares_by_risk = risk_budget / risk_per_share if risk_per_share > 0 else shares_by_capital
         shares_by_cash = cash / entry_price
         shares = min(shares_by_capital, shares_by_risk, shares_by_cash)
+
+        # 거래량 제약: 20일 평균 거래량의 10% 초과 불가
+        if avg_daily_volume > 0:
+            max_shares_by_volume = avg_daily_volume * 0.10
+            if shares > max_shares_by_volume:
+                shares = max_shares_by_volume
+
         shares = int(math.floor(shares))
         if shares <= 0:
             return 0, 0.0, risk_per_share
@@ -480,6 +510,8 @@ class BacktestEngine:
     def _execute_exit_price(self, price: float) -> float:
         adjusted = price * (1 - self.slippage)
         adjusted *= (1 - self.transaction_cost)
+        if self.korean_sell_tax > 0:
+            adjusted *= (1 - self.korean_sell_tax)  # 한국 주식 매도세 (KOSPI 0.23%)
         return round_to_tick_down(adjusted, self.is_korean_stock)
 
     def _calculate_position_size(
@@ -576,6 +608,33 @@ class BacktestEngine:
         avg_win = float(np.mean([t["pnl_pct"] for t in wins])) if wins else 0.0
         avg_loss = float(np.mean([t["pnl_pct"] for t in losses])) if losses else 0.0
 
+        # 통계적 신뢰도 계산
+        significance: Dict[str, Any] = {}
+        min_trades_warning: Optional[str] = None
+
+        if len(self.trades) < 5:
+            significance = {"confidence": "very_low", "warning": "거래 5건 미만 - 통계적 의미 없음"}
+            min_trades_warning = "거래 횟수가 너무 적어 결과의 신뢰도가 매우 낮습니다."
+        elif len(self.trades) < 10:
+            significance = {"confidence": "very_low", "warning": "거래 10건 미만 - 통계적 의미 제한적"}
+            min_trades_warning = "거래 횟수 부족으로 통계적 의미가 제한적입니다."
+        elif len(self.trades) < 30:
+            significance = {"confidence": "low", "warning": "거래 30건 미만 - 표본 크기 작음"}
+            min_trades_warning = "표본 크기가 작아 결과에 주의가 필요합니다."
+        else:
+            try:
+                from scipy import stats as scipy_stats
+                pnl_pcts = [t["pnl_pct"] for t in self.trades]
+                t_stat, p_value = scipy_stats.ttest_1samp(pnl_pcts, 0)
+                significance = {
+                    "confidence": "high" if p_value < 0.05 else "moderate" if p_value < 0.1 else "low",
+                    "t_statistic": round(float(t_stat), 3),
+                    "p_value": round(float(p_value), 4),
+                    "sample_size": len(self.trades),
+                }
+            except ImportError:
+                significance = {"confidence": "unknown", "warning": "scipy 미설치 - 신뢰도 계산 불가"}
+
         return BacktestMetrics(
             CAGR=round(float(cagr), 4),
             Sharpe=round(float(sharpe), 2),
@@ -589,6 +648,8 @@ class BacktestEngine:
             Sortino=round(float(sortino), 2),
             Calmar=round(float(calmar), 2),
             TailRatio=round(float(tail_ratio), 2),
+            statistical_significance=significance if significance else None,
+            min_trades_warning=min_trades_warning,
         )
 
     def _build_risk_summary(

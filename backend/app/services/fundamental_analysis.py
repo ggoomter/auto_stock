@@ -703,14 +703,14 @@ class FundamentalAnalyzer:
 
         applicable_quarter = self._get_applicable_quarter(as_of_date)
 
-        # 펀더멘털 데이터 없으면 기술적 분석만 사용
+        # 펀더멘털 데이터 없으면 보수적으로 기각 (lookahead bias 방지)
         if applicable_quarter is None:
-            return True  # 데이터 제약으로 통과 처리
+            return False  # 데이터 없으면 펀더멘털 미충족으로 처리
 
         # DART API 사용 (한국 주식) 또는 yfinance fallback
-        if self.is_korean and self.dart_client:
-            metrics = self.dart_client.get_metrics_at_date(
-                self.ticker.replace('.KS', '').replace('.KQ', ''),
+        if self.is_korean and self._dart_client:
+            metrics = self._dart_client.get_metrics_at_date(
+                self.symbol.replace('.KS', '').replace('.KQ', ''),
                 as_of_date
             )
             if metrics and not metrics.get('error'):
@@ -746,13 +746,13 @@ class FundamentalAnalyzer:
         applicable_quarter = self._get_applicable_quarter(as_of_date)
 
         if applicable_quarter is None:
-            # 펀더멘털 데이터가 없으면 기술적 분석만 진행 (골든크로스)
-            return True  # 기술적 조건만으로 매매
+            # 펀더멘털 데이터가 없으면 보수적으로 기각 (lookahead bias 방지)
+            return False  # 데이터 없으면 펀더멘털 미충족으로 처리
 
         # DART API 사용 (한국 주식) 또는 yfinance fallback
-        if self.is_korean and self.dart_client:
-            metrics = self.dart_client.get_metrics_at_date(
-                self.ticker.replace('.KS', '').replace('.KQ', ''),
+        if self.is_korean and self._dart_client:
+            metrics = self._dart_client.get_metrics_at_date(
+                self.symbol.replace('.KS', '').replace('.KQ', ''),
                 as_of_date
             )
             if metrics and not metrics.get('error'):
@@ -779,9 +779,9 @@ class FundamentalAnalyzer:
         # PEG 없지만 성장률 있으면 성장률만으로 판단
         elif earnings_growth_pct and earnings_growth_pct > 0:
             return earnings_growth_pct > 15  # 15% 이상 성장으로 완화
-        # 둘 다 없으면 기술적 분석만 (골든크로스)
+        # 둘 다 없으면 보수적으로 기각 (lookahead bias 방지)
         else:
-            return True  # 기술적 조건만으로 매매
+            return False  # 데이터 없으면 펀더멘털 미충족으로 처리
 
     def check_graham_criteria_at_date(self, as_of_date: datetime) -> bool:
         """특정 날짜에 그레이엄 기준 통과 여부"""
@@ -791,9 +791,9 @@ class FundamentalAnalyzer:
             return False
 
         # DART API 사용 (한국 주식) 또는 yfinance fallback
-        if self.is_korean and self.dart_client:
-            metrics = self.dart_client.get_metrics_at_date(
-                self.ticker.replace('.KS', '').replace('.KQ', ''),
+        if self.is_korean and self._dart_client:
+            metrics = self._dart_client.get_metrics_at_date(
+                self.symbol.replace('.KS', '').replace('.KQ', ''),
                 as_of_date
             )
             if metrics and not metrics.get('error'):

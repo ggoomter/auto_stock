@@ -13,6 +13,7 @@ import numpy as np
 from typing import Dict, Tuple, Optional
 from .fundamental_analysis import FundamentalAnalyzer
 from ..models.schemas import RiskParams
+from ..core.logging_config import logger
 
 
 def _get_close_series(df: pd.DataFrame) -> pd.Series:
@@ -99,7 +100,8 @@ class BuffettStrategy(MasterStrategy):
         exit_signals = pd.Series([False] * len(price_data), index=price_data.index)
 
         # 안전마진: 52주 최저가 대비 +20% 이내 (저평가 구간)
-        rolling_low_252 = close.rolling(252, min_periods=100).min()
+        # .shift(1): 전일까지의 최저가만 사용 (lookahead bias 방지)
+        rolling_low_252 = close.rolling(252, min_periods=100).min().shift(1)
         safety_margin = close < (rolling_low_252 * 1.20)
 
         # 각 날짜별로 펀더멘털 체크 (버핏 원칙: 지속적인 기업 가치 모니터링)
@@ -108,9 +110,9 @@ class BuffettStrategy(MasterStrategy):
             try:
                 passes_fundamental = analyzer.check_buffett_criteria_at_date(date)
             except Exception as e:
-                # 펀더멘털 데이터 없으면 기술적 분석만 사용
-                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}, 기술적 분석만 사용")
-                passes_fundamental = True
+                # 펀더멘털 데이터 없으면 보수적으로 기각 (lookahead bias 방지)
+                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}")
+                passes_fundamental = False
 
             if passes_fundamental and safety_margin.loc[date]:
                 # 진입: 펀더멘털 OK + 안전마진 (저평가)
@@ -190,9 +192,9 @@ class LynchStrategy(MasterStrategy):
             try:
                 passes_fundamental = analyzer.check_lynch_criteria_at_date(date)
             except Exception as e:
-                # 펀더멘털 데이터 없으면 기술적 분석만 사용 (골든크로스)
-                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}, 기술적 분석만 사용")
-                passes_fundamental = True  # 데이터 없으면 기술적 조건만으로 판단
+                # 펀더멘털 데이터 없으면 보수적으로 기각 (lookahead bias 방지)
+                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}")
+                passes_fundamental = False
 
             if passes_fundamental and golden_cross.loc[date]:
                 # 진입: PEG < 1.0 + 골든크로스 (추세 시작)
@@ -255,7 +257,8 @@ class GrahamStrategy(MasterStrategy):
         exit_signals = pd.Series([False] * len(price_data), index=price_data.index)
 
         # 기술적 조건: 52주 최저가 + 골든크로스 (반등 시작)
-        rolling_low = close.rolling(252, min_periods=100).min()
+        # .shift(1): 전일까지의 최저가만 사용 (lookahead bias 방지)
+        rolling_low = close.rolling(252, min_periods=100).min().shift(1)
         near_low = close < rolling_low * 1.15  # 저점 대비 +15% 이내
 
         ma20 = close.rolling(20).mean()
@@ -272,9 +275,9 @@ class GrahamStrategy(MasterStrategy):
             try:
                 passes_fundamental = analyzer.check_graham_criteria_at_date(date)
             except Exception as e:
-                # 펀더멘털 데이터 없으면 기술적 분석만 사용
-                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}, 기술적 분석만 사용")
-                passes_fundamental = True
+                # 펀더멘털 데이터 없으면 보수적으로 기각 (lookahead bias 방지)
+                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}")
+                passes_fundamental = False
 
             if passes_fundamental and near_low.loc[date] and golden_cross.loc[date]:
                 # 진입: P/B < 0.67 + 저점 + 골든크로스

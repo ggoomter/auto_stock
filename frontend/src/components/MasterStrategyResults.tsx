@@ -1,4 +1,5 @@
-﻿import { TrendingUp, TrendingDown, Activity, Target, AlertCircle, BarChart3 } from 'lucide-react';
+﻿import { useState } from 'react';
+import { TrendingUp, TrendingDown, Activity, Target, AlertCircle, BarChart3, ShieldCheck, ShieldAlert, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import type { MasterStrategyResponse } from '../services/api';
 import TradingTimeline from './TradingTimeline';
 import PortfolioChart from './PortfolioChart';
@@ -9,6 +10,7 @@ interface MasterStrategyResultsProps {
 
 export default function MasterStrategyResults({ results }: MasterStrategyResultsProps) {
   const { strategy_info, backtest, fundamental_screen, signal_examples, equity_curve, price_data, trade_history } = results;
+  const [showLimitations, setShowLimitations] = useState(false);
 
   const formatPercent = (value: number) => `${(value * 100).toFixed(2)}%`;
   const formatNumber = (value: number) => value.toFixed(2);
@@ -151,6 +153,86 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
           </div>
         </div>
       </div>
+
+      {/* 면책사항 배너 */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+        <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+        <div className="text-xs text-amber-800">
+          <strong>면책사항:</strong> 과거 성과는 미래 수익을 보장하지 않습니다.
+          백테스트 결과는 생존 편향(survivorship bias)의 영향을 받을 수 있으며, 실제 거래 환경과 차이가 있습니다.
+          본 결과는 교육 및 연구 목적으로만 제공됩니다.
+        </div>
+      </div>
+
+      {/* 통계적 신뢰도 배지 */}
+      {!hasNoTrades && (() => {
+        const sig = backtest.metrics.statistical_significance;
+        const warning = backtest.metrics.min_trades_warning;
+        if (!sig && !warning) return null;
+
+        const confidence = sig?.confidence || 'unknown';
+        const badgeConfig: Record<string, { bg: string; border: string; text: string; icon: typeof ShieldCheck; label: string; desc: string }> = {
+          high: {
+            bg: 'from-green-50 to-emerald-50',
+            border: 'border-green-300',
+            text: 'text-green-800',
+            icon: ShieldCheck,
+            label: '높은 신뢰도',
+            desc: '충분한 거래 횟수와 통계적 유의성이 확인되었습니다.',
+          },
+          moderate: {
+            bg: 'from-yellow-50 to-amber-50',
+            border: 'border-yellow-300',
+            text: 'text-yellow-800',
+            icon: ShieldAlert,
+            label: '보통 신뢰도',
+            desc: '거래 횟수가 제한적이어서 결과 해석에 주의가 필요합니다.',
+          },
+          low: {
+            bg: 'from-orange-50 to-amber-50',
+            border: 'border-orange-300',
+            text: 'text-orange-800',
+            icon: AlertCircle,
+            label: '낮은 신뢰도',
+            desc: '표본 크기가 작아 통계적 의미가 제한됩니다.',
+          },
+          very_low: {
+            bg: 'from-red-50 to-rose-50',
+            border: 'border-red-300',
+            text: 'text-red-800',
+            icon: AlertCircle,
+            label: '매우 낮은 신뢰도',
+            desc: '거래 횟수가 매우 부족하여 결과를 신뢰하기 어렵습니다.',
+          },
+        };
+
+        const config = badgeConfig[confidence] || badgeConfig.low;
+        const BadgeIcon = config.icon;
+
+        return (
+          <div className={`card bg-gradient-to-r ${config.bg} border-2 ${config.border}`}>
+            <div className="flex items-start gap-3">
+              <BadgeIcon className={`w-6 h-6 ${config.text} flex-shrink-0 mt-0.5`} />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-sm font-bold ${config.text}`}>{config.label}</span>
+                  {sig?.p_value !== undefined && (
+                    <span className="text-xs text-gray-500 font-mono">
+                      (p={sig.p_value.toFixed(4)})
+                    </span>
+                  )}
+                </div>
+                <p className={`text-sm ${config.text} opacity-90`}>{config.desc}</p>
+                {(sig?.warning || warning) && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    {sig?.warning || warning}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 거래 0건일 때 경고 메시지 */}
       {hasNoTrades && (
@@ -305,6 +387,22 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
               <div className="text-sm text-purple-700 mt-1">
                 승률 {winRate.toFixed(1)}% ({winningTrades.length}승 {losingTrades.length}패)
               </div>
+            </div>
+          </div>
+
+          {/* MDD 강조 표시 */}
+          <div className="mt-4 bg-red-50 border-2 border-red-300 rounded-lg p-4 flex items-center gap-4">
+            <div className="flex-shrink-0 w-12 h-12 bg-red-500 rounded-full flex items-center justify-center">
+              <TrendingDown className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="text-xs text-red-700 font-medium mb-0.5">최대 낙폭 (MDD) - 최악의 손실 구간</div>
+              <div className="text-3xl font-black text-red-700">
+                {formatPercent(backtest.metrics.MaxDD)}
+              </div>
+            </div>
+            <div className="text-xs text-red-600 max-w-[200px]">
+              투자 기간 중 고점 대비 최대 하락폭입니다. 실제 투자 시 이 수준의 손실을 감내할 수 있어야 합니다.
             </div>
           </div>
         </div>
@@ -701,8 +799,48 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
         </div>
       )}
 
+      {/* 방법론 한계 섹션 (접을 수 있음) */}
+      <div className="card border border-gray-200">
+        <button
+          onClick={() => setShowLimitations(!showLimitations)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">방법론 한계 및 주의사항</span>
+          </div>
+          {showLimitations ? (
+            <ChevronUp className="w-4 h-4 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-gray-400" />
+          )}
+        </button>
+        {showLimitations && (
+          <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600 space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="text-gray-400 mt-0.5">1.</span>
+              <span>재무 데이터는 최근 4분기만 정확합니다 (yfinance 한계). 장기 백테스트에서 과거 펀더멘털 조건이 부정확할 수 있습니다.</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-gray-400 mt-0.5">2.</span>
+              <span>단일 종목 분석만 지원합니다. 포트폴리오 분산 효과가 반영되지 않아 실제 투자 성과와 다를 수 있습니다.</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-gray-400 mt-0.5">3.</span>
+              <span>거래 비용(수수료, 슬리피지, 거래세)은 추정치이며 실제 브로커 조건과 다를 수 있습니다.</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-gray-400 mt-0.5">4.</span>
+              <span>백테스트는 과거 데이터에 대한 시뮬레이션이며, 시장 충격, 유동성 위기, 거래 정지 등은 반영하지 않습니다.</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-gray-400 mt-0.5">5.</span>
+              <span>생존 편향(survivorship bias): 현재 상장된 종목만 분석 가능하며, 상장폐지된 종목은 제외됩니다.</span>
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
-
-

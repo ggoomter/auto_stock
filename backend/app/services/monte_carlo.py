@@ -94,37 +94,41 @@ class MonteCarloSimulator:
     def _block_bootstrap(
         self,
         data: pd.DataFrame,
-        block_size: int = 20
+        expected_block_size: int = 20
     ) -> pd.DataFrame:
         """
-        블록 부트스트랩 (시계열 자기상관 보존)
+        Stationary Bootstrap (기하분포 블록 크기)
+
+        고정 블록 크기 대신 확률적 블록 경계를 사용하여
+        시계열의 자기상관 구조를 더 잘 보존합니다.
 
         Args:
             data: 원본 데이터
-            block_size: 블록 크기 (일수)
+            expected_block_size: 기대 블록 크기 (기하분포 평균)
 
         Returns:
             리샘플링된 데이터
         """
         n = len(data)
-        n_blocks = n // block_size
+        if n < 2:
+            return data.copy()
 
-        # 랜덤 블록 선택
-        block_indices = np.random.randint(0, n - block_size, size=n_blocks)
+        p = 1.0 / expected_block_size  # 새 블록 시작 확률
 
-        resampled_indices = []
-        for idx in block_indices:
-            resampled_indices.extend(range(idx, idx + block_size))
+        indices = []
+        i = np.random.randint(0, n)
+        for _ in range(n):
+            indices.append(i)
+            if np.random.random() < p:
+                i = np.random.randint(0, n)  # 새 랜덤 위치
+            else:
+                i = (i + 1) % n  # 현재 블록 계속
 
-        # 인덱스 범위 체크
-        resampled_indices = [i for i in resampled_indices if i < n]
-
-        # 리샘플링
-        resampled_data = data.iloc[resampled_indices].copy()
+        resampled_data = data.iloc[indices].copy()
         resampled_data.index = pd.date_range(
             start=data.index[0],
             periods=len(resampled_data),
-            freq='D'
+            freq='B'  # 'B'=영업일 (주말 제외, 더 현실적)
         )
 
         return resampled_data
