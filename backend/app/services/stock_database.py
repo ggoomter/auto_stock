@@ -23,7 +23,7 @@ class StockDatabase:
         self._load_thread = None  # 백그라운드 스레드
 
         # 백그라운드 스레드에서 비동기 로드
-        logger.info("🚀 StockDatabase 초기화 시작 (백그라운드 로드)")
+        logger.info("StockDatabase 초기화 시작 (백그라운드 로드)")
         self._start_background_loading()
 
     def _load_korean_stocks(self) -> pd.DataFrame:
@@ -74,14 +74,20 @@ class StockDatabase:
             # 통합 및 정리
             df = pd.concat(all_stocks, ignore_index=True)
 
-            # 컬럼 정리
-            df = df.rename(columns={
+            # 컬럼 정리 (유연하게)
+            rename_map = {
                 'Code': 'code',
                 'Name': 'nameKo',
-                'Market': 'marketOld',
-                'Sector': 'sector',
-                'Industry': 'industry'
-            })
+                'Market': 'marketOld'
+            }
+
+            # Sector, Industry 컬럼이 있으면 rename
+            if 'Sector' in df.columns:
+                rename_map['Sector'] = 'sector'
+            if 'Industry' in df.columns:
+                rename_map['Industry'] = 'industry'
+
+            df = df.rename(columns=rename_map)
 
             # Symbol 생성 (Code + .KS or .KQ)
             df['symbol'] = df.apply(
@@ -91,6 +97,10 @@ class StockDatabase:
 
             # 영문명은 한글명과 동일 (yfinance가 제공)
             df['nameEn'] = df['nameKo']
+
+            # sector 컬럼이 없으면 빈 문자열로 생성
+            if 'sector' not in df.columns:
+                df['sector'] = ''
 
             # 필요한 컬럼만 선택
             df = df[['symbol', 'nameKo', 'nameEn', 'sector']].fillna('')
@@ -150,18 +160,18 @@ class StockDatabase:
 
             def _load_in_background():
                 try:
-                    logger.info("📥 백그라운드에서 한국 주식 데이터 로딩 시작...")
+                    logger.info("백그라운드에서 한국 주식 데이터 로딩 시작...")
                     self.korean_stocks = self._load_korean_stocks()
-                    logger.info(f"✅ 백그라운드 로딩 완료: {len(self.korean_stocks)}개 종목")
+                    logger.info(f"백그라운드 로딩 완료: {len(self.korean_stocks)}개 종목")
                 except Exception as e:
-                    logger.error(f"❌ 백그라운드 로딩 실패: {str(e)}")
+                    logger.error(f"백그라운드 로딩 실패: {str(e)}")
                     self.korean_stocks = self._load_fallback_stocks()
                 finally:
                     self._loading = False
 
             self._load_thread = threading.Thread(target=_load_in_background, daemon=True)
             self._load_thread.start()
-            logger.info("🚀 백그라운드 로딩 스레드 시작")
+            logger.info("백그라운드 로딩 스레드 시작")
 
     def search(self, query: str, limit: int = 20) -> List[Dict]:
         """통합 검색 (한글/영문/심볼)"""
@@ -170,7 +180,7 @@ class StockDatabase:
 
         # 로딩 중이거나 데이터 없으면 fallback 먼저 검색 (빠른 응답)
         if self.korean_stocks is None or self._loading:
-            logger.info("🚀 Fallback 데이터로 빠른 검색 (전체 로딩 백그라운드 진행)")
+            logger.info("Fallback 데이터로 빠른 검색 (전체 로딩 백그라운드 진행)")
             fallback_data = self._load_fallback_stocks()
 
             # Fallback에서 검색
@@ -258,5 +268,10 @@ def get_stock_database() -> StockDatabase:
     """전역 종목 데이터베이스 반환"""
     global _stock_db
     if _stock_db is None:
-        _stock_db = StockDatabase()
+        try:
+            _stock_db = StockDatabase()
+        except Exception as e:
+            logger.error(f"StockDatabase 초기화 실패: {str(e)}")
+            # 초기화 실패 시에도 인스턴스 생성 (fallback 데이터 사용)
+            _stock_db = StockDatabase()
     return _stock_db

@@ -1,48 +1,96 @@
 @echo off
-chcp 65001 > nul
-title 금융 분석 플랫폼 - 종료
-color 0C
 
-echo ================================
-echo   금융 분석 플랫폼 종료
-echo ================================
+title Stop Services
+REM color 0E는 노란색, 0A는 초록색, 07은 기본 흰색
+color 0E
+
+echo.
+echo ========================================================
+echo   Stopping All Services...
+echo ========================================================
 echo.
 
-echo [작업 1/3] 백엔드 서버 종료 중...
-REM FastAPI/Uvicorn 프로세스 종료
-taskkill /F /IM python.exe /FI "WINDOWTITLE eq *uvicorn*" > nul 2>&1
-taskkill /F /FI "WINDOWTITLE eq *python*" /FI "MEMUSAGE gt 50000" > nul 2>&1
+echo [1/4] Closing console windows...
+REM START.bat로 실행된 창 제목으로 종료
+taskkill /FI "WINDOWTITLE eq Backend Server*" /F >nul 2>&1
+if %errorlevel% equ 0 (echo   - Backend window closed)
+taskkill /FI "WINDOWTITLE eq Frontend Server*" /F >nul 2>&1
+if %errorlevel% equ 0 (echo   - Frontend window closed)
+taskkill /FI "WINDOWTITLE eq Administrator:  Backend Server*" /F >nul 2>&1
+taskkill /FI "WINDOWTITLE eq Administrator:  Frontend Server*" /F >nul 2>&1
 
-REM 포트 8000번 사용 중인 프로세스 강제 종료
-for /f "tokens=5" %%a in ('netstat -aon ^| find ":8000" ^| find "LISTENING"') do (
-    taskkill /F /PID %%a > nul 2>&1
-    if not errorlevel 1 echo [완료] 백엔드 서버 종료 (PID: %%a)
+echo [2/4] Stopping Backend processes (Python/uvicorn)...
+REM Python 및 uvicorn 프로세스 종료
+taskkill /F /IM uvicorn.exe >nul 2>&1
+taskkill /F /IM python.exe /FI "MEMUSAGE gt 50000" >nul 2>&1
+wmic process where "commandline like '%%uvicorn%%app.main:app%%'" delete >nul 2>&1
+wmic process where "commandline like '%%uvicorn_start.py%%'" delete >nul 2>&1
+wmic process where "commandline like '%%run_backend.bat%%'" delete >nul 2>&1
+
+REM 포트 8650을 사용하는 프로세스 찾아서 종료
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8650 ^| findstr LISTENING') do (
+    if not "%%a"=="" if not "%%a"=="0" (
+        taskkill /PID %%a /F >nul 2>&1
+    )
+)
+echo   [OK] Backend stopped
+
+echo.
+echo [3/4] Stopping Frontend processes (Node/Vite)...
+REM Node 및 Vite 프로세스 종료
+taskkill /F /IM node.exe /FI "MEMUSAGE gt 50000" >nul 2>&1
+wmic process where "commandline like '%%vite%%'" delete >nul 2>&1
+wmic process where "commandline like '%%npm%%run%%dev%%'" delete >nul 2>&1
+wmic process where "commandline like '%%run_frontend.bat%%'" delete >nul 2>&1
+
+REM 포트 4783을 사용하는 프로세스 찾아서 종료
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :4783 ^| findstr LISTENING') do (
+    if not "%%a"=="" if not "%%a"=="0" (
+        taskkill /PID %%a /F >nul 2>&1
+    )
+)
+echo   [OK] Frontend stopped
+
+echo.
+echo [4/4] Verifying ports are freed...
+timeout /t 2 /nobreak >nul
+
+REM 포트 확인
+netstat -ano | findstr :8650 >nul 2>&1
+if errorlevel 1 (
+    echo   [OK] Port 8650 is free
+) else (
+    echo   [!] Port 8650 may still be in use
+    echo   Attempting force kill...
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8650 ^| findstr LISTENING') do (
+        if not "%%a"=="" if not "%%a"=="0" (
+            echo   Killing PID %%a
+            taskkill /PID %%a /F >nul 2>&1
+        )
+    )
+)
+
+netstat -ano | findstr :4783 >nul 2>&1
+if errorlevel 1 (
+    echo   [OK] Port 4783 is free
+) else (
+    echo   [!] Port 4783 may still be in use
+    echo   Attempting force kill...
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :4783 ^| findstr LISTENING') do (
+        if not "%%a"=="" if not "%%a"=="0" (
+            echo   Killing PID %%a
+            taskkill /PID %%a /F >nul 2>&1
+        )
+    )
 )
 
 echo.
-echo [작업 2/3] 프론트엔드 서버 종료 중...
-REM Vite/Node 프로세스 종료
-taskkill /F /IM node.exe > nul 2>&1
-
-REM 포트 5173번 사용 중인 프로세스 강제 종료
-for /f "tokens=5" %%a in ('netstat -aon ^| find ":5173" ^| find "LISTENING"') do (
-    taskkill /F /PID %%a > nul 2>&1
-    if not errorlevel 1 echo [완료] 프론트엔드 서버 종료 (PID: %%a)
-)
-
+echo ========================================================
+echo   All Services Stopped!
+echo ========================================================
 echo.
-echo [작업 3/3] 관련 프로세스 정리 중...
-REM 남은 관련 프로세스 정리
-taskkill /F /IM python.exe /T > nul 2>&1
-taskkill /F /IM node.exe /T > nul 2>&1
+echo Logs saved in logs\ folder
+echo.
+echo Press any key to exit...
+pause >nul
 
-timeout /t 1 /nobreak > nul
-
-echo.
-echo ================================
-echo   종료 완료!
-echo ================================
-echo.
-echo 모든 서버가 정상적으로 종료되었습니다.
-echo.
-pause

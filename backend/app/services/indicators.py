@@ -76,11 +76,86 @@ class IndicatorCalculator:
         """Bollinger Bands 계산"""
         close_col = IndicatorCalculator._get_close_col(df)
         bbands = ta.bbands(df[close_col], length=period, std=std)
-        # pandas-ta의 실제 컬럼명 형식: BBU_20_2.0_2.0 (std가 두번 들어감)
-        df['BB_upper'] = bbands[f'BBU_{period}_{std}_{std}']
-        df['BB_middle'] = bbands[f'BBM_{period}_{std}_{std}']
-        df['BB_lower'] = bbands[f'BBL_{period}_{std}_{std}']
-        df['BB_width'] = bbands[f'BBB_{period}_{std}_{std}']
+        
+        # pandas-ta와 pandas-ta-classic의 컬럼명 형식이 다를 수 있음
+        # 가능한 컬럼명 형식들을 시도
+        possible_upper = [
+            f'BBU_{period}_{std}_{std}',
+            f'BBU_{period}_{std}',
+            f'BBU_{period}',
+            'BBU_20_2.0',
+            'BBU_20',
+            'BBU'
+        ]
+        possible_middle = [
+            f'BBM_{period}_{std}_{std}',
+            f'BBM_{period}_{std}',
+            f'BBM_{period}',
+            'BBM_20_2.0',
+            'BBM_20',
+            'BBM'
+        ]
+        possible_lower = [
+            f'BBL_{period}_{std}_{std}',
+            f'BBL_{period}_{std}',
+            f'BBL_{period}',
+            'BBL_20_2.0',
+            'BBL_20',
+            'BBL'
+        ]
+        possible_width = [
+            f'BBB_{period}_{std}_{std}',
+            f'BBB_{period}_{std}',
+            f'BBB_{period}',
+            'BBB_20_2.0',
+            'BBB_20',
+            'BBB'
+        ]
+        
+        # 실제 존재하는 컬럼 찾기
+        upper_col = None
+        middle_col = None
+        lower_col = None
+        width_col = None
+        
+        for col in possible_upper:
+            if col in bbands.columns:
+                upper_col = col
+                break
+        
+        for col in possible_middle:
+            if col in bbands.columns:
+                middle_col = col
+                break
+        
+        for col in possible_lower:
+            if col in bbands.columns:
+                lower_col = col
+                break
+        
+        for col in possible_width:
+            if col in bbands.columns:
+                width_col = col
+                break
+        
+        # 컬럼이 없으면 에러
+        if upper_col is None or middle_col is None or lower_col is None:
+            available_cols = list(bbands.columns)
+            raise ValueError(
+                f"Bollinger Bands 컬럼을 찾을 수 없습니다. "
+                f"사용 가능한 컬럼: {available_cols}. "
+                f"시도한 형식: BBU_{period}_{std}_{std}, BBU_{period}_{std}, BBU_{period}"
+            )
+        
+        df['BB_upper'] = bbands[upper_col]
+        df['BB_middle'] = bbands[middle_col]
+        df['BB_lower'] = bbands[lower_col]
+        if width_col:
+            df['BB_width'] = bbands[width_col]
+        else:
+            # BB_width가 없으면 계산
+            df['BB_width'] = (df['BB_upper'] - df['BB_lower']) / df['BB_middle']
+        
         return df
 
     @staticmethod

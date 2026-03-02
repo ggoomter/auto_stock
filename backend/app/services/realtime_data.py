@@ -215,8 +215,8 @@ class RealtimeSignalGenerator:
 
         # 기술적 지표 계산
         from .indicators import IndicatorCalculator
-        calculator = IndicatorCalculator(data)
-        data_with_indicators = calculator.calculate_all()
+        # IndicatorCalculator는 정적 메서드만 있으므로 직접 호출
+        data_with_indicators = IndicatorCalculator.calculate_all(data)
 
         latest = data_with_indicators.iloc[-1]
         prev = data_with_indicators.iloc[-2] if len(data_with_indicators) > 1 else None

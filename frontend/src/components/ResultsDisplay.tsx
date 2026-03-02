@@ -176,40 +176,40 @@ export default function ResultsDisplay({ results, initialCapital = 1000000 }: Re
           <div className="mt-6 space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <MetricCard 
-                label="CAGR (연평균)" 
+                label="연평균 수익률" 
                 value={`${(backtest.metrics.CAGR * 100).toFixed(2)}%`} 
                 positive={backtest.metrics.CAGR > 0} 
               />
               <MetricCard 
-                label="Max Drawdown" 
+                label="최대 낙폭" 
                 value={`${(backtest.metrics.MaxDD * 100).toFixed(2)}%`} 
                 positive={backtest.metrics.MaxDD > -0.2} 
                 invert 
               />
               <MetricCard 
-                label="승률 (Hit Ratio)" 
+                label="승률" 
                 value={`${(backtest.metrics.HitRatio * 100).toFixed(1)}%`} 
                 positive={backtest.metrics.HitRatio > 0.5} 
               />
               <MetricCard 
-                label="Sharpe Ratio" 
+                label="샤프 비율" 
                 value={backtest.metrics.Sharpe.toFixed(2)} 
                 positive={backtest.metrics.Sharpe > 1} 
               />
               
-              {/* New Advanced Metrics */}
+              {/* 고급 지표 */}
               <MetricCard 
-                label="Sortino Ratio" 
+                label="소르티노 비율" 
                 value={backtest.metrics.Sortino?.toFixed(2) ?? 'N/A'} 
                 positive={(backtest.metrics.Sortino ?? 0) > 1} 
               />
               <MetricCard 
-                label="Calmar Ratio" 
+                label="칼마 비율" 
                 value={backtest.metrics.Calmar?.toFixed(2) ?? 'N/A'} 
                 positive={(backtest.metrics.Calmar ?? 0) > 1} 
               />
               <MetricCard 
-                label="Tail Ratio" 
+                label="테일 비율" 
                 value={backtest.metrics.TailRatio?.toFixed(2) ?? 'N/A'} 
                 positive={(backtest.metrics.TailRatio ?? 0) > 1} 
               />

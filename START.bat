@@ -98,14 +98,14 @@ echo.
 
 REM --- 백엔드 백그라운드 실행 (새 창으로 실행) ---
 echo Starting backend on port 8650 (logs/backend.log)...
-start "Backend Server" /MIN cmd /c "cd /d "%~dp0" && call run_backend.bat"
+start "Backend Server" /MIN cmd /c "cd /d "%~dp0" && call run_backend.bat > logs\backend.log 2>&1"
 
 echo Waiting for backend to start (5 seconds)...
 timeout /t 5 /nobreak
 
 REM --- 프론트엔드 백그라운드 실행 (새 창으로 실행) ---
 echo Starting frontend on port 4783 (logs/frontend.log)...
-start "Frontend Server" /MIN cmd /c "cd /d "%~dp0" && call run_frontend.bat"
+start "Frontend Server" /MIN cmd /c "cd /d "%~dp0" && call run_frontend.bat > logs\frontend.log 2>&1"
 
 echo.
 echo ========================================================

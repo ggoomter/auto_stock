@@ -24,7 +24,14 @@
       "Bash(powershell -Command:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(\"backend/venv/Scripts/python.exe\" -m pip list)",
+      "Bash(\"backend/venv/Scripts/python.exe\" -m pip install finance-datareader)",
+      "Bash(\"backend/venv/Scripts/python.exe\":*)",
+      "Bash(\"venv/Scripts/python.exe\" -m uvicorn:*)",
+      "Bash(timeout /t 3)"
     ],
     "deny": [],
     "ask": []

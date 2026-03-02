@@ -797,6 +797,45 @@ def _get_strategy_info(strategy_name: str) -> MasterStrategyInfo:
             ],
             holding_period="장기 (5년+)",
             risk_profile="높음 (혁신 기술 변동성)"
+        ),
+        "modern_livermore": MasterStrategyInfo(
+            name="Modern Livermore - Enhanced Trend Following",
+            description="리버모어 전략의 현대적 개선 버전",
+            key_principles=[
+                "52주 신고가 돌파 매수",
+                "추세선 이탈 손절",
+                "피라미딩 (분할 매수)",
+                "트레일링 스탑 적용",
+                "시장이 옳다"
+            ],
+            holding_period="단기~중기 (추세 지속)",
+            risk_profile="높음 (타이트 손절)"
+        ),
+        "chanos": MasterStrategyInfo(
+            name="Jim Chanos - Short Selling",
+            description="공매도 전문 전략",
+            key_principles=[
+                "재무제표 분석 기반 공매도",
+                "회계 부정 의심 종목",
+                "과대평가된 성장주",
+                "부채비율 높은 기업",
+                "숏 포지션 관리"
+            ],
+            holding_period="단기~중기",
+            risk_profile="매우 높음 (공매도 리스크)"
+        ),
+        "super_momentum": MasterStrategyInfo(
+            name="Super Momentum Strategy",
+            description="강력한 모멘텀 추종 전략",
+            key_principles=[
+                "강한 모멘텀 확인",
+                "신고가 돌파",
+                "거래량 증가",
+                "트레일링 스탑",
+                "빠른 손절"
+            ],
+            holding_period="단기 (모멘텀 지속)",
+            risk_profile="높음 (타이트 손절)"
         )
     }
     return info_map.get(strategy_name, MasterStrategyInfo(
@@ -920,17 +959,41 @@ async def get_strategy_template(strategy_name: str):
 @router.get("/master-strategies")
 async def list_master_strategies():
     """사용 가능한 투자 대가 전략 목록"""
-    strategies = list_strategies()
-    return {
-        "strategies": [
-            {
-                "name": name,
-                "description": desc,
-                "info": _get_strategy_info(name)
-            }
-            for name, desc in strategies.items()
-        ]
-    }
+    try:
+        strategies = list_strategies()
+        result = []
+        for name, desc in strategies.items():
+            try:
+                info = _get_strategy_info(name)
+                # Pydantic 모델을 dict로 변환
+                info_dict = info.model_dump() if hasattr(info, 'model_dump') else info.dict() if hasattr(info, 'dict') else info
+                result.append({
+                    "name": name,
+                    "description": desc,
+                    "info": info_dict
+                })
+            except Exception as e:
+                import traceback
+                logger.error(f"전략 정보 가져오기 실패 ({name}): {str(e)}")
+                logger.error(f"Traceback:\n{traceback.format_exc()}")
+                # 오류가 발생해도 기본 정보라도 반환
+                result.append({
+                    "name": name,
+                    "description": desc,
+                    "info": {
+                        "name": name,
+                        "description": desc,
+                        "key_principles": [],
+                        "holding_period": "",
+                        "risk_profile": ""
+                    }
+                })
+        return {"strategies": result}
+    except Exception as e:
+        import traceback
+        logger.error(f"master-strategies 엔드포인트 오류: {str(e)}")
+        logger.error(f"Traceback:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"전략 목록 조회 실패: {str(e)}")
 
 
 @router.get("/health")
@@ -971,11 +1034,16 @@ async def search_stocks(query: str):
         from ..services.stock_database import get_stock_database
 
         if not query or len(query.strip()) < 1:
-            return {"results": []}
+            return {"results": [], "query": query}
 
         # 통합 검색 (한글/영문/심볼)
-        db = get_stock_database()
-        results = db.search(query, limit=20)
+        try:
+            db = get_stock_database()
+            results = db.search(query, limit=20)
+        except Exception as db_error:
+            logger.error(f"종목 데이터베이스 오류: {str(db_error)}")
+            # 데이터베이스 오류 시 빈 결과 반환
+            return {"results": [], "query": query, "error": "데이터베이스 초기화 중입니다. 잠시 후 다시 시도해주세요."}
 
         return {
             "results": results,
@@ -983,8 +1051,10 @@ async def search_stocks(query: str):
         }
 
     except Exception as e:
+        import traceback
         logger.error(f"종목 검색 오류: {str(e)}")
-        return {"results": [], "error": str(e)}
+        logger.error(f"Traceback:\n{traceback.format_exc()}")
+        return {"results": [], "query": query, "error": str(e)}
 
 
 # ============================================================
@@ -1062,12 +1132,11 @@ async def compare_strategies(request: StrategyComparisonRequest):
 
                     continue
                 # 각 전략 실행
-                strategy_class = get_strategy(strategy_name)
-                if not strategy_class:
+                # get_strategy는 이미 인스턴스를 반환함 (MASTER_STRATEGIES에 이미 인스턴스화되어 있음)
+                strategy = get_strategy(strategy_name)
+                if not strategy:
                     logger.warning(f"전략을 찾을 수 없음: {strategy_name}")
                     continue
-
-                strategy = strategy_class()
 
                 # 전략별 백테스트 실행
                 strategy_results = []
@@ -1075,14 +1144,34 @@ async def compare_strategies(request: StrategyComparisonRequest):
 
                 for symbol in request.symbols:
                     # 데이터 로드
-                    data = load_sample_data(symbol, request.start_date, request.end_date)
-                    if data is None or len(data) < 50:
-                        logger.warning(f"데이터 부족: {symbol}")
+                    try:
+                        data = load_sample_data(symbol, request.start_date, request.end_date)
+                        if data is None or len(data) == 0:
+                            logger.warning(f"데이터 로드 실패: {symbol} (None 또는 빈 데이터)")
+                            continue
+                    except Exception as e:
+                        logger.error(f"데이터 로드 오류 ({symbol}): {str(e)}")
+                        continue
+
+                    # 지표 계산 전 데이터 길이 확인
+                    if len(data) < 50:
+                        logger.warning(f"데이터 부족: {symbol} (로드된 데이터: {len(data)}개, 최소 50개 필요)")
                         continue
 
                     # 지표 계산
-                    calculator = IndicatorCalculator(data)
-                    data_with_indicators = calculator.calculate_all()
+                    try:
+                        # IndicatorCalculator는 정적 메서드만 있으므로 직접 호출
+                        data_with_indicators = IndicatorCalculator.calculate_all(data)
+                        
+                        # 지표 계산 후 데이터 길이 확인 (dropna로 인해 줄어들 수 있음)
+                        if len(data_with_indicators) < 20:
+                            logger.warning(f"지표 계산 후 데이터 부족: {symbol} (계산 후: {len(data_with_indicators)}개, 최소 20개 필요)")
+                            continue
+                    except Exception as e:
+                        logger.error(f"지표 계산 오류 ({symbol}): {str(e)}")
+                        import traceback
+                        logger.error(f"Traceback:\n{traceback.format_exc()}")
+                        continue
 
                     # 펀더멘털 분석 (필요한 경우)
                     fundamental_screen = {}
@@ -1099,22 +1188,72 @@ async def compare_strategies(request: StrategyComparisonRequest):
                             logger.warning(f"펀더멘털 분석 실패 ({symbol}): {e}")
 
                     # 전략 실행
-                    entry_signals, exit_signals = strategy.generate_signals(
-                        data_with_indicators,
-                        fundamental_screen
-                    )
+                    # generate_signals는 (symbol, price_data, **kwargs) 형식
+                    try:
+                        entry_signals, exit_signals = strategy.generate_signals(
+                            symbol,
+                            data_with_indicators,
+                            fundamental_screen=fundamental_screen if fundamental_screen else None
+                        )
+                    except Exception as e:
+                        logger.error(f"전략 시그널 생성 실패 ({strategy_name}, {symbol}): {str(e)}")
+                        import traceback
+                        logger.error(f"Traceback:\n{traceback.format_exc()}")
+                        continue
+
+                    # 리스크 파라미터 가져오기
+                    try:
+                        risk_params = strategy.get_risk_params()
+                    except Exception as e:
+                        logger.error(f"리스크 파라미터 가져오기 실패 ({strategy_name}): {str(e)}")
+                        # 기본 리스크 파라미터 사용
+                        from ..models.schemas import RiskParams
+                        risk_params = RiskParams(
+                            stop_loss_pct=0.10,
+                            take_profit_pct=0.20,
+                            position_sizing="equal"
+                        )
 
                     # 백테스트
-                    engine = BacktestEngine(
-                        data=data_with_indicators,
-                        entry_signals=entry_signals,
-                        exit_signals=exit_signals,
-                        initial_capital=request.initial_capital / len(request.symbols),  # 균등 배분
-                        stop_loss_pct=getattr(strategy, 'stop_loss_pct', None),
-                        take_profit_pct=getattr(strategy, 'take_profit_pct', None)
-                    )
-                    backtest_result = engine.run()
-                    strategy_results.append(backtest_result)
+                    try:
+                        # 한국 주식 여부 확인
+                        symbol_base = symbol.replace('.KS', '').replace('.KQ', '')
+                        is_korean_stock = (symbol_base.isdigit() and len(symbol_base) == 6) or symbol.endswith(('.KS', '.KQ'))
+                        
+                        engine = BacktestEngine(
+                            data=data_with_indicators,
+                            entry_signals=entry_signals,
+                            exit_signals=exit_signals,
+                            risk_params=risk_params,
+                            transaction_cost_bps=10,
+                            slippage_bps=5,
+                            initial_capital=request.initial_capital / len(request.symbols),  # 균등 배분
+                            is_korean_stock=is_korean_stock
+                        )
+                        metrics, equity_curve, risk_report = engine.run()
+                        
+                        # 결과 형식 변환
+                        backtest_result = {
+                            "metrics": {
+                                "CAGR": float(metrics.CAGR),
+                                "Sharpe": float(metrics.Sharpe),
+                                "MaxDD": float(metrics.MaxDD),
+                                "WinRate": float(metrics.HitRatio),
+                                "TotalTrades": int(metrics.TotalTrades) if hasattr(metrics, 'TotalTrades') else 0,
+                                "ProfitFactor": float(metrics.ProfitFactor) if hasattr(metrics, 'ProfitFactor') else 0.0
+                            },
+                            "risk_summary": risk_report,
+                            "equity_curve": [
+                                {"date": idx.strftime("%Y-%m-%d"), "equity": float(val)}
+                                for idx, val in equity_curve.items()
+                            ] if equity_curve is not None else []
+                        }
+                        strategy_results.append(backtest_result)
+                    except Exception as e:
+                        logger.error(f"백테스트 실행 실패 ({strategy_name}, {symbol}): {str(e)}")
+                        import traceback
+                        logger.error(f"Traceback:\n{traceback.format_exc()}")
+                        continue
 
                     # Equity curve 저장
                     if backtest_result.get("equity_curve"):
@@ -1264,8 +1403,8 @@ async def run_llm_strategy(request: LLMStrategyRequest):
                 continue
 
             # 지표 계산
-            calculator = IndicatorCalculator(data)
-            data_with_indicators = calculator.calculate_all()
+            # IndicatorCalculator는 정적 메서드만 있으므로 직접 호출
+            data_with_indicators = IndicatorCalculator.calculate_all(data)
 
             # LLM 신호 생성
             entry_signals, exit_signals = llm_strategy.generate_signals(

@@ -1,121 +1,160 @@
 @echo off
-chcp 65001 > nul
-title 금융 분석 플랫폼 - 시작
-color 0A
 
-echo ================================
-echo   금융 분석 플랫폼 시작
-echo ================================
-echo.
-
-REM 백엔드 디렉토리 확인
-if not exist "backend" (
-    echo [오류] backend 폴더를 찾을 수 없습니다.
-    echo 현재 위치: %CD%
-    pause
-    exit /b 1
-)
-
-REM 프론트엔드 디렉토리 확인
-if not exist "frontend" (
-    echo [오류] frontend 폴더를 찾을 수 없습니다.
-    echo 현재 위치: %CD%
-    pause
-    exit /b 1
-)
-
-echo [단계 1/4] 가상환경 설정 확인...
-cd backend
-
-REM Python 가상환경 생성 (없을 경우)
-if not exist "venv\Scripts\activate.bat" (
-    echo 가상환경이 없습니다. 새로 생성합니다...
-    python -m venv venv
-    if errorlevel 1 (
-        echo [오류] 가상환경 생성 실패
-        echo Python이 설치되어 있는지 확인하세요.
-        cd ..
-        pause
-        exit /b 1
-    )
-    echo [완료] 가상환경 생성 완료
-)
-
-REM 가상환경 활성화 및 패키지 설치
-call venv\Scripts\activate.bat
+title Financial Research Copilot
 
 echo.
-echo [단계 2/4] 백엔드 의존성 설치 확인...
-pip show fastapi > nul 2>&1
+echo ========================================================
+echo   Financial Research Copilot
+echo   Starting...
+echo ========================================================
+echo.
+
+REM --- logs 폴더 생성 ---
+if not exist "%~dp0logs" (
+    mkdir "%~dp0logs"
+)
+
+REM --- 환경 점검 ---
+where python
 if errorlevel 1 (
-    echo 필요한 패키지를 설치합니다...
-    pip install -r requirements.txt
+    echo [ERROR] Python is not installed or not in PATH!
+    pause
+    exit /b 1
+)
+where node
+if errorlevel 1 (
+    echo [ERROR] Node.js is not installed or not in PATH!
+    pause
+    exit /b 1
+)
+
+echo [OK] Python found:
+python --version
+echo.
+
+echo [OK] Node.js found:
+node --version
+echo.
+
+REM --- 포트 충돌 체크 및 이전 인스턴스 종료 ---
+echo Checking for port conflicts...
+echo.
+
+REM 백엔드 포트 8650 체크
+netstat -ano | findstr :8650
+if not errorlevel 1 (
+    echo [WARNING] Port 8650 is already in use
+    echo Attempting to stop previous backend instance...
+    wmic process where "commandline like '%%uvicorn%%app.main:app%%'" delete
+    wmic process where "commandline like '%%uvicorn_start.py%%'" delete
+    timeout /t 2 /nobreak
+    echo [OK] Previous backend stopped
+    echo.
+)
+
+REM 프론트엔드 포트 4783 체크
+netstat -ano | findstr :4783
+if not errorlevel 1 (
+    echo [WARNING] Port 4783 is already in use
+    echo Attempting to stop previous frontend instance...
+    wmic process where "commandline like '%%vite%%'" delete
+    wmic process where "commandline like '%%npm%%run%%dev%%'" delete
+    timeout /t 2 /nobreak
+    echo [OK] Previous frontend stopped
+    echo.
+)
+
+REM --- 백엔드 가상환경 확인 ---
+if not exist "%~dp0backend\venv" (
+    echo [ERROR] Backend virtual environment not found!
+    echo.
+    echo Please run: backend\SIMPLE_INSTALL.bat
+    echo.
+    pause
+    exit /b 1
+)
+echo [OK] Backend virtual environment found
+echo.
+
+REM --- 프론트엔드 의존성 확인 ---
+if not exist "%~dp0frontend\node_modules" (
+    echo Installing frontend dependencies...
+    cd /d "%~dp0frontend" && call npm install
     if errorlevel 1 (
-        echo [오류] 패키지 설치 실패
-        cd ..
+        echo [ERROR] Failed to install frontend dependencies.
         pause
         exit /b 1
     )
-    echo [완료] 패키지 설치 완료
+    echo [OK] Frontend dependencies installed
 ) else (
-    echo [확인] 패키지가 이미 설치되어 있습니다.
+    echo [OK] Frontend dependencies already installed
 )
-
-echo.
-echo [단계 3/4] 백엔드 서버 시작...
-echo 주소: http://localhost:8000
-echo API 문서: http://localhost:8000/docs
-start /B cmd /c "venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend_log.txt 2>&1"
-
-REM 백엔드 시작 대기
-timeout /t 3 /nobreak > nul
-
-cd ..
-
-echo.
-echo [단계 4/4] 프론트엔드 서버 시작...
-cd frontend
-
-REM npm 패키지 설치 확인
-if not exist "node_modules" (
-    echo Node.js 패키지를 설치합니다...
-    call npm install
-    if errorlevel 1 (
-        echo [오류] npm 패키지 설치 실패
-        echo Node.js가 설치되어 있는지 확인하세요.
-        cd ..
-        pause
-        exit /b 1
-    )
-    echo [완료] npm 패키지 설치 완료
-) else (
-    echo [확인] npm 패키지가 이미 설치되어 있습니다.
-)
-
-echo 주소: http://localhost:5173
-start /B cmd /c "npm run dev > frontend_log.txt 2>&1"
-
-cd ..
-
-echo.
-echo ================================
-echo   시작 완료!
-echo ================================
-echo.
-echo 백엔드: http://localhost:8000
-echo 프론트엔드: http://localhost:5173
-echo API 문서: http://localhost:8000/docs
-echo.
-echo 로그 파일:
-echo - backend\backend_log.txt
-echo - frontend\frontend_log.txt
-echo.
-echo 종료하려면 "앱종료.bat"을 실행하세요.
 echo.
 
-REM 5초 후 브라우저 자동 실행
-echo 5초 후 브라우저가 자동으로 열립니다...
-timeout /t 5 /nobreak > nul
-start http://localhost:5173
+echo ========================================================
+echo   Starting Services (Background Mode)...
+echo ========================================================
+echo.
 
-pause
+REM --- 백엔드 백그라운드 실행 (새 창으로 실행) ---
+echo Starting backend on port 8650 (logs/backend.log)...
+start "Backend Server" /MIN cmd /c "cd /d "%~dp0" && call run_backend.bat > logs\backend.log 2>&1"
+
+echo Waiting for backend to start (5 seconds)...
+timeout /t 5 /nobreak
+
+REM --- 프론트엔드 백그라운드 실행 (새 창으로 실행) ---
+echo Starting frontend on port 4783 (logs/frontend.log)...
+start "Frontend Server" /MIN cmd /c "cd /d "%~dp0" && call run_frontend.bat > logs\frontend.log 2>&1"
+
+echo.
+echo ========================================================
+echo   All Services Running! (Background Mode)
+echo ========================================================
+echo Backend:  http://localhost:8650
+echo Frontend: http://localhost:4783
+echo API Docs: http://localhost:8650/docs
+echo.
+echo Logs:
+echo   - Backend warnings/errors: logs\app.log.YYYY-MM-DD
+echo   - Backend full logs:       logs\backend.log
+echo   - Frontend logs:           logs\frontend.log
+echo.
+echo Note: Backend takes a few seconds to fully start
+echo.
+
+timeout /t 3 /nobreak
+start http://localhost:4783
+
+echo.
+echo ========================================================
+echo   Press ANY KEY to stop all services...
+echo ========================================================
+echo.
+choice /C YN /N /M "Press Y to stop services, N to keep running: "
+if errorlevel 2 goto :end
+if errorlevel 1 goto :stop
+
+:stop
+echo.
+echo Stopping services...
+echo.
+
+REM Backend 프로세스 종료
+echo Stopping backend...
+taskkill /FI "WINDOWTITLE eq Backend Server*" /F 2>NUL
+wmic process where "commandline like '%%uvicorn%%app.main:app%%'" delete 2>NUL
+
+REM Frontend 프로세스 종료
+echo Stopping frontend...
+taskkill /FI "WINDOWTITLE eq Frontend Server*" /F 2>NUL
+wmic process where "commandline like '%%vite%%'" delete 2>NUL
+
+echo.
+echo [OK] All services stopped.
+echo.
+timeout /t 2 /nobreak
+goto :end
+
+:end
+

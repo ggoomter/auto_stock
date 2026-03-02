@@ -102,15 +102,22 @@ class BuffettStrategy(MasterStrategy):
         rolling_low_252 = close.rolling(252, min_periods=100).min()
         safety_margin = close < (rolling_low_252 * 1.20)
 
-        # 각 날짜별로 펀더멘털 체크
+        # 각 날짜별로 펀더멘털 체크 (버핏 원칙: 지속적인 기업 가치 모니터링)
+        # 버핏은 "기업의 본질이 변하면 팔아라"는 원칙
         for date in price_data.index:
-            passes_fundamental = analyzer.check_buffett_criteria_at_date(date)
+            try:
+                passes_fundamental = analyzer.check_buffett_criteria_at_date(date)
+            except Exception as e:
+                # 펀더멘털 데이터 없으면 기술적 분석만 사용
+                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}, 기술적 분석만 사용")
+                passes_fundamental = True
 
             if passes_fundamental and safety_margin.loc[date]:
                 # 진입: 펀더멘털 OK + 안전마진 (저평가)
                 entry_signals.loc[date] = True
             elif not passes_fundamental:
-                # 청산: 펀더멘털 악화
+                # 청산: 펀더멘털 악화 (기업의 본질이 변함)
+                # 버핏 원칙: "기업의 본질이 변하면 팔아라"
                 exit_signals.loc[date] = True
 
         return entry_signals, exit_signals
@@ -177,15 +184,22 @@ class LynchStrategy(MasterStrategy):
         golden_cross = (ma20 > ma50) & (ma20_prev <= ma50_prev)
         death_cross = (ma20 < ma50) & (ma20_prev >= ma50_prev)
 
-        # 각 날짜별로 펀더멘털 체크
+        # 각 날짜별로 펀더멘털 체크 (피터 린치 원칙: 지속적인 펀더멘털 모니터링)
+        # 린치는 "회사가 변하면 팔아라"는 원칙을 가지고 있음
         for date in price_data.index:
-            passes_fundamental = analyzer.check_lynch_criteria_at_date(date)
+            try:
+                passes_fundamental = analyzer.check_lynch_criteria_at_date(date)
+            except Exception as e:
+                # 펀더멘털 데이터 없으면 기술적 분석만 사용 (골든크로스)
+                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}, 기술적 분석만 사용")
+                passes_fundamental = True  # 데이터 없으면 기술적 조건만으로 판단
 
             if passes_fundamental and golden_cross.loc[date]:
                 # 진입: PEG < 1.0 + 골든크로스 (추세 시작)
                 entry_signals.loc[date] = True
             elif not passes_fundamental or death_cross.loc[date]:
-                # 청산: PEG > 2.0 OR 데드크로스
+                # 청산: PEG > 2.0 OR 데드크로스 (성장 둔화 OR 추세 이탈)
+                # 린치 원칙: "회사가 변하면 팔아라"
                 exit_signals.loc[date] = True
 
         return entry_signals, exit_signals
@@ -252,15 +266,22 @@ class GrahamStrategy(MasterStrategy):
         golden_cross = (ma20 > ma50) & (ma20_prev <= ma50_prev)
         death_cross = (ma20 < ma50) & (ma20_prev >= ma50_prev)
 
-        # 각 날짜별로 펀더멘털 체크
+        # 각 날짜별로 펀더멘털 체크 (그레이엄 원칙: 안전마진 지속 확인)
+        # 그레이엄은 "안전마진이 사라지면 팔아라"는 원칙
         for date in price_data.index:
-            passes_fundamental = analyzer.check_graham_criteria_at_date(date)
+            try:
+                passes_fundamental = analyzer.check_graham_criteria_at_date(date)
+            except Exception as e:
+                # 펀더멘털 데이터 없으면 기술적 분석만 사용
+                logger.debug(f"펀더멘털 체크 실패 ({symbol}, {date}): {e}, 기술적 분석만 사용")
+                passes_fundamental = True
 
             if passes_fundamental and near_low.loc[date] and golden_cross.loc[date]:
                 # 진입: P/B < 0.67 + 저점 + 골든크로스
                 entry_signals.loc[date] = True
             elif not passes_fundamental or death_cross.loc[date]:
-                # 청산: P/B > 1.0 OR 데드크로스
+                # 청산: P/B > 1.0 OR 데드크로스 (안전마진 사라짐 OR 추세 이탈)
+                # 그레이엄 원칙: "안전마진이 사라지면 팔아라"
                 exit_signals.loc[date] = True
 
         return entry_signals, exit_signals

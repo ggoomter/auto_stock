@@ -530,7 +530,14 @@ class BacktestEngine:
         total_return = (self.equity_curve.iloc[-1] / initial_capital) - 1
         period_days = (self.dates[-1] - self.dates[0]).days
         years = period_days / 365.25 if period_days > 0 else 0.0
-        cagr = (1 + total_return) ** (1 / years) - 1 if years > 0 else total_return
+        
+        # CAGR 계산: 기간이 1년 미만이면 총 수익률을 연환산하지 않고 그대로 사용
+        # (짧은 기간의 연환산은 부정확할 수 있음)
+        if years < 1.0:
+            # 1년 미만 기간은 총 수익률을 그대로 사용 (연환산하지 않음)
+            cagr = total_return
+        else:
+            cagr = (1 + total_return) ** (1 / years) - 1 if years > 0 else total_return
 
         returns_series = pd.Series(daily_returns).replace([np.inf, -np.inf], np.nan).dropna()
         

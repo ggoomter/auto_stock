@@ -348,28 +348,28 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
           {/* 성과 지표 - 한 줄로 컴팩트하게 */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="text-xs text-green-700 mb-1">연간 수익률 (CAGR)</div>
+            <div className="text-xs text-green-700 mb-1">연평균 수익률</div>
             <div className={`text-lg font-bold ${backtest.metrics.CAGR >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {formatPercent(backtest.metrics.CAGR)}
             </div>
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="text-xs text-blue-700 mb-1">샤프 비율 (Sharpe)</div>
+            <div className="text-xs text-blue-700 mb-1">샤프 비율</div>
             <div className="text-lg font-bold text-blue-600">
               {formatNumber(backtest.metrics.Sharpe)}
             </div>
           </div>
 
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <div className="text-xs text-red-700 mb-1">최대 손실 (MDD)</div>
+            <div className="text-xs text-red-700 mb-1">최대 낙폭</div>
             <div className="text-lg font-bold text-red-600">
               {formatPercent(backtest.metrics.MaxDD)}
             </div>
           </div>
 
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-            <div className="text-xs text-purple-700 mb-1">승률 (Win Rate)</div>
+            <div className="text-xs text-purple-700 mb-1">승률</div>
             <div className="text-lg font-bold text-purple-600">
               {formatPercent(backtest.metrics.HitRatio)}
             </div>

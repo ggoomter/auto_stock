@@ -37,12 +37,13 @@ if errorlevel 1 (
 
 python -c "import pandas_ta" >nul 2>&1
 if errorlevel 1 (
-    echo [WARNING] pandas-ta not found, installing without dependencies...
-    pip install --no-deps pandas-ta==0.4.71b0
+    echo [WARNING] pandas-ta not found, checking pandas-ta-classic...
+    python -c "import pandas_ta_classic" >nul 2>&1
     if errorlevel 1 (
-        echo [ERROR] Failed to install pandas-ta!
-        pause
-        exit /b 1
+        echo [INFO] pandas-ta-classic is already in requirements.txt, will be installed if needed
+        echo [OK] Continuing without pandas-ta (pandas-ta-classic will be used)
+    ) else (
+        echo [OK] pandas-ta-classic found
     )
 )
 

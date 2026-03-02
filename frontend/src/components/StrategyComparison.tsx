@@ -74,6 +74,15 @@ export default function StrategyComparison({
   best_strategy
 }: StrategyComparisonProps) {
   const [selectedMetric, setSelectedMetric] = useState<'CAGR' | 'Sharpe' | 'MaxDD' | 'WinRate'>('CAGR');
+  
+  // 한글 지표명 매핑
+  const metricNames: Record<string, string> = {
+    'CAGR': '연평균 수익률',
+    'Sharpe': '샤프 비율',
+    'MaxDD': '최대 낙폭',
+    'WinRate': '승률',
+    'ProfitFactor': '수익 팩터'
+  };
 
   // 수익률 차트 데이터
   const equityChartData = {
@@ -199,10 +208,7 @@ export default function StrategyComparison({
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              {metric === 'CAGR' && 'CAGR (연평균 수익률)'}
-              {metric === 'Sharpe' && 'Sharpe Ratio (위험 대비 수익)'}
-              {metric === 'MaxDD' && 'Max Drawdown (최대 낙폭)'}
-              {metric === 'WinRate' && 'Win Rate (승률)'}
+              {metricNames[metric] || metric}
             </button>
           ))}
         </div>
@@ -246,6 +252,11 @@ export default function StrategyComparison({
                   <div>최종 자산: {result.final_equity.toLocaleString()}원</div>
                   <div>총 수익률: {result.total_return_pct.toFixed(2)}%</div>
                   <div>거래 횟수: {result.trade_count}회</div>
+                  {result.metrics.CAGR < -0.5 && (
+                    <div className="text-xs text-red-500 mt-1">
+                      ⚠️ 짧은 기간의 결과는 참고용입니다
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -260,11 +271,11 @@ export default function StrategyComparison({
           <thead className="bg-gray-100">
             <tr>
               <th className="px-4 py-3 text-left font-bold">전략</th>
-              <th className="px-4 py-3 text-right font-bold">CAGR</th>
-              <th className="px-4 py-3 text-right font-bold">Sharpe</th>
-              <th className="px-4 py-3 text-right font-bold">MaxDD</th>
+              <th className="px-4 py-3 text-right font-bold">연평균 수익률</th>
+              <th className="px-4 py-3 text-right font-bold">샤프 비율</th>
+              <th className="px-4 py-3 text-right font-bold">최대 낙폭</th>
               <th className="px-4 py-3 text-right font-bold">승률</th>
-              <th className="px-4 py-3 text-right font-bold">Profit Factor</th>
+              <th className="px-4 py-3 text-right font-bold">수익 팩터</th>
               <th className="px-4 py-3 text-right font-bold">거래 수</th>
               <th className="px-4 py-3 text-right font-bold">최종 자산</th>
             </tr>
@@ -304,19 +315,19 @@ export default function StrategyComparison({
       {/* 요약 통계 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="card bg-blue-50 border-blue-200">
-          <div className="text-sm text-blue-700 mb-1">평균 CAGR</div>
+          <div className="text-sm text-blue-700 mb-1">평균 연평균 수익률</div>
           <div className="text-2xl font-bold text-blue-900">
             {formatPercent(results.reduce((sum, r) => sum + r.metrics.CAGR, 0) / results.length)}
           </div>
         </div>
         <div className="card bg-green-50 border-green-200">
-          <div className="text-sm text-green-700 mb-1">평균 Sharpe</div>
+          <div className="text-sm text-green-700 mb-1">평균 샤프 비율</div>
           <div className="text-2xl font-bold text-green-900">
             {(results.reduce((sum, r) => sum + r.metrics.Sharpe, 0) / results.length).toFixed(2)}
           </div>
         </div>
         <div className="card bg-red-50 border-red-200">
-          <div className="text-sm text-red-700 mb-1">평균 MaxDD</div>
+          <div className="text-sm text-red-700 mb-1">평균 최대 낙폭</div>
           <div className="text-2xl font-bold text-red-900">
             {formatPercent(results.reduce((sum, r) => sum + r.metrics.MaxDD, 0) / results.length)}
           </div>
