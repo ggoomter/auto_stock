@@ -97,3 +97,68 @@ class PaperTradingRepository:
             return [dict(r) for r in rows]
         finally:
             conn.close()
+
+
+class JobRunRepository:
+    """일별 작업 실행 기록 — '오늘 이미 돌았나' 판단 근거"""
+
+    def __init__(self, db_path: str | None = None):
+        self._db_path = db_path
+
+    def record(self, job_name: str, run_date: str, status: str,
+               detail: str | None = None, finished_at: str = "") -> None:
+        conn = get_connection(self._db_path)
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO job_runs "
+                "(job_name, run_date, status, detail, finished_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (job_name, run_date, status, detail, finished_at),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def has_succeeded(self, job_name: str, run_date: str) -> bool:
+        conn = get_connection(self._db_path)
+        try:
+            row = conn.execute(
+                "SELECT 1 FROM job_runs "
+                "WHERE job_name=? AND run_date=? AND status='success'",
+                (job_name, run_date),
+            ).fetchone()
+            return row is not None
+        finally:
+            conn.close()
+
+
+class SnapshotRepository:
+    """일별 가상 잔고 스냅샷 — 모의투자 수익 곡선의 원천"""
+
+    def __init__(self, db_path: str | None = None):
+        self._db_path = db_path
+
+    def save(self, snapshot_date: str, total_value: float, cash: float,
+             positions_value: float) -> None:
+        conn = get_connection(self._db_path)
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO portfolio_snapshots "
+                "(snapshot_date, total_value, cash, positions_value) "
+                "VALUES (?, ?, ?, ?)",
+                (snapshot_date, total_value, cash, positions_value),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def list_all(self) -> list[dict]:
+        conn = get_connection(self._db_path)
+        try:
+            rows = conn.execute(
+                "SELECT snapshot_date, total_value, cash, positions_value "
+                "FROM portfolio_snapshots ORDER BY snapshot_date",
+            ).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
