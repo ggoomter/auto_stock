@@ -595,7 +595,7 @@ class AutoTradingEngine:
         """포지션 관리 (트레일링 스톱 등)"""
         while self.is_running:
             try:
-                for symbol, position in self.active_positions.items():
+                for symbol, position in list(self.active_positions.items()):
                     # 현재가 업데이트
                     data = await self.data_collector.fetch_realtime_data(symbol)
                     if data is not None:
@@ -714,7 +714,7 @@ class AutoTradingEngine:
         # 손실이 큰 포지션부터 청산
         positions_with_pnl = []
 
-        for symbol, position in self.active_positions.items():
+        for symbol, position in list(self.active_positions.items()):
             data = await self.data_collector.fetch_realtime_data(symbol)
             if data is not None:
                 current_price = data['close'].iloc[-1]
@@ -744,21 +744,29 @@ class AutoTradingEngine:
             await self.signal_queue.put(signal)
 
     async def _close_all_positions(self, reason: str):
-        """모든 포지션 청산"""
-        for symbol, position in self.active_positions.items():
-            signal = TradingSignal(
-                timestamp=datetime.now(),
-                symbol=symbol,
-                action="sell",
-                strategy_name="system",
-                confidence=1.0,
-                entry_price=0,
-                stop_loss=0,
-                take_profit=0,
-                position_size=position['shares'],
-                reason=reason
-            )
-            await self.signal_queue.put(signal)
+        """모든 포지션 청산 — 큐를 거치지 않고 직접 체결.
+        stop()이 is_running=False로 만든 뒤에도 _process_signals 루프에 의존하지
+        않고 즉시 청산되도록 _execute_order를 직접 await 한다.
+        순회 중 del 안전을 위해 active_positions 복사본을 사용한다.
+        """
+        for symbol, position in list(self.active_positions.items()):
+            try:
+                exit_price = await self._resolve_exit_price(symbol, position)
+                signal = TradingSignal(
+                    timestamp=datetime.now(),
+                    symbol=symbol,
+                    action="sell",
+                    strategy_name="system",
+                    confidence=1.0,
+                    entry_price=exit_price,
+                    stop_loss=0,
+                    take_profit=0,
+                    position_size=position['shares'],
+                    reason=reason
+                )
+                await self._execute_order(signal)
+            except Exception as e:
+                logger.error(f"포지션 청산 실패 ({symbol}): {e}")
 
     def _is_trading_hours(self) -> bool:
         """거래 시간 확인"""
