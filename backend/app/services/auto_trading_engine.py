@@ -525,6 +525,14 @@ class AutoTradingEngine:
                     signal.symbol,
                 )
 
+            # 이중 방어: 체결가가 0 이하이면 DB에 0원 체결이 기록되지 않도록 거부
+            if order.status == OrderStatus.FILLED and order.filled_price <= 0:
+                order.status = OrderStatus.REJECTED
+                logger.error(
+                    f"체결가 0 이하로 주문 거부: {signal.symbol} "
+                    f"{signal.action} price={order.filled_price}"
+                )
+
             # 포지션 업데이트
             if order.status == OrderStatus.FILLED:
                 if signal.action == "buy":
@@ -684,6 +692,23 @@ class AutoTradingEngine:
                 logger.error(f"리스크 모니터링 오류: {e}")
                 await asyncio.sleep(60)
 
+    async def _resolve_exit_price(self, symbol: str, position: Dict) -> float:
+        """청산 신호용 현재가 결정 — 실시간 조회 시도 후 폴백 (0 금지).
+        우선순위: 실시간 시세 → position['current_price'] → position['entry_price'].
+        """
+        try:
+            data = await self.data_collector.fetch_realtime_data(symbol)
+            if data is not None and not data.empty:
+                price = float(data['close'].iloc[-1])
+                if price > 0:
+                    return price
+        except Exception as e:
+            logger.warning(f"청산가 실시간 조회 실패 ({symbol}): {e}")
+
+        # 폴백: 최근 갱신된 현재가 → 진입가 (0은 절대 사용하지 않음)
+        price = position.get('current_price') or position.get('entry_price', 0)
+        return price
+
     async def _reduce_exposure(self):
         """포지션 축소"""
         # 손실이 큰 포지션부터 청산
@@ -702,16 +727,18 @@ class AutoTradingEngine:
         # 하위 20% 청산
         to_close = int(len(positions_with_pnl) * 0.2) or 1
         for symbol, _ in positions_with_pnl[:to_close]:
+            position = self.active_positions[symbol]
+            exit_price = await self._resolve_exit_price(symbol, position)
             signal = TradingSignal(
                 timestamp=datetime.now(),
                 symbol=symbol,
                 action="sell",
                 strategy_name="risk_management",
                 confidence=1.0,
-                entry_price=0,
+                entry_price=exit_price,
                 stop_loss=0,
                 take_profit=0,
-                position_size=self.active_positions[symbol]['shares'],
+                position_size=position['shares'],
                 reason="리스크 축소"
             )
             await self.signal_queue.put(signal)
@@ -887,14 +914,15 @@ class AutoTradingEngine:
             try:
                 position = self.active_positions[symbol]
 
-                # 긴급 청산 신호 생성
+                # 긴급 청산 신호 생성 (현재가 확보 — 0원 체결 방지)
+                exit_price = await self._resolve_exit_price(symbol, position)
                 signal = TradingSignal(
                     timestamp=datetime.now(),
                     symbol=symbol,
                     action="sell",
                     strategy_name="emergency_stop",
                     confidence=1.0,
-                    entry_price=0,
+                    entry_price=exit_price,
                     stop_loss=0,
                     take_profit=0,
                     position_size=position['shares'],
