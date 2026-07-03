@@ -85,6 +85,7 @@ class PortfolioStatusResponse(BaseModel):
     positions_value: float
     total_pnl: float
     total_pnl_pct: float
+    price_is_stale: bool = False
     positions: List[PositionResponse]
     risk_metrics: Dict
     last_update: str
@@ -339,6 +340,7 @@ async def get_portfolio_status():
             positions_value=portfolio.get("positions_value", 0.0),
             total_pnl=portfolio.get("total_pnl", 0.0),
             total_pnl_pct=portfolio.get("total_pnl_pct", 0.0),
+            price_is_stale=portfolio.get("price_is_stale", False),
             positions=positions,
             risk_metrics=portfolio.get("risk_metrics", {}),
             last_update=datetime.now().isoformat()
