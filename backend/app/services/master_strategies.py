@@ -1085,7 +1085,8 @@ MASTER_STRATEGIES = {
     "modern_livermore": ModernLivermoreStrategy(),  # 현대적 개선 Livermore
     "oneil": ONeilStrategy(),
     "wood": WoodStrategy(),  # 캐시 우드 - 혁신 기술 투자
-    "chanos": ChanosStrategy(),
+    # TODO: 숏 엔진 구현 전까지 비활성화 (backtest.py에 숏 로직 없음 — 롱으로 체결되는 결함)
+    # "chanos": ChanosStrategy(),
     "super_momentum": SuperMomentumStrategy(),  # ✅ 신규 추가
 }
 

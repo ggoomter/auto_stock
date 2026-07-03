@@ -80,7 +80,7 @@ class AnalysisRequest(BaseModel):
 
 class MasterStrategyRequest(BaseModel):
     """투자 대가 전략 백테스트 요청"""
-    strategy_name: Literal["buffett", "lynch", "graham", "dalio", "livermore", "modern_livermore", "oneil", "chanos"] = Field(
+    strategy_name: Literal["buffett", "lynch", "graham", "dalio", "livermore", "modern_livermore", "oneil"] = Field(
         ..., description="Master investor strategy name"
     )
     symbols: List[str] = Field(..., min_length=1, description="Stock symbols to backtest")
@@ -211,6 +211,9 @@ class AnalysisResponse(BaseModel):
     sample_info: SampleInfo
     prediction: Prediction
     backtest: Backtest
-    monte_carlo: MonteCarloResult
+    # 몬테카를로 비활성화: _block_bootstrap이 리샘플 데이터에 합성 date_range 인덱스를
+    # 부여한 뒤 원본 날짜로 시그널을 reindex → 날짜 불일치로 모든 시그널 False →
+    # 거래 0건 → P5/P50/P95 전부 허수. 수리 전까지 None 전달. (monte_carlo.py는 유지)
+    monte_carlo: Optional[MonteCarloResult] = None
     signal_examples: List[SignalExample]
     limitations: List[str]

@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from ..services.parser import StrategyParser
 from ..services.indicators import IndicatorCalculator, load_sample_data
 from ..services.backtest import BacktestEngine
-from ..services.monte_carlo import MonteCarloSimulator
+# MonteCarloSimulator: 비활성화 (시그널 정렬 결함으로 허수 신뢰구간 — monte_carlo.py 유지, import 제거)
 from ..services.master_strategies import get_strategy, list_strategies, format_coverage_warning
 from ..services.fundamental_analysis import FundamentalAnalyzer
 from ..services.exchange_rate import get_exchange_service
@@ -152,17 +152,11 @@ async def analyze_strategy(request: AnalysisRequest):
                 detail=f"백테스트 실행 실패: {str(e)}"
             )
 
-        # 4. 몬테카를로 시뮬레이션
-        mc_simulator = MonteCarloSimulator(
-            data,
-            entry_signals,
-            exit_signals,
-            request.strategy.risk,
-            request.simulate.bootstrap_runs,
-            request.simulate.transaction_cost_bps,
-            request.simulate.slippage_bps
-        )
-        mc_result = mc_simulator.run()
+        # 4. 몬테카를로 시뮬레이션 — 비활성화 (허수 신뢰구간 결함)
+        # monte_carlo.py의 _block_bootstrap이 리샘플 데이터에 합성 date_range 인덱스를
+        # 부여한 뒤 원본 날짜로 시그널을 reindex → 날짜 불일치로 모든 시그널 False →
+        # 거래 0건 → P5/P50/P95 전부 허수. 수리(Task TODO) 전까지 None 전달.
+        mc_result = None
 
         # 5. 예측 (조건부 확률)
         prediction = _calculate_prediction(
