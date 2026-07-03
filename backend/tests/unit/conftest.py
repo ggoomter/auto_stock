@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 
-def _q(end, eps=100.0, bps=2000.0, roe=0.12, ni=1000.0):
+def _q(end, eps=100.0, bps=2000.0, roe=0.20, ni=1000.0):
     """합성 QuarterMetrics 생성 헬퍼 (available_from = 분기말 + 45일)"""
     from app.services.pit_fundamentals import QuarterMetrics
     end = pd.Timestamp(end)

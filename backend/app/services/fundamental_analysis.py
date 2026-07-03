@@ -5,11 +5,15 @@
 → 백테스트는 최근 1년 데이터만 정확
 → 그 이전 기간은 기술적 분석만 사용
 """
+from __future__ import annotations
+
 import yfinance as yf
 import pandas as pd
 import numpy as np
 from typing import Dict, Optional, List, Tuple
 from datetime import datetime, timedelta
+
+from ..core.logging_config import logger
 
 
 class FundamentalAnalyzer:
@@ -669,167 +673,151 @@ class FundamentalAnalyzer:
         return conditions
 
     # ========== 시점별 펀더멘털 체크 (백테스트용) ==========
-    def check_buffett_criteria_at_date(self, as_of_date: datetime) -> bool:
+    # 모든 판정은 point-in-time 데이터(_pit)만 사용한다.
+    # 공시 전 미래 재무를 보는 look-ahead를 원천 차단하며,
+    # 데이터가 없으면(빌드 실패 / metrics_at None / 필요한 지표 None) 무조건 False.
+    # (기존의 "데이터 없으면 True 통과" / 현재-시점 fetcher / 죽은 DART 경로는 전면 폐지)
+
+    def _get_pit(self, as_of_date):
         """
-        특정 날짜에 버핏 기준 통과 여부
+        point-in-time 펀더멘털을 인스턴스에 1회 lazy build 후 캐시.
 
-        현대 버핏 스타일: "합리적 가격의 훌륭한 기업"
-        - 높은 ROE (자본 효율성)
-        - 긍정적 현금흐름
-        - P/E는 완화된 기준 (성장주도 인정)
+        - 이미 _pit가 있으면(정상 build 또는 테스트 주입) 그대로 반환.
+        - 최초 호출 시: 한국 → build_korean_pit(stock_code, as_of연도-1, 현재연도),
+          미국 → build_us_pit(symbol). analyzer는 백테스트 기간을 모르므로
+          첫 호출 as_of_date 기준으로 조회 연도 범위를 잡는다(DART 호출량 최소화 위해 1회만).
+        - build 실패/None → 이후 모든 시점 False. logger.warning은 1회만(스팸 금지).
         """
-        # 한국 주식인지 확인하고 실제 데이터 사용
-        if self.symbol and ('.KS' in self.symbol or '.KQ' in self.symbol or self.symbol in ['005930']):
-            from .korean_stock_data import get_korean_stock_fetcher
-            fetcher = get_korean_stock_fetcher()
-            metrics = fetcher.get_buffett_metrics(self.symbol)
+        pit = getattr(self, '_pit', None)
+        if pit is not None:
+            return pit
+        # 이미 build 시도했고 실패한 경우 → 네트워크 재시도 없이 None
+        if getattr(self, '_pit_build_failed', False):
+            return None
 
-            if metrics:
-                roe = metrics.get('ROE', 0)  # 이미 퍼센트로 변환됨
-                debt_to_equity = metrics.get('debt_to_equity', 0)
-                fcf = metrics.get('free_cashflow', 0)
-                pe = metrics.get('PE', 0)
-                pb = metrics.get('PB', 0)
+        try:
+            from .pit_fundamentals import build_korean_pit, build_us_pit
+            as_of = pd.Timestamp(as_of_date)
+            if self.is_korean:
+                start_year = as_of.year - 1
+                end_year = datetime.now().year
+                pit = build_korean_pit(self.stock_code, start_year, end_year)
+            else:
+                pit = build_us_pit(self.symbol)
+        except Exception as e:  # noqa: BLE001 - build 실패는 False 처리로 흡수
+            logger.warning(f"{getattr(self, 'symbol', '?')}: point-in-time 펀더멘털 build 예외: {e}")
+            pit = None
 
-                # 버핏 기준 체크 (한국 시장 특성 반영)
-                # 2024년 삼성전자 ROE 8.4% - 반도체 불황 회복기 고려
-                return (
-                    roe and roe > 8 and  # ROE > 8% (반도체 사이클 저점 고려)
-                    debt_to_equity is not None and debt_to_equity < 0.5 and  # 부채비율 < 50%
-                    fcf and fcf > 0 and  # 긍정적 현금흐름
-                    pe and 0 < pe < 25 and  # P/E < 25
-                    pb and pb < 3  # P/B < 3
+        self._pit = pit
+        if pit is None:
+            self._pit_build_failed = True
+            if not getattr(self, '_pit_warned', False):
+                self._pit_warned = True
+                logger.warning(
+                    f"{getattr(self, 'symbol', '?')}: point-in-time 펀더멘털 build 실패 "
+                    f"— 해당 종목은 모든 시점 매수 판정 False 처리"
                 )
+        return pit
 
-        applicable_quarter = self._get_applicable_quarter(as_of_date)
-
-        # 펀더멘털 데이터 없으면 기술적 분석만 사용
-        if applicable_quarter is None:
-            return True  # 데이터 제약으로 통과 처리
-
-        # DART API 사용 (한국 주식) 또는 yfinance fallback
-        if self.is_korean and self.dart_client:
-            metrics = self.dart_client.get_metrics_at_date(
-                self.ticker.replace('.KS', '').replace('.KQ', ''),
-                as_of_date
-            )
-            if metrics and not metrics.get('error'):
-                roe = metrics.get('roe', 0)
-                fcf = metrics.get('fcf', 0)
-                pe = metrics.get('per', 0)
-            else:
-                # DART 실패 시 yfinance fallback
-                info = self.get_info()
-                roe = info.get('returnOnEquity', 0)
-                fcf = info.get('freeCashflow', 0)
-                pe = info.get('trailingPE', 0)
-        else:
-            # 미국 주식은 yfinance 사용
-            info = self.get_info()
-            roe = info.get('returnOnEquity', 0)
-            fcf = info.get('freeCashflow', 0)
-            pe = info.get('trailingPE', 0)
-
-        # 현대 버핏 기준: 질적 우수성 중심
-        return (
-            roe and roe > 0.15 and  # ROE > 15% (자본 효율성)
-            fcf and fcf > 0 and  # 긍정적 현금흐름
-            pe and 0 < pe < 50  # P/E < 50 (성장주 허용)
-        )
-
-    def check_lynch_criteria_at_date(self, as_of_date: datetime) -> bool:
+    def fundamental_coverage(self) -> Optional[Tuple[str, str]]:
         """
-        특정 날짜에 린치 기준 통과 여부
-
-        PEG 계산: yfinance 제공 → P/E ÷ 성장률 계산 → 성장률만 → 기술적 분석
+        point-in-time 데이터의 검증 가능 구간을 ISO 날짜 문자열 튜플로 반환.
+        (Task 4가 응답에 노출용) pit가 없으면 None.
         """
-        applicable_quarter = self._get_applicable_quarter(as_of_date)
+        pit = getattr(self, '_pit', None)
+        if pit is None:
+            return None
+        cov = pit.coverage()
+        if cov is None:
+            return None
+        start, end = cov
+        return (pd.Timestamp(start).date().isoformat(),
+                pd.Timestamp(end).date().isoformat())
 
-        if applicable_quarter is None:
-            # 펀더멘털 데이터가 없으면 기술적 분석만 진행 (골든크로스)
-            return True  # 기술적 조건만으로 매매
+    def check_buffett_criteria_at_date(self, as_of_date, price: Optional[float] = None) -> bool:
+        """
+        특정 날짜에 버핏 기준 통과 여부 (point-in-time).
 
-        # DART API 사용 (한국 주식) 또는 yfinance fallback
-        if self.is_korean and self.dart_client:
-            metrics = self.dart_client.get_metrics_at_date(
-                self.ticker.replace('.KS', '').replace('.KQ', ''),
-                as_of_date
-            )
-            if metrics and not metrics.get('error'):
-                peg = metrics.get('peg')
-                earnings_growth_pct = metrics.get('earnings_growth_yoy')
-            else:
-                # DART 실패 시 yfinance fallback
-                lynch_metrics = self.get_lynch_metrics()
-                peg = lynch_metrics.get('PEG')
-                earnings_growth_pct = lynch_metrics.get('earnings_growth')
-        else:
-            # 미국 주식은 yfinance 사용
-            lynch_metrics = self.get_lynch_metrics()
-            peg = lynch_metrics.get('PEG')
-            earnings_growth_pct = lynch_metrics.get('earnings_growth')
-
-        # PEG 있으면 (yfinance 제공 또는 계산됨) PEG와 성장률 모두 체크
-        if peg and peg > 0:
-            # PEG < 1.0이고 성장률 > 20%
-            return (
-                0 < peg < 1.0 and  # PEG < 1
-                earnings_growth_pct and earnings_growth_pct > 20  # 20% 이상 성장
-            )
-        # PEG 없지만 성장률 있으면 성장률만으로 판단
-        elif earnings_growth_pct and earnings_growth_pct > 0:
-            return earnings_growth_pct > 15  # 15% 이상 성장으로 완화
-        # 둘 다 없으면 기술적 분석만 (골든크로스)
-        else:
-            return True  # 기술적 조건만으로 매매
-
-    def check_graham_criteria_at_date(self, as_of_date: datetime) -> bool:
-        """특정 날짜에 그레이엄 기준 통과 여부"""
-        applicable_quarter = self._get_applicable_quarter(as_of_date)
-
-        if applicable_quarter is None:
+        조건: ROE > 15% AND 부채비율 < 0.5 AND 0 < PE < 25 AND PB < 3
+        - PE/PB는 as_of_date 시점 주가(price) 필요 → price None이면 판정 불가 → False.
+        - 기존 FCF(잉여현금흐름) 조건은 point-in-time 산출이 불가능(분기별 시점 FCF 데이터 부재)
+          하므로 제외한다.
+        """
+        pit = self._get_pit(as_of_date)
+        if pit is None:
             return False
-
-        # DART API 사용 (한국 주식) 또는 yfinance fallback
-        if self.is_korean and self.dart_client:
-            metrics = self.dart_client.get_metrics_at_date(
-                self.ticker.replace('.KS', '').replace('.KQ', ''),
-                as_of_date
-            )
-            if metrics and not metrics.get('error'):
-                pb = metrics.get('pbr')
-                current_ratio = metrics.get('current_ratio')
-            else:
-                # DART 실패 시 yfinance fallback
-                info = self.get_info()
-                pb = info.get('priceToBook', None)
-                current_ratio = info.get('currentRatio', None)
-        else:
-            # 미국 주식은 yfinance 사용
-            info = self.get_info()
-            pb = info.get('priceToBook', None)
-            current_ratio = info.get('currentRatio', None)
-
-        # P/B 있으면: 둘 다 체크, 없으면: current_ratio만 체크
-        if pb is not None:
-            return (
-                0 < pb < 0.67 and  # 청산가치 이하
-                current_ratio is not None and current_ratio > 2.0  # 높은 유동비율
-            )
-        else:
-            # P/B 데이터 없는 경우 (한국 주식): current_ratio만 체크
-            return current_ratio is not None and current_ratio > 2.0
-
-    def check_oneil_criteria_at_date(self, as_of_date: datetime) -> bool:
-        """특정 날짜에 오닐 기준 통과 여부"""
-        applicable_quarter = self._get_applicable_quarter(as_of_date)
-
-        if applicable_quarter is None:
+        m = pit.metrics_at(as_of_date)
+        if m is None or m.roe is None or m.debt_to_equity is None:
             return False
+        if not (m.roe > 0.15 and m.debt_to_equity < 0.5):
+            return False
+        if price is None:
+            return False
+        pe = pit.pe_at(as_of_date, price)
+        pb = pit.pb_at(as_of_date, price)
+        if pe is None or pb is None:
+            return False
+        return 0 < pe < 25 and pb < 3
 
-        info = self.get_info()
-        earnings_growth = info.get('earningsGrowth', 0)
+    def check_lynch_criteria_at_date(self, as_of_date, price: Optional[float] = None) -> bool:
+        """
+        특정 날짜에 린치 기준 통과 여부 (point-in-time).
 
-        return (
-            earnings_growth and earnings_growth > 0.25  # 25% 이상 성장
-        )
+        조건: PEG < 1.0 AND 이익성장률 > 20%
+        - growth: 전년 동분기 대비 순이익 증가율(소수, 0.5 = +50%). 산출 불가 시 None → False.
+        - PEG = PE ÷ (growth*100). price None 또는 PE 산출 불가 → False.
+        """
+        pit = self._get_pit(as_of_date)
+        if pit is None:
+            return False
+        m = pit.metrics_at(as_of_date)
+        if m is None:
+            return False
+        growth = pit.yoy_net_income_growth_at(as_of_date)
+        if growth is None or growth <= 0:
+            return False
+        if price is None:
+            return False
+        pe = pit.pe_at(as_of_date, price)
+        if pe is None:
+            return False
+        peg = pe / (growth * 100)
+        return 0 < peg < 1.0 and growth > 0.20
+
+    def check_graham_criteria_at_date(self, as_of_date, price: Optional[float] = None) -> bool:
+        """
+        특정 날짜에 그레이엄 기준 통과 여부 (point-in-time).
+
+        조건: PB < 0.67 AND 유동비율 > 2.0
+        - PB는 price 필요, current_ratio는 분기 스냅샷. 둘 중 하나라도 None → False.
+        """
+        pit = self._get_pit(as_of_date)
+        if pit is None:
+            return False
+        m = pit.metrics_at(as_of_date)
+        if m is None or m.current_ratio is None:
+            return False
+        if price is None:
+            return False
+        pb = pit.pb_at(as_of_date, price)
+        if pb is None:
+            return False
+        return pb < 0.67 and m.current_ratio > 2.0
+
+    def check_oneil_criteria_at_date(self, as_of_date, price: Optional[float] = None) -> bool:
+        """
+        특정 날짜에 오닐 기준 통과 여부 (point-in-time).
+
+        조건: 전년 동분기 대비 순이익 성장률 > 25% (소수 0.25). 산출 불가 시 None → False.
+        (price 인자는 호출부 일관성 위해 유지하나 오닐 판정엔 사용하지 않음)
+        """
+        pit = self._get_pit(as_of_date)
+        if pit is None:
+            return False
+        m = pit.metrics_at(as_of_date)
+        if m is None:
+            return False
+        growth = pit.yoy_net_income_growth_at(as_of_date)
+        if growth is None:
+            return False
+        return growth > 0.25

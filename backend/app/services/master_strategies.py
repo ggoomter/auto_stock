@@ -104,7 +104,7 @@ class BuffettStrategy(MasterStrategy):
 
         # 각 날짜별로 펀더멘털 체크
         for date in price_data.index:
-            passes_fundamental = analyzer.check_buffett_criteria_at_date(date)
+            passes_fundamental = analyzer.check_buffett_criteria_at_date(date, price=close.loc[date])
 
             if passes_fundamental and safety_margin.loc[date]:
                 # 진입: 펀더멘털 OK + 안전마진 (저평가)
@@ -179,7 +179,7 @@ class LynchStrategy(MasterStrategy):
 
         # 각 날짜별로 펀더멘털 체크
         for date in price_data.index:
-            passes_fundamental = analyzer.check_lynch_criteria_at_date(date)
+            passes_fundamental = analyzer.check_lynch_criteria_at_date(date, price=close.loc[date])
 
             if passes_fundamental and golden_cross.loc[date]:
                 # 진입: PEG < 1.0 + 골든크로스 (추세 시작)
@@ -254,7 +254,7 @@ class GrahamStrategy(MasterStrategy):
 
         # 각 날짜별로 펀더멘털 체크
         for date in price_data.index:
-            passes_fundamental = analyzer.check_graham_criteria_at_date(date)
+            passes_fundamental = analyzer.check_graham_criteria_at_date(date, price=close.loc[date])
 
             if passes_fundamental and near_low.loc[date] and golden_cross.loc[date]:
                 # 진입: P/B < 0.67 + 저점 + 골든크로스
@@ -642,7 +642,7 @@ class ONeilStrategy(MasterStrategy):
 
         # 각 날짜별로 펀더멘털 체크
         for date in price_data.index:
-            passes_fundamental = analyzer.check_oneil_criteria_at_date(date)
+            passes_fundamental = analyzer.check_oneil_criteria_at_date(date, price=close.loc[date])
 
             if passes_fundamental and breakout_high.loc[date] and in_uptrend.loc[date] and volume_surge.loc[date]:
                 # 진입: CAN SLIM + 신고가 돌파 + 추세 + 거래량
