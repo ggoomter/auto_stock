@@ -2,13 +2,14 @@
 WebSocket API 엔드포인트
 실시간 데이터 스트리밍 및 자동매매 제어
 """
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 from typing import List, Dict
 import json
 import asyncio
 from datetime import datetime
 
 from ..core.logging_config import logger
+from ..core.config import settings
 
 
 router = APIRouter()
@@ -205,6 +206,18 @@ async def start_trading(config: Dict = None):
     try:
         from ..services.auto_trading_engine import AutoTradingEngine, AutoTradingConfig
 
+        # mode 검증
+        mode = config.get("mode", "paper") if config else "paper"
+        if mode not in ("paper", "live"):
+            raise HTTPException(status_code=422, detail=f"지원하지 않는 모드: {mode}")
+
+        # 실전 모드 차단
+        if mode == "live" and not settings.ENABLE_LIVE_TRADING:
+            raise HTTPException(
+                status_code=403,
+                detail="실전 모드는 비활성화되어 있습니다 (paper 모드만 지원)"
+            )
+
         if config:
             trading_config = AutoTradingConfig(**config)
         else:
@@ -219,6 +232,8 @@ async def start_trading(config: Dict = None):
         else:
             return {"success": False, "message": "자동매매가 이미 실행 중입니다"}
 
+    except HTTPException:
+        raise
     except ImportError:
         return {"success": False, "message": "자동매매 엔진이 설치되지 않았습니다"}
     except Exception as e:
