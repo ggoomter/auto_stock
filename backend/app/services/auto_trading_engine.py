@@ -28,7 +28,7 @@ from .position_scaling import (
 )
 from .stock_screener import StockScreener, ScreenerType
 from .paper_execution import calculate_equal_weight_shares, simulate_fill_price
-from ..db.repositories import PaperTradingRepository
+from ..db.repositories import PaperTradingRepository, SnapshotRepository
 
 
 class TradingMode(Enum):
@@ -162,6 +162,7 @@ class AutoTradingEngine:
 
         # 상태 관리 — DB가 진실의 원천, dict는 런타임 캐시
         self.paper_repo = PaperTradingRepository(db_path)
+        self.snapshot_repo = SnapshotRepository(db_path)
         self.active_positions: Dict[str, Dict] = {}
         self._restore_open_positions()
         self.pending_orders: List[Order] = []
@@ -591,6 +592,7 @@ class AutoTradingEngine:
                     data = await self.data_collector.fetch_realtime_data(symbol)
                     if data is not None:
                         current_price = data['close'].iloc[-1]
+                        position['current_price'] = current_price
 
                         # 최고가 업데이트
                         if current_price > position['highest_price']:
@@ -616,6 +618,18 @@ class AutoTradingEngine:
                             "type": "position_update",
                             "positions": [position_info]
                         })
+
+                # 일별 스냅샷 저장 (같은 날 여러 번 저장돼도 마지막 값으로 upsert)
+                try:
+                    summary = self.get_portfolio_summary()
+                    self.snapshot_repo.save(
+                        snapshot_date=datetime.now().strftime("%Y-%m-%d"),
+                        total_value=summary["total_value"],
+                        cash=summary["cash"],
+                        positions_value=summary["positions_value"],
+                    )
+                except Exception as e:
+                    logger.error(f"스냅샷 저장 실패: {e}")
 
                 await asyncio.sleep(30)  # 30초마다 업데이트
 
@@ -805,30 +819,23 @@ class AutoTradingEngine:
         }
 
     def get_portfolio_summary(self) -> Dict:
-        """포트폴리오 요약"""
-        # 포지션 가치 계산 (현재가 필요 - 임시로 entry_price 사용)
-        total_positions_value = sum(
-            pos.get('entry_price', 0) * pos.get('shares', 0)
-            for pos in self.active_positions.values()
-        )
-
-        # 현금 잔고 (초기 자본 - 투자금)
-        cash = self.config.total_capital - total_positions_value
-
-        # 총 자산
-        total_value = cash + total_positions_value
-
-        # 총 손익
-        total_pnl = total_value - self.config.total_capital
-        total_pnl_pct = (total_pnl / self.config.total_capital) * 100 if self.config.total_capital > 0 else 0
-
-        # 포지션 상세 정보
+        """포트폴리오 요약 — 모니터링 루프가 갱신한 current_price 기준"""
+        price_is_stale = False
         positions = []
+        total_positions_value = 0.0
+        total_cost = 0.0
+
         for symbol, pos in self.active_positions.items():
-            # 현재가 (임시로 entry_price 사용)
-            current_price = pos.get('entry_price', 0)
             entry_price = pos.get('entry_price', 0)
             quantity = pos.get('shares', 0)
+            current_price = pos.get('current_price')
+            if current_price is None:
+                current_price = entry_price
+                price_is_stale = True
+
+            value = current_price * quantity
+            total_positions_value += value
+            total_cost += entry_price * quantity
 
             pnl = (current_price - entry_price) * quantity
             pnl_pct = ((current_price / entry_price) - 1) * 100 if entry_price > 0 else 0
@@ -846,11 +853,17 @@ class AutoTradingEngine:
                 "strategy": pos.get('strategy', 'unknown')
             })
 
-        # 리스크 지표 (간단 버전)
+        # 현금 = 초기 자본 - 매수 원금 + 실현 손익
+        realized_pnl = sum(t.get("pnl", 0) for t in self.trade_history)
+        cash = self.config.total_capital - total_cost + realized_pnl
+        total_value = cash + total_positions_value
+        total_pnl = total_value - self.config.total_capital
+        total_pnl_pct = (total_pnl / self.config.total_capital) * 100 if self.config.total_capital > 0 else 0
+
         risk_metrics = {
             "concentration_risk": len(self.active_positions) / self.config.max_positions if self.config.max_positions > 0 else 0,
             "daily_var": abs(self.daily_pnl) / self.config.total_capital if self.config.total_capital > 0 else 0,
-            "max_position_size": max([pos.get('shares', 0) * pos.get('entry_price', 0) for pos in self.active_positions.values()]) if self.active_positions else 0
+            "max_position_size": max([p["current_price"] * p["quantity"] for p in positions]) if positions else 0
         }
 
         return {
@@ -859,6 +872,7 @@ class AutoTradingEngine:
             "positions_value": total_positions_value,
             "total_pnl": total_pnl,
             "total_pnl_pct": total_pnl_pct,
+            "price_is_stale": price_is_stale,
             "positions": positions,
             "risk_metrics": risk_metrics
         }
