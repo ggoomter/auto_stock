@@ -20,7 +20,7 @@ from ..services.parser import StrategyParser
 from ..services.indicators import IndicatorCalculator, load_sample_data
 from ..services.backtest import BacktestEngine
 from ..services.monte_carlo import MonteCarloSimulator
-from ..services.master_strategies import get_strategy, list_strategies
+from ..services.master_strategies import get_strategy, list_strategies, format_coverage_warning
 from ..services.fundamental_analysis import FundamentalAnalyzer
 from ..services.exchange_rate import get_exchange_service
 from ..services.backtest_cache import get_cache
@@ -660,6 +660,12 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
         # 12. 응답 구성
         logger.info(f"Response data - Exchange rate: {usd_krw_rate}, Initial KRW: {initial_capital_krw}, Final KRW: {final_capital_krw}")
 
+        # 펀더멘털 검증 가능 구간 경고 추가 (Buffett/Lynch/Graham/O'Neil 전략만)
+        backtest_warnings = list(risk_report.get("warnings") or []) if isinstance(risk_report, dict) else []
+        if request.strategy_name.lower() in ("buffett", "lynch", "graham", "oneil"):
+            coverage = getattr(strategy, "last_fundamental_coverage", None)
+            backtest_warnings.append(format_coverage_warning(coverage))
+
         response = MasterStrategyResponse(
             strategy_info=strategy_info,
             backtest=Backtest(
@@ -671,7 +677,7 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
                 equity_curve_ref=None,
                 equity_curve=equity_curve_payload,
                 risk_summary=risk_report,
-                warnings=risk_report.get("warnings") if isinstance(risk_report, dict) else None,
+                warnings=backtest_warnings if backtest_warnings else None,
                 trade_history=None  # Backtest에는 trade_history 넣지 않음 (MasterStrategyResponse에만)
             ),
             fundamental_screen=fundamental_screen,

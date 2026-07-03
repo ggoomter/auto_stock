@@ -15,6 +15,19 @@ from .fundamental_analysis import FundamentalAnalyzer
 from ..models.schemas import RiskParams
 
 
+def format_coverage_warning(coverage: Optional[Tuple[str, str]]) -> str:
+    """
+    펀더멘털 point-in-time 검증 가능 구간을 사용자 경고 문자열로 변환.
+
+    - coverage 있음: "펀더멘털 검증 가능 구간: {start} ~ {end} (이전 구간은 매수 신호 없음)"
+    - coverage None: 시점별 데이터가 없어 매수 신호가 생성되지 않았음을 안내.
+    """
+    if coverage is None:
+        return "펀더멘털 시점별 데이터 없음 — 이 백테스트는 매수 신호가 생성되지 않았습니다"
+    start, end = coverage
+    return f"펀더멘털 검증 가능 구간: {start} ~ {end} (이전 구간은 매수 신호 없음)"
+
+
 def _get_close_series(df: pd.DataFrame) -> pd.Series:
     """컬럼명 대소문자 무관하게 close 시리즈 반환"""
     for col in ['close', 'Close', 'CLOSE']:
@@ -37,6 +50,9 @@ class MasterStrategy:
     def __init__(self, name: str, description: str):
         self.name = name
         self.description = description
+        # 펀더멘털 point-in-time 검증 가능 구간 (Task 4).
+        # generate_signals 실행 후 갱신됨. 전역 싱글톤이므로 각 실행 시작 시 None 리셋.
+        self.last_fundamental_coverage: Optional[Tuple[str, str]] = None
 
     def generate_signals(
         self,
@@ -92,6 +108,7 @@ class BuffettStrategy(MasterStrategy):
             price_data = price_data.copy()
             price_data.index = price_data.index.tz_localize(None)
 
+        self.last_fundamental_coverage = None  # 이전 요청 잔존값 리셋 (전역 싱글톤)
         analyzer = FundamentalAnalyzer(symbol)
         close = _get_close_series(price_data)
 
@@ -113,6 +130,8 @@ class BuffettStrategy(MasterStrategy):
                 # 청산: 펀더멘털 악화
                 exit_signals.loc[date] = True
 
+        # check 루프 후에만 pit가 빌드되므로 여기서 coverage 저장 (Task 4)
+        self.last_fundamental_coverage = analyzer.fundamental_coverage()
         return entry_signals, exit_signals
 
     def get_risk_params(self) -> RiskParams:
@@ -162,6 +181,7 @@ class LynchStrategy(MasterStrategy):
             price_data = price_data.copy()
             price_data.index = price_data.index.tz_localize(None)
 
+        self.last_fundamental_coverage = None  # 이전 요청 잔존값 리셋 (전역 싱글톤)
         analyzer = FundamentalAnalyzer(symbol)
         close = _get_close_series(price_data)
 
@@ -188,6 +208,8 @@ class LynchStrategy(MasterStrategy):
                 # 청산: PEG > 2.0 OR 데드크로스
                 exit_signals.loc[date] = True
 
+        # check 루프 후에만 pit가 빌드되므로 여기서 coverage 저장 (Task 4)
+        self.last_fundamental_coverage = analyzer.fundamental_coverage()
         return entry_signals, exit_signals
 
     def get_risk_params(self) -> RiskParams:
@@ -234,6 +256,7 @@ class GrahamStrategy(MasterStrategy):
             price_data = price_data.copy()
             price_data.index = price_data.index.tz_localize(None)
 
+        self.last_fundamental_coverage = None  # 이전 요청 잔존값 리셋 (전역 싱글톤)
         analyzer = FundamentalAnalyzer(symbol)
         close = _get_close_series(price_data)
 
@@ -263,6 +286,8 @@ class GrahamStrategy(MasterStrategy):
                 # 청산: P/B > 1.0 OR 데드크로스
                 exit_signals.loc[date] = True
 
+        # check 루프 후에만 pit가 빌드되므로 여기서 coverage 저장 (Task 4)
+        self.last_fundamental_coverage = analyzer.fundamental_coverage()
         return entry_signals, exit_signals
 
     def get_risk_params(self) -> RiskParams:
@@ -613,6 +638,7 @@ class ONeilStrategy(MasterStrategy):
             price_data = price_data.copy()
             price_data.index = price_data.index.tz_localize(None)
 
+        self.last_fundamental_coverage = None  # 이전 요청 잔존값 리셋 (전역 싱글톤)
         analyzer = FundamentalAnalyzer(symbol)
         close = _get_close_series(price_data)
 
@@ -652,6 +678,8 @@ class ONeilStrategy(MasterStrategy):
                 # 청산: MA21 하향 돌파
                 exit_signals.loc[date] = True
 
+        # check 루프 후에만 pit가 빌드되므로 여기서 coverage 저장 (Task 4)
+        self.last_fundamental_coverage = analyzer.fundamental_coverage()
         return entry_signals, exit_signals
 
     def get_risk_params(self) -> RiskParams:
