@@ -27,7 +27,8 @@ from .position_scaling import (
     ExitStrategy
 )
 from .stock_screener import StockScreener, ScreenerType
-from .paper_execution import calculate_equal_weight_shares
+from .paper_execution import calculate_equal_weight_shares, simulate_fill_price
+from ..db.repositories import PaperTradingRepository
 
 
 class TradingMode(Enum):
@@ -134,7 +135,7 @@ class AutoTradingConfig:
 class AutoTradingEngine:
     """자동매매 엔진"""
 
-    def __init__(self, config: AutoTradingConfig = None):
+    def __init__(self, config: AutoTradingConfig = None, db_path: str | None = None):
         self.config = config or AutoTradingConfig()
         self.is_running = False
 
@@ -159,8 +160,10 @@ class AutoTradingEngine:
         self.strategy_parsers: Dict[str, StrategyParser] = {}
         self.master_strategies = MASTER_STRATEGIES
 
-        # 상태 관리
+        # 상태 관리 — DB가 진실의 원천, dict는 런타임 캐시
+        self.paper_repo = PaperTradingRepository(db_path)
         self.active_positions: Dict[str, Dict] = {}
+        self._restore_open_positions()
         self.pending_orders: List[Order] = []
         self.trade_history: List[Dict] = []
         self.daily_pnl = 0.0
@@ -178,6 +181,28 @@ class AutoTradingEngine:
         logger.info(f"자동매매 엔진 초기화 (모드: {self.config.mode.value})")
         logger.info(f"분할 매수/매도: {'활성화' if self.config.use_position_scaling else '비활성화'}")
         logger.info(f"자동 종목 발굴: {'활성화' if self.config.use_stock_screener else '비활성화'}")
+
+    def _restore_open_positions(self):
+        """서버 재시작 시 DB의 open 포지션을 메모리로 복원"""
+        try:
+            for pos in self.paper_repo.list_open_positions():
+                self.active_positions[pos["symbol"]] = {
+                    "position_id": pos["id"],
+                    "symbol": pos["symbol"],
+                    "shares": pos["quantity"],
+                    "entry_price": pos["entry_price"],
+                    "stop_loss": pos["stop_loss"],
+                    "take_profit": pos["take_profit"],
+                    "highest_price": pos["highest_price"] or pos["entry_price"],
+                    "strategy": pos["strategy"],
+                    "entry_time": datetime.fromisoformat(pos["entry_at"]),
+                }
+            if self.active_positions:
+                logger.info(f"open 포지션 {len(self.active_positions)}건 복원됨")
+        except Exception as e:
+            # 복원 실패는 치명적 — 고아 포지션을 만들 수 있으므로 기동을 막는다
+            logger.error(f"포지션 복원 실패: {e}")
+            raise
 
     async def start(self, symbols: List[str] = None):
         """자동매매 시작"""
@@ -488,19 +513,31 @@ class AutoTradingEngine:
                     order.status = OrderStatus.REJECTED
                     logger.error(f"주문 거부: {result['message']}")
 
-            # 모의 거래
+            # 모의 거래: 보수적 결정론 체결 (매수 올림 / 매도 내림, 랜덤 없음)
             else:
-                # 슬리피지 시뮬레이션
-                slippage = np.random.uniform(-self.config.slippage_tolerance,
-                                            self.config.slippage_tolerance)
                 order.status = OrderStatus.FILLED
                 order.filled_quantity = signal.position_size
-                order.filled_price = signal.entry_price * (1 + slippage)
+                order.filled_price = simulate_fill_price(
+                    signal.entry_price,
+                    "buy" if signal.action == "buy" else "sell",
+                    self.config.slippage_tolerance,
+                    signal.symbol,
+                )
 
             # 포지션 업데이트
             if order.status == OrderStatus.FILLED:
                 if signal.action == "buy":
+                    position_id = self.paper_repo.open_position(
+                        symbol=signal.symbol,
+                        quantity=order.filled_quantity,
+                        entry_price=order.filled_price,
+                        strategy=signal.strategy_name,
+                        stop_loss=signal.stop_loss,
+                        take_profit=signal.take_profit,
+                        entry_at=datetime.now().isoformat(timespec="seconds"),
+                    )
                     self.active_positions[signal.symbol] = {
+                        "position_id": position_id,
                         "symbol": signal.symbol,
                         "shares": order.filled_quantity,
                         "entry_price": order.filled_price,
@@ -529,6 +566,13 @@ class AutoTradingEngine:
                             "reason": signal.reason
                         })
 
+                        self.paper_repo.close_position(
+                            position_id=position["position_id"],
+                            exit_price=order.filled_price,
+                            exit_reason=signal.reason,
+                            exit_at=datetime.now().isoformat(timespec="seconds"),
+                        )
+
                         del self.active_positions[signal.symbol]
 
             self.pending_orders.append(order)
@@ -556,6 +600,11 @@ class AutoTradingEngine:
                             if self.config.use_trailing_stop:
                                 new_stop = current_price * (1 - self.config.trailing_stop_percent)
                                 position['stop_loss'] = max(position['stop_loss'], new_stop)
+                                self.paper_repo.update_stops(
+                                    position["position_id"],
+                                    stop_loss=position['stop_loss'],
+                                    highest_price=position['highest_price'],
+                                )
 
                         # 포지션 정보 브로드캐스트
                         position_info = position.copy()
