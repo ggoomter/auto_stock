@@ -27,6 +27,7 @@ from .position_scaling import (
     ExitStrategy
 )
 from .stock_screener import StockScreener, ScreenerType
+from .paper_execution import calculate_equal_weight_shares
 
 
 class TradingMode(Enum):
@@ -300,15 +301,14 @@ class AutoTradingEngine:
                 # 리스크 파라미터 가져오기
                 risk_params = strategy.get_risk_params()
                 
-                # 포지션 크기 계산
-                sizing_result = self.risk_manager.calculate_position_size(
-                    symbol=symbol,
+                # 포지션 크기: 1/N 균등 배분 (Kelly는 승률 하드코딩 문제로 제거)
+                position_size = calculate_equal_weight_shares(
+                    total_capital=self.config.total_capital,
+                    max_positions=self.config.max_positions,
                     entry_price=current_price,
-                    stop_loss=current_price * (1 - risk_params.stop_pct),
-                    strategy_win_rate=0.5,  # 추후 백테스트 결과 연동 필요
-                    avg_win_loss_ratio=2.0,
-                    current_positions=list(self.active_positions.values())
                 )
+                if position_size <= 0:
+                    return None  # 예산 부족 시 진입하지 않음
 
                 return TradingSignal(
                     timestamp=datetime.now(),
@@ -317,9 +317,9 @@ class AutoTradingEngine:
                     strategy_name=strategy_name,
                     confidence=0.8,
                     entry_price=current_price,
-                    stop_loss=sizing_result.손절가,
-                    take_profit=sizing_result.목표가,
-                    position_size=sizing_result.추천_주식수,
+                    stop_loss=current_price * (1 - risk_params.stop_pct),
+                    take_profit=current_price * (1 + risk_params.take_pct),
+                    position_size=position_size,
                     reason=f"{strategy_name} 진입 조건 충족"
                 )
 

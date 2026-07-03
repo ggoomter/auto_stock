@@ -22,3 +22,12 @@ def simulate_fill_price(price: float, side: str, slippage: float,
     if side == "sell":
         return round_to_tick_down(price * (1 - slippage), korean)
     raise ValueError(f"지원하지 않는 side: {side}")
+
+
+def calculate_equal_weight_shares(total_capital: float, max_positions: int,
+                                  entry_price: float) -> int:
+    """균등 배분(1/N) 주식 수. 근거 없는 Kelly 추정치 대신 설명 가능한 단순 규칙."""
+    if entry_price <= 0 or max_positions <= 0:
+        return 0
+    budget_per_position = total_capital / max_positions
+    return max(0, int(budget_per_position / entry_price))
