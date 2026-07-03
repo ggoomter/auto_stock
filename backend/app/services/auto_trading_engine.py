@@ -889,7 +889,9 @@ class AutoTradingEngine:
             })
 
         # 현금 = 초기 자본 - 매수 원금 + 실현 손익
-        realized_pnl = sum(t.get("pnl", 0) for t in self.trade_history)
+        # 실현 손익은 DB(closed 포지션)가 진실의 원천 — 재시작해도 정직하게 유지된다.
+        # (메모리 trade_history와 합산하면 이중 계산되므로 교체한다)
+        realized_pnl = self.paper_repo.total_realized_pnl()
         cash = self.config.total_capital - total_cost + realized_pnl
         total_value = cash + total_positions_value
         total_pnl = total_value - self.config.total_capital

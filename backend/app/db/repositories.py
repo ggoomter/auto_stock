@@ -86,6 +86,18 @@ class PaperTradingRepository:
         finally:
             conn.close()
 
+    def total_realized_pnl(self) -> float:
+        """청산 완료(closed) 포지션의 누적 실현손익 — 재시작해도 유지되는 진실의 원천"""
+        conn = get_connection(self._db_path)
+        try:
+            row = conn.execute(
+                "SELECT COALESCE(SUM((exit_price - entry_price) * quantity), 0) AS pnl "
+                "FROM paper_positions WHERE status='closed'",
+            ).fetchone()
+            return float(row["pnl"]) if row is not None else 0.0
+        finally:
+            conn.close()
+
     def list_trades(self) -> list[dict]:
         conn = get_connection(self._db_path)
         try:
