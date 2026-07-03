@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict
 from datetime import datetime
 from ..core.logging_config import logger
+from ..core.config import settings
 from ..services.auto_trading_engine import (
     AutoTradingEngine,
     AutoTradingConfig,
@@ -84,6 +85,7 @@ class PortfolioStatusResponse(BaseModel):
     positions_value: float
     total_pnl: float
     total_pnl_pct: float
+    price_is_stale: bool = False
     positions: List[PositionResponse]
     risk_metrics: Dict
     last_update: str
@@ -110,6 +112,18 @@ async def start_trading(request: TradingStartRequest, background_tasks: Backgrou
     global _trading_engine, _is_running
 
     try:
+        # mode 값 검증 (paper/live 외 거부)
+        if request.mode not in ("paper", "live"):
+            raise HTTPException(status_code=422, detail=f"지원하지 않는 모드: {request.mode}")
+
+        # 실전 모드 차단: 브로커 주문 경로(buy_stock/sell_stock 부재)가 미완성이라
+        # 실행 시 크래시함. 수리 전까지 서버 설정으로 봉인한다.
+        if request.mode == "live" and not settings.ENABLE_LIVE_TRADING:
+            raise HTTPException(
+                status_code=403,
+                detail="실전 모드는 비활성화되어 있습니다 (paper 모드만 지원)"
+            )
+
         # 이미 실행 중인지 체크
         if _is_running:
             raise HTTPException(
@@ -326,6 +340,7 @@ async def get_portfolio_status():
             positions_value=portfolio.get("positions_value", 0.0),
             total_pnl=portfolio.get("total_pnl", 0.0),
             total_pnl_pct=portfolio.get("total_pnl_pct", 0.0),
+            price_is_stale=portfolio.get("price_is_stale", False),
             positions=positions,
             risk_metrics=portfolio.get("risk_metrics", {}),
             last_update=datetime.now().isoformat()

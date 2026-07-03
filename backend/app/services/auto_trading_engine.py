@@ -27,6 +27,8 @@ from .position_scaling import (
     ExitStrategy
 )
 from .stock_screener import StockScreener, ScreenerType
+from .paper_execution import calculate_equal_weight_shares, simulate_fill_price
+from ..db.repositories import PaperTradingRepository, SnapshotRepository
 
 
 class TradingMode(Enum):
@@ -133,7 +135,7 @@ class AutoTradingConfig:
 class AutoTradingEngine:
     """자동매매 엔진"""
 
-    def __init__(self, config: AutoTradingConfig = None):
+    def __init__(self, config: AutoTradingConfig = None, db_path: str | None = None):
         self.config = config or AutoTradingConfig()
         self.is_running = False
 
@@ -158,8 +160,11 @@ class AutoTradingEngine:
         self.strategy_parsers: Dict[str, StrategyParser] = {}
         self.master_strategies = MASTER_STRATEGIES
 
-        # 상태 관리
+        # 상태 관리 — DB가 진실의 원천, dict는 런타임 캐시
+        self.paper_repo = PaperTradingRepository(db_path)
+        self.snapshot_repo = SnapshotRepository(db_path)
         self.active_positions: Dict[str, Dict] = {}
+        self._restore_open_positions()
         self.pending_orders: List[Order] = []
         self.trade_history: List[Dict] = []
         self.daily_pnl = 0.0
@@ -177,6 +182,28 @@ class AutoTradingEngine:
         logger.info(f"자동매매 엔진 초기화 (모드: {self.config.mode.value})")
         logger.info(f"분할 매수/매도: {'활성화' if self.config.use_position_scaling else '비활성화'}")
         logger.info(f"자동 종목 발굴: {'활성화' if self.config.use_stock_screener else '비활성화'}")
+
+    def _restore_open_positions(self):
+        """서버 재시작 시 DB의 open 포지션을 메모리로 복원"""
+        try:
+            for pos in self.paper_repo.list_open_positions():
+                self.active_positions[pos["symbol"]] = {
+                    "position_id": pos["id"],
+                    "symbol": pos["symbol"],
+                    "shares": pos["quantity"],
+                    "entry_price": pos["entry_price"],
+                    "stop_loss": pos["stop_loss"],
+                    "take_profit": pos["take_profit"],
+                    "highest_price": pos["highest_price"] or pos["entry_price"],
+                    "strategy": pos["strategy"],
+                    "entry_time": datetime.fromisoformat(pos["entry_at"]),
+                }
+            if self.active_positions:
+                logger.info(f"open 포지션 {len(self.active_positions)}건 복원됨")
+        except Exception as e:
+            # 복원 실패는 치명적 — 고아 포지션을 만들 수 있으므로 기동을 막는다
+            logger.error(f"포지션 복원 실패: {e}")
+            raise
 
     async def start(self, symbols: List[str] = None):
         """자동매매 시작"""
@@ -300,15 +327,14 @@ class AutoTradingEngine:
                 # 리스크 파라미터 가져오기
                 risk_params = strategy.get_risk_params()
                 
-                # 포지션 크기 계산
-                sizing_result = self.risk_manager.calculate_position_size(
-                    symbol=symbol,
+                # 포지션 크기: 1/N 균등 배분 (Kelly는 승률 하드코딩 문제로 제거)
+                position_size = calculate_equal_weight_shares(
+                    total_capital=self.config.total_capital,
+                    max_positions=self.config.max_positions,
                     entry_price=current_price,
-                    stop_loss=current_price * (1 - risk_params.stop_pct),
-                    strategy_win_rate=0.5,  # 추후 백테스트 결과 연동 필요
-                    avg_win_loss_ratio=2.0,
-                    current_positions=list(self.active_positions.values())
                 )
+                if position_size <= 0:
+                    return None  # 예산 부족 시 진입하지 않음
 
                 return TradingSignal(
                     timestamp=datetime.now(),
@@ -317,9 +343,9 @@ class AutoTradingEngine:
                     strategy_name=strategy_name,
                     confidence=0.8,
                     entry_price=current_price,
-                    stop_loss=sizing_result.손절가,
-                    take_profit=sizing_result.목표가,
-                    position_size=sizing_result.추천_주식수,
+                    stop_loss=current_price * (1 - risk_params.stop_pct),
+                    take_profit=current_price * (1 + risk_params.take_pct),
+                    position_size=position_size,
                     reason=f"{strategy_name} 진입 조건 충족"
                 )
 
@@ -488,19 +514,39 @@ class AutoTradingEngine:
                     order.status = OrderStatus.REJECTED
                     logger.error(f"주문 거부: {result['message']}")
 
-            # 모의 거래
+            # 모의 거래: 보수적 결정론 체결 (매수 올림 / 매도 내림, 랜덤 없음)
             else:
-                # 슬리피지 시뮬레이션
-                slippage = np.random.uniform(-self.config.slippage_tolerance,
-                                            self.config.slippage_tolerance)
                 order.status = OrderStatus.FILLED
                 order.filled_quantity = signal.position_size
-                order.filled_price = signal.entry_price * (1 + slippage)
+                order.filled_price = simulate_fill_price(
+                    signal.entry_price,
+                    "buy" if signal.action == "buy" else "sell",
+                    self.config.slippage_tolerance,
+                    signal.symbol,
+                )
+
+            # 이중 방어: 체결가가 0 이하이면 DB에 0원 체결이 기록되지 않도록 거부
+            if order.status == OrderStatus.FILLED and order.filled_price <= 0:
+                order.status = OrderStatus.REJECTED
+                logger.error(
+                    f"체결가 0 이하로 주문 거부: {signal.symbol} "
+                    f"{signal.action} price={order.filled_price}"
+                )
 
             # 포지션 업데이트
             if order.status == OrderStatus.FILLED:
                 if signal.action == "buy":
+                    position_id = self.paper_repo.open_position(
+                        symbol=signal.symbol,
+                        quantity=order.filled_quantity,
+                        entry_price=order.filled_price,
+                        strategy=signal.strategy_name,
+                        stop_loss=signal.stop_loss,
+                        take_profit=signal.take_profit,
+                        entry_at=datetime.now().isoformat(timespec="seconds"),
+                    )
                     self.active_positions[signal.symbol] = {
+                        "position_id": position_id,
                         "symbol": signal.symbol,
                         "shares": order.filled_quantity,
                         "entry_price": order.filled_price,
@@ -529,6 +575,13 @@ class AutoTradingEngine:
                             "reason": signal.reason
                         })
 
+                        self.paper_repo.close_position(
+                            position_id=position["position_id"],
+                            exit_price=order.filled_price,
+                            exit_reason=signal.reason,
+                            exit_at=datetime.now().isoformat(timespec="seconds"),
+                        )
+
                         del self.active_positions[signal.symbol]
 
             self.pending_orders.append(order)
@@ -542,11 +595,12 @@ class AutoTradingEngine:
         """포지션 관리 (트레일링 스톱 등)"""
         while self.is_running:
             try:
-                for symbol, position in self.active_positions.items():
+                for symbol, position in list(self.active_positions.items()):
                     # 현재가 업데이트
                     data = await self.data_collector.fetch_realtime_data(symbol)
                     if data is not None:
                         current_price = data['close'].iloc[-1]
+                        position['current_price'] = current_price
 
                         # 최고가 업데이트
                         if current_price > position['highest_price']:
@@ -556,6 +610,11 @@ class AutoTradingEngine:
                             if self.config.use_trailing_stop:
                                 new_stop = current_price * (1 - self.config.trailing_stop_percent)
                                 position['stop_loss'] = max(position['stop_loss'], new_stop)
+                                self.paper_repo.update_stops(
+                                    position["position_id"],
+                                    stop_loss=position['stop_loss'],
+                                    highest_price=position['highest_price'],
+                                )
 
                         # 포지션 정보 브로드캐스트
                         position_info = position.copy()
@@ -567,6 +626,18 @@ class AutoTradingEngine:
                             "type": "position_update",
                             "positions": [position_info]
                         })
+
+                # 일별 스냅샷 저장 (같은 날 여러 번 저장돼도 마지막 값으로 upsert)
+                try:
+                    summary = self.get_portfolio_summary()
+                    self.snapshot_repo.save(
+                        snapshot_date=datetime.now().strftime("%Y-%m-%d"),
+                        total_value=summary["total_value"],
+                        cash=summary["cash"],
+                        positions_value=summary["positions_value"],
+                    )
+                except Exception as e:
+                    logger.error(f"스냅샷 저장 실패: {e}")
 
                 await asyncio.sleep(30)  # 30초마다 업데이트
 
@@ -621,12 +692,29 @@ class AutoTradingEngine:
                 logger.error(f"리스크 모니터링 오류: {e}")
                 await asyncio.sleep(60)
 
+    async def _resolve_exit_price(self, symbol: str, position: Dict) -> float:
+        """청산 신호용 현재가 결정 — 실시간 조회 시도 후 폴백 (0 금지).
+        우선순위: 실시간 시세 → position['current_price'] → position['entry_price'].
+        """
+        try:
+            data = await self.data_collector.fetch_realtime_data(symbol)
+            if data is not None and not data.empty:
+                price = float(data['close'].iloc[-1])
+                if price > 0:
+                    return price
+        except Exception as e:
+            logger.warning(f"청산가 실시간 조회 실패 ({symbol}): {e}")
+
+        # 폴백: 최근 갱신된 현재가 → 진입가 (0은 절대 사용하지 않음)
+        price = position.get('current_price') or position.get('entry_price', 0)
+        return price
+
     async def _reduce_exposure(self):
         """포지션 축소"""
         # 손실이 큰 포지션부터 청산
         positions_with_pnl = []
 
-        for symbol, position in self.active_positions.items():
+        for symbol, position in list(self.active_positions.items()):
             data = await self.data_collector.fetch_realtime_data(symbol)
             if data is not None:
                 current_price = data['close'].iloc[-1]
@@ -639,36 +727,46 @@ class AutoTradingEngine:
         # 하위 20% 청산
         to_close = int(len(positions_with_pnl) * 0.2) or 1
         for symbol, _ in positions_with_pnl[:to_close]:
+            position = self.active_positions[symbol]
+            exit_price = await self._resolve_exit_price(symbol, position)
             signal = TradingSignal(
                 timestamp=datetime.now(),
                 symbol=symbol,
                 action="sell",
                 strategy_name="risk_management",
                 confidence=1.0,
-                entry_price=0,
+                entry_price=exit_price,
                 stop_loss=0,
                 take_profit=0,
-                position_size=self.active_positions[symbol]['shares'],
+                position_size=position['shares'],
                 reason="리스크 축소"
             )
             await self.signal_queue.put(signal)
 
     async def _close_all_positions(self, reason: str):
-        """모든 포지션 청산"""
-        for symbol, position in self.active_positions.items():
-            signal = TradingSignal(
-                timestamp=datetime.now(),
-                symbol=symbol,
-                action="sell",
-                strategy_name="system",
-                confidence=1.0,
-                entry_price=0,
-                stop_loss=0,
-                take_profit=0,
-                position_size=position['shares'],
-                reason=reason
-            )
-            await self.signal_queue.put(signal)
+        """모든 포지션 청산 — 큐를 거치지 않고 직접 체결.
+        stop()이 is_running=False로 만든 뒤에도 _process_signals 루프에 의존하지
+        않고 즉시 청산되도록 _execute_order를 직접 await 한다.
+        순회 중 del 안전을 위해 active_positions 복사본을 사용한다.
+        """
+        for symbol, position in list(self.active_positions.items()):
+            try:
+                exit_price = await self._resolve_exit_price(symbol, position)
+                signal = TradingSignal(
+                    timestamp=datetime.now(),
+                    symbol=symbol,
+                    action="sell",
+                    strategy_name="system",
+                    confidence=1.0,
+                    entry_price=exit_price,
+                    stop_loss=0,
+                    take_profit=0,
+                    position_size=position['shares'],
+                    reason=reason
+                )
+                await self._execute_order(signal)
+            except Exception as e:
+                logger.error(f"포지션 청산 실패 ({symbol}): {e}")
 
     def _is_trading_hours(self) -> bool:
         """거래 시간 확인"""
@@ -756,30 +854,23 @@ class AutoTradingEngine:
         }
 
     def get_portfolio_summary(self) -> Dict:
-        """포트폴리오 요약"""
-        # 포지션 가치 계산 (현재가 필요 - 임시로 entry_price 사용)
-        total_positions_value = sum(
-            pos.get('entry_price', 0) * pos.get('shares', 0)
-            for pos in self.active_positions.values()
-        )
-
-        # 현금 잔고 (초기 자본 - 투자금)
-        cash = self.config.total_capital - total_positions_value
-
-        # 총 자산
-        total_value = cash + total_positions_value
-
-        # 총 손익
-        total_pnl = total_value - self.config.total_capital
-        total_pnl_pct = (total_pnl / self.config.total_capital) * 100 if self.config.total_capital > 0 else 0
-
-        # 포지션 상세 정보
+        """포트폴리오 요약 — 모니터링 루프가 갱신한 current_price 기준"""
+        price_is_stale = False
         positions = []
+        total_positions_value = 0.0
+        total_cost = 0.0
+
         for symbol, pos in self.active_positions.items():
-            # 현재가 (임시로 entry_price 사용)
-            current_price = pos.get('entry_price', 0)
             entry_price = pos.get('entry_price', 0)
             quantity = pos.get('shares', 0)
+            current_price = pos.get('current_price')
+            if current_price is None:
+                current_price = entry_price
+                price_is_stale = True
+
+            value = current_price * quantity
+            total_positions_value += value
+            total_cost += entry_price * quantity
 
             pnl = (current_price - entry_price) * quantity
             pnl_pct = ((current_price / entry_price) - 1) * 100 if entry_price > 0 else 0
@@ -797,11 +888,19 @@ class AutoTradingEngine:
                 "strategy": pos.get('strategy', 'unknown')
             })
 
-        # 리스크 지표 (간단 버전)
+        # 현금 = 초기 자본 - 매수 원금 + 실현 손익
+        # 실현 손익은 DB(closed 포지션)가 진실의 원천 — 재시작해도 정직하게 유지된다.
+        # (메모리 trade_history와 합산하면 이중 계산되므로 교체한다)
+        realized_pnl = self.paper_repo.total_realized_pnl()
+        cash = self.config.total_capital - total_cost + realized_pnl
+        total_value = cash + total_positions_value
+        total_pnl = total_value - self.config.total_capital
+        total_pnl_pct = (total_pnl / self.config.total_capital) * 100 if self.config.total_capital > 0 else 0
+
         risk_metrics = {
             "concentration_risk": len(self.active_positions) / self.config.max_positions if self.config.max_positions > 0 else 0,
             "daily_var": abs(self.daily_pnl) / self.config.total_capital if self.config.total_capital > 0 else 0,
-            "max_position_size": max([pos.get('shares', 0) * pos.get('entry_price', 0) for pos in self.active_positions.values()]) if self.active_positions else 0
+            "max_position_size": max([p["current_price"] * p["quantity"] for p in positions]) if positions else 0
         }
 
         return {
@@ -810,6 +909,7 @@ class AutoTradingEngine:
             "positions_value": total_positions_value,
             "total_pnl": total_pnl,
             "total_pnl_pct": total_pnl_pct,
+            "price_is_stale": price_is_stale,
             "positions": positions,
             "risk_metrics": risk_metrics
         }
@@ -824,14 +924,15 @@ class AutoTradingEngine:
             try:
                 position = self.active_positions[symbol]
 
-                # 긴급 청산 신호 생성
+                # 긴급 청산 신호 생성 (현재가 확보 — 0원 체결 방지)
+                exit_price = await self._resolve_exit_price(symbol, position)
                 signal = TradingSignal(
                     timestamp=datetime.now(),
                     symbol=symbol,
                     action="sell",
                     strategy_name="emergency_stop",
                     confidence=1.0,
-                    entry_price=0,
+                    entry_price=exit_price,
                     stop_loss=0,
                     take_profit=0,
                     position_size=position['shares'],

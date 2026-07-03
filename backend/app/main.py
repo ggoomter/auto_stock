@@ -91,6 +91,8 @@ app.include_router(trading_router, prefix=settings.API_V1_STR, tags=["trading"])
 @app.on_event("startup")
 async def startup_event():
     """앱 시작 시 실행"""
+    from .db.database import init_db
+    init_db()
     register_websocket_callbacks()
 
 

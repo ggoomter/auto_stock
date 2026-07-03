@@ -6,7 +6,7 @@
 2. 피라미딩 (Pyramiding): 승리 중인 포지션 추가 매수
 3. 단계별 청산: 이익 실현 + 손실 최소화
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Tuple
 from datetime import datetime
 from enum import Enum
@@ -101,13 +101,13 @@ class ScaledPosition:
     config: ScalingConfig
 
     # 진입 기록
-    entries: List[PositionEntry]
+    entries: List[PositionEntry] = field(default_factory=list)
     total_shares: int = 0
     total_cost: float = 0.0
     avg_entry_price: float = 0.0
 
     # 청산 기록
-    exits: List[PositionExit]
+    exits: List[PositionExit] = field(default_factory=list)
     remaining_shares: int = 0
     realized_pnl: float = 0.0
 
