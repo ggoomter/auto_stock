@@ -52,6 +52,8 @@ class PointInTimeFundamentals:
     def metrics_at(self, as_of: pd.Timestamp) -> Optional[QuarterMetrics]:
         """available_from <= as_of 인 가장 최근 분기. 없으면 None (look-ahead 방지의 핵심)."""
         as_of = pd.Timestamp(as_of)
+        if as_of.tzinfo is not None:
+            as_of = as_of.tz_localize(None)  # 내부 quarter_end는 tz-naive — 비교 오류 방어
         latest: Optional[QuarterMetrics] = None
         for q in self.quarters:  # 오름차순 → 마지막으로 조건 만족한 것이 최신
             if q.available_from <= as_of:
@@ -120,6 +122,16 @@ _REPRT_CODE = {1: "11013", 2: "11012", 3: "11014", 4: "11011"}
 _QUARTER_END_MD = {1: (3, 31), 2: (6, 30), 3: (9, 30), 4: (12, 31)}
 
 
+# 계정명 정확 일치용 알려진 변형 (공백 제거 기준) — 실응답 관찰(삼성전자 2023) 기반
+_ACCOUNT_NAME_VARIANTS = {
+    "당기순이익": ("당기순이익", "당기순이익(손실)", "연결당기순이익", "연결당기순이익(손실)"),
+    "자본총계": ("자본총계",),
+    "부채총계": ("부채총계",),
+    "유동자산": ("유동자산",),
+    "유동부채": ("유동부채",),
+}
+
+
 def _find_amount(
     df: pd.DataFrame,
     keyword: str,
@@ -127,9 +139,12 @@ def _find_amount(
     column: str = "thstrm_amount",
 ) -> Optional[float]:
     """
-    DART fnlttSinglAcntAll 응답에서 account_nm 포함 검색으로 지정 컬럼 금액 추출.
+    DART fnlttSinglAcntAll 응답에서 account_nm 매칭으로 지정 컬럼 금액 추출.
     sj_div 지정 시 해당 재무제표 구분만 대상(BS=재무상태표, IS/CIS=손익).
-    계정명은 기업·연도별 변형이 있으므로 포함 검색으로 유연 매칭.
+
+    매칭 순서 (오매칭 방지 — 비유동자산/귀속내역 행 오염 차단):
+    1) 공백 제거 후 알려진 변형과 정확 일치 우선 (예: "당기순이익(손실)")
+    2) fallback: 포함 검색하되 "비"로 시작하는 계정(비유동자산/비유동부채 등) 제외
 
     실응답 확인(삼성전자 005930, 2023): 손익 계정의
     - thstrm_amount = 분기 단독(3개월)치 (사업보고서만 연간 12개월)
@@ -140,9 +155,19 @@ def _find_amount(
     sub = df
     if sj_div is not None and "sj_div" in df.columns:
         sub = df[df["sj_div"].isin(sj_div)]
-    rows = sub[sub["account_nm"].astype(str).str.replace(" ", "").str.contains(keyword, na=False)]
+
+    names = sub["account_nm"].astype(str).str.replace(" ", "")
+
+    # 1) 정확 일치 우선 (알려진 변형 포함)
+    variants = _ACCOUNT_NAME_VARIANTS.get(keyword, (keyword,))
+    rows = sub[names.isin(variants)]
+
+    # 2) fallback: 포함 검색 — 단, "비"로 시작하는 계정(비유동~) 제외
+    if rows.empty:
+        rows = sub[names.str.contains(keyword, na=False) & ~names.str.startswith("비")]
     if rows.empty:
         return None
+
     raw = str(rows.iloc[0].get(column, "")).replace(",", "").strip()
     if raw in ("", "-", "nan", "None"):
         return None
@@ -224,6 +249,9 @@ def build_korean_pit(
                 annual = _find_amount(df, "당기순이익", sj_div=("IS", "CIS"))
                 if annual is not None and cum9 is not None:
                     quarter_ni = annual - cum9
+                # TODO(Task 7 스모크 실측 후 판단): 3분기보고서의 thstrm_add_amount(9개월 누적)
+                # 부재 시 Q4 net_income이 None으로 유실됨. fallback으로 같은 해 Q1+Q2+Q3
+                # 단독치 합산(모두 존재할 때만)으로 9개월 누적을 재구성하는 방안 검토.
 
             equity = _find_amount(df, "자본총계", sj_div=("BS",))
             debt = _find_amount(df, "부채총계", sj_div=("BS",))
