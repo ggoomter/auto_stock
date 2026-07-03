@@ -147,33 +147,13 @@ async def websocket_trading_control(websocket: WebSocket):
             command = json.loads(data)
 
             if command['type'] == 'start_trading':
-                # 자동매매 시작
-                try:
-                    from ..services.auto_trading_engine import AutoTradingEngine, AutoTradingConfig
-
-                    config = AutoTradingConfig(**command.get('config', {}))
-
-                    if not trading_engine:
-                        trading_engine = AutoTradingEngine(config)
-
-                    if not trading_engine.is_running:
-                        asyncio.create_task(trading_engine.start())
-
-                        await websocket.send_text(json.dumps({
-                            'type': 'trading_started',
-                            'message': '자동매매가 시작되었습니다'
-                        }))
-                    else:
-                        await websocket.send_text(json.dumps({
-                            'type': 'error',
-                            'message': '자동매매가 이미 실행 중입니다'
-                        }))
-
-                except ImportError:
-                    await websocket.send_text(json.dumps({
-                        'type': 'error',
-                        'message': '자동매매 엔진이 설치되지 않았습니다'
-                    }))
+                # 자동매매 시작은 REST API로 일원화한다. WebSocket에서 엔진을
+                # 생성하면 REST가 관리하는 싱글톤과 별개의 제2 엔진이 만들어져
+                # 포지션/현금이 이중 관리되므로 거부한다.
+                await websocket.send_text(json.dumps({
+                    'type': 'error',
+                    'message': '자동매매 시작은 REST API(/api/v1/trading/start)를 사용하세요'
+                }))
 
             elif command['type'] == 'stop_trading':
                 # 자동매매 중지
