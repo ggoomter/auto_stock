@@ -51,6 +51,7 @@ class SimulateParams(BaseModel):
     bootstrap_runs: int = Field(default=1000, ge=100, le=10000)
     transaction_cost_bps: int = Field(default=10, ge=0, le=100)
     slippage_bps: int = Field(default=5, ge=0, le=50)
+    sell_tax_bps: int = Field(default=18, ge=0, le=100)
 
 
 class TargetMetrics(BaseModel):

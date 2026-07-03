@@ -81,6 +81,10 @@ async def analyze_strategy(request: AnalysisRequest):
         symbol = request.symbols[0]
         data = all_data[symbol]
 
+        # 한국 주식 여부 확인 (.KS, .KQ 접미사 또는 6자리 숫자)
+        symbol_base = symbol.replace('.KS', '').replace('.KQ', '')
+        is_korean_stock = (symbol_base.isdigit() and len(symbol_base) == 6) or symbol.endswith(('.KS', '.KQ'))
+
         # 2. 전략 파싱 및 시그널 생성
         try:
             parser = StrategyParser()
@@ -106,7 +110,9 @@ async def analyze_strategy(request: AnalysisRequest):
                 exit_signals,
                 request.strategy.risk,
                 request.simulate.transaction_cost_bps,
-                request.simulate.slippage_bps
+                request.simulate.slippage_bps,
+                is_korean_stock=is_korean_stock,  # 한국 주식 여부 전달
+                sell_tax_bps=request.simulate.sell_tax_bps  # 한국 매도 거래세
             )
             metrics, equity_curve, risk_report = backtest_engine.run()
             equity_curve_payload = [
@@ -424,7 +430,8 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
                 request.simulate.transaction_cost_bps,
                 request.simulate.slippage_bps,
                 initial_capital=backtest_initial_capital,
-                is_korean_stock=is_korean_stock  # 한국 주식 여부 전달
+                is_korean_stock=is_korean_stock,  # 한국 주식 여부 전달
+                sell_tax_bps=request.simulate.sell_tax_bps  # 한국 매도 거래세
             )
 
             metrics, equity_curve, risk_report = backtest_engine.run()

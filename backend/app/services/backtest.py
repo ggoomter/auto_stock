@@ -34,6 +34,7 @@ class BacktestEngine:
         slippage_bps: int = 5,
         initial_capital: float = 100000.0,
         is_korean_stock: bool = False,
+        sell_tax_bps: int = 18,
     ) -> None:
         # 단일 종목일 경우 딕셔너리로 변환하여 통일된 처리
         if isinstance(data, pd.DataFrame):
@@ -51,6 +52,7 @@ class BacktestEngine:
         self.risk_params = risk_params
         self.transaction_cost = transaction_cost_bps / 10000.0
         self.slippage = slippage_bps / 10000.0
+        self.sell_tax = sell_tax_bps / 10000.0
         self.initial_capital = float(initial_capital)
         self.is_korean_stock = is_korean_stock
 
@@ -480,6 +482,9 @@ class BacktestEngine:
     def _execute_exit_price(self, price: float) -> float:
         adjusted = price * (1 - self.slippage)
         adjusted *= (1 - self.transaction_cost)
+        # 한국 주식 매도 시에만 증권거래세 반영 (미국 주식 미적용)
+        if self.is_korean_stock:
+            adjusted *= (1 - self.sell_tax)
         return round_to_tick_down(adjusted, self.is_korean_stock)
 
     def _calculate_position_size(
