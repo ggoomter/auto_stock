@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, Bar, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, Bar } from 'recharts';
 import { Eye, EyeOff, BarChart3, TrendingUp, Maximize2, X } from 'lucide-react';
 import { globalEvents, companyEvents, eventColors, eventIcons, type GlobalEvent } from '../data/globalEvents';
 import { detectCandlePattern } from './Candlestick';
@@ -10,7 +10,7 @@ interface StockChartProps {
   endDate: string;
 }
 
-export default function StockChart({ symbol, startDate, endDate }: StockChartProps) {
+export default function StockChart({ symbol }: StockChartProps) {
   const [showGlobalEvents, setShowGlobalEvents] = useState(true);
   const [showCompanyEvents, setShowCompanyEvents] = useState(true);
   const [eventCategory, setEventCategory] = useState<string>('all');
@@ -45,9 +45,6 @@ export default function StockChart({ symbol, startDate, endDate }: StockChartPro
     }
 
     const days = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-
-    // 시간프레임에 따라 데이터 간격 조정
-    const interval = timeframe === 'daily' ? 1 : timeframe === 'weekly' ? 7 : 30;
 
     // 시간프레임에 따라 간격 결정
     let dataInterval = 1; // 일봉 기본

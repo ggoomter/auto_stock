@@ -67,6 +67,9 @@ export interface AnalysisResponse {
       TotalTrades?: number;
       WinTrades?: number;
       LossTrades?: number;
+      Sortino?: number;
+      Calmar?: number;
+      TailRatio?: number;
     };
     cost_assumptions_bps: Record<string, number>;
     equity_curve_ref?: string;
@@ -175,6 +178,9 @@ export interface MasterStrategyResponse {
       TotalTrades?: number;
       WinTrades?: number;
       LossTrades?: number;
+      Sortino?: number;
+      Calmar?: number;
+      TailRatio?: number;
     };
     cost_assumptions_bps: Record<string, number>;
     equity_curve_ref?: string;

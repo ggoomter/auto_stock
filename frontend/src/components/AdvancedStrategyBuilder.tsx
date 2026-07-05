@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, HelpCircle, Lightbulb } from 'lucide-react';
+import { Plus, Trash2, Lightbulb } from 'lucide-react';
 
 interface Condition {
   id: string;
@@ -67,24 +67,7 @@ const PRESETS = {
 };
 
 export default function AdvancedStrategyBuilder({ type, onChange }: AdvancedStrategyBuilderProps) {
-  // 초기 조건을 매수/매도에 따라 다르게 설정
-  const getInitialCondition = (): Condition => {
-    const defaults = type === 'entry'
-      ? { operator: '<', value: 30 }  // 매수: RSI < 30 (과매도)
-      : { operator: '>', value: 70 }; // 매도: RSI > 70 (과매수)
-
-    return {
-      id: '1',
-      timeframe: 'daily',
-      indicator: 'RSI',
-      operator: defaults.operator,
-      value: defaults.value,
-      type: 'compare',
-    };
-  };
-
   const [conditions, setConditions] = useState<Condition[]>([]);
-  const [showTooltip, setShowTooltip] = useState<string | null>(null);
 
   // 지표별 디폴트 설정 (매수/매도별로 다른 기본값)
   const getIndicatorDefaults = (indicator: string, strategyType: 'entry' | 'exit') => {
@@ -236,8 +219,10 @@ export default function AdvancedStrategyBuilder({ type, onChange }: AdvancedStra
   };
 
   const loadPreset = (presetKey: string) => {
+    // PRESETS.entry와 PRESETS.exit는 키 집합이 달라 union index 시 never가 됨 → 명시적 타입으로 캐스팅
+    type PresetEntry = { name: string; description: string; conditions: Omit<Condition, 'id' | 'connector'>[] };
     const presets = type === 'entry' ? PRESETS.entry : PRESETS.exit;
-    const preset = presets[presetKey as keyof typeof presets];
+    const preset = presets[presetKey as keyof typeof presets] as PresetEntry | undefined;
     if (!preset) return;
 
     const newConditions: Condition[] = preset.conditions.map((c, idx) => ({

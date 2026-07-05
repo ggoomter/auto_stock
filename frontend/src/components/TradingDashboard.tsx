@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  TrendingUp,
-  TrendingDown,
   AlertTriangle,
   Activity,
   DollarSign,
   PieChart,
-  Bell,
   Shield,
   Zap,
-  Eye,
   Settings,
   RefreshCw,
   Play,
@@ -26,8 +22,7 @@ import {
   type TradingStartRequest,
   type TradingStopRequest,
   type TradingStatusResponse,
-  type PortfolioStatusResponse,
-  type PositionInfo
+  type PortfolioStatusResponse
 } from '../services/api';
 
 interface TradingDashboardProps {
@@ -51,7 +46,7 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
   const [totalCapital, setTotalCapital] = useState(10000000);
   const [maxPositions, setMaxPositions] = useState(5);
   const [enabledStrategies, setEnabledStrategies] = useState<string[]>(['buffett', 'lynch']);
-  const [tradingSymbols, setTradingSymbols] = useState<string[]>(['AAPL', 'TSLA', '005930.KS']);
+  const [tradingSymbols] = useState<string[]>(['AAPL', 'TSLA', '005930.KS']);
 
   // UI 상태
   const [showSettings, setShowSettings] = useState(false);

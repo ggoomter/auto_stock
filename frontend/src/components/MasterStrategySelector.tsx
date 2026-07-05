@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, Calendar, Edit3 } from 'lucide-react';
 import StockAutocomplete from './StockAutocomplete';
-import { getMasterStrategies, getStrategyTemplate, type MasterStrategyRequest, type MasterStrategyListItem } from '../services/api';
+import { getMasterStrategies, getStrategyTemplate, type MasterStrategyRequest } from '../services/api';
 
 interface MasterStrategySelectorProps {
   onSubmit: (request: MasterStrategyRequest) => void;
@@ -14,7 +14,6 @@ interface MasterStrategySelectorProps {
 export default function MasterStrategySelector({ onSubmit, onLoadTemplate, isLoading, initialSymbols = [] }: MasterStrategySelectorProps) {
   const [selectedStrategy, setSelectedStrategy] = useState<string>('');
   const [symbol, setSymbol] = useState('');
-  const [symbolName, setSymbolName] = useState('');
   const [dateRange, setDateRange] = useState({
     start: '2024-01-01',
     end: '2024-12-31',
@@ -167,11 +166,9 @@ export default function MasterStrategySelector({ onSubmit, onLoadTemplate, isLoa
           </label>
           <StockAutocomplete
             value={symbol}
-            onChange={(sym, name) => {
+            onChange={(sym) => {
               setSymbol(sym);
-              setSymbolName(name || sym);
             }}
-            placeholder="예: AAPL, MSFT, 005930.KS"
           />
           <p className="text-sm text-indigo-700 mt-2 font-medium">
             💡 미국 주식은 티커만 입력 (예: AAPL), 한국 주식은 .KS 추가 (예: 005930.KS)

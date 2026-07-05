@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Activity, TrendingUp, TrendingDown, Clock, RefreshCw } from 'lucide-react';
-import { useWebSocket, type PriceUpdate } from '../hooks/useWebSocket';
+import { useWebSocket } from '../hooks/useWebSocket';
 import StockAutocomplete from '../components/StockAutocomplete';
 
 export default function RealtimeMonitor() {
