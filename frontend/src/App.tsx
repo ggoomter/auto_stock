@@ -13,6 +13,8 @@ import NewsFetchButton from './components/NewsFetchButton';
 import ComparisonPage from './pages/ComparisonPage';
 import RealtimeMonitor from './pages/RealtimeMonitor';
 import TradingDashboard from './components/TradingDashboard';
+import { ToastProvider } from './components/Toast';
+import ErrorBoundary from './components/ErrorBoundary';
 import {
   analyzeStrategy,
   analyzeMasterStrategy,
@@ -197,16 +199,20 @@ function DashboardPage() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<StrategyPage />} />
-          <Route path="compare" element={<ComparisonPage />} />
-          <Route path="realtime" element={<RealtimeMonitor />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="learn" element={<LearnMenu />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+      <ToastProvider>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<StrategyPage />} />
+              <Route path="compare" element={<ComparisonPage />} />
+              <Route path="realtime" element={<RealtimeMonitor />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="learn" element={<LearnMenu />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </ErrorBoundary>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
