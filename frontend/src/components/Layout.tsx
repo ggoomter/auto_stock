@@ -51,7 +51,7 @@ export default function Layout() {
   ];
 
   return (
-    {/* flex 필수: lg에서 사이드바가 static 블록이 되므로 flex가 없으면 본문이 사이드바 아래로 밀려남 */}
+    // flex 필수: lg에서 사이드바가 static 블록이 되므로 flex가 없으면 본문이 사이드바 아래로 밀려남
     <div className={`min-h-screen flex transition-colors duration-300 ${isDarkMode ? 'dark:bg-gray-900 dark:text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       {/* Sidebar */}
       <aside 
