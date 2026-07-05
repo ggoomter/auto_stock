@@ -19,6 +19,8 @@ import requests
 from bs4 import BeautifulSoup
 from pykrx import stock
 
+from app.services import naver_market
+
 logger = logging.getLogger(__name__)
 
 # ── 감성 키워드 상수 (추후 확장 가능) ──────────────────────────
@@ -43,7 +45,8 @@ def build_name_map(force_refresh: bool = False) -> dict[str, str]:
 
     - KOSPI 종목은 ``.KS``, KOSDAQ 종목은 ``.KQ`` 접미사를 붙인다.
     - 조회 비용이 크므로 모듈 전역에 캐시하며, 프로세스당 1회만 실제 호출한다.
-    - pykrx 호출 실패 시 빈 dict를 반환하고 warning 로그를 남긴다(캐시하지 않음).
+    - pykrx 실패/빈 결과(2026 로그인 정책 등) 시 네이버 금융 시총 페이지로 폴백한다.
+    - 폴백까지 실패하면 빈 dict를 반환하고 warning(캐시하지 않음).
 
     Args:
         force_refresh: True면 캐시를 무시하고 다시 빌드한다(테스트/갱신용).
@@ -59,8 +62,23 @@ def build_name_map(force_refresh: bool = False) -> dict[str, str]:
                 name = stock.get_market_ticker_name(ticker)
                 if name:
                     name_map[name] = f"{ticker}{suffix}"
-    except Exception as exc:  # pykrx/네트워크 실패 — 빈 dict로 안전 폴백
-        logger.warning("build_name_map 실패, 빈 사전 반환: %s", exc)
+    except Exception as exc:  # pykrx/네트워크 실패 — 네이버 폴백으로 넘어감
+        logger.warning("build_name_map(pykrx) 실패: %s", exc)
+        name_map = {}
+
+    # pykrx 실패/빈 결과 시 네이버 시총 페이지로 폴백 (KRX 로그인 대체)
+    if not name_map:
+        logger.info("build_name_map: pykrx 비어있음 → 네이버 시총 폴백으로 사전 구성")
+        try:
+            for row in naver_market.fetch_market_sum():
+                if row.name:
+                    name_map[row.name] = row.symbol
+        except Exception as exc:  # 방어적 — fetch 내부에서 이미 페이지별 예외 처리
+            logger.warning("build_name_map(네이버 폴백) 실패: %s", exc)
+            name_map = {}
+
+    if not name_map:  # 폴백까지 실패 — 캐시하지 않음
+        logger.warning("build_name_map 실패, 빈 사전 반환")
         return {}
 
     _NAME_MAP_CACHE = name_map

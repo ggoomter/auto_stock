@@ -18,6 +18,8 @@ from datetime import datetime, timedelta
 import pandas as pd
 from pykrx import stock
 
+from app.services import naver_market
+
 logger = logging.getLogger(__name__)
 
 # 펀더멘털 임계값
@@ -82,14 +84,44 @@ def _merge_fundamental(cap_df: pd.DataFrame, date_str: str,
     return cap_df.join(fund[["PER", "PBR", "EPS", "BPS"]], how="left")
 
 
-def build_universe(top_n: int = 300, date: str | None = None) -> list[Candidate]:
+def build_universe(
+    top_n: int = 300, date: str | None = None, meta: dict | None = None
+) -> list[Candidate]:
     """KOSPI+KOSDAQ 시가총액 상위 top_n 종목을 Candidate 리스트로 반환.
 
-    실패(영업일 미발견/예외) 시 빈 리스트 + warning.
+    경로 우선순위:
+    1. KRX(pykrx) — 자격증명이 있으면 우선 사용(PER/PBR/ROE 전부 제공).
+    2. KRX가 비면(2026 로그인 정책·네트워크 실패 등) 네이버 금융 시총 페이지 폴백.
+
+    폴백(네이버) 특성:
+    - 네이버 기본 시총 페이지에는 **PBR이 없어** Candidate.pbr=None이 된다.
+      → fundamental_filter의 PBR 조건은 '데이터 없음'으로 passed=False가 되므로,
+        2/3 통과 규칙상 폴백 종목은 PER·ROE 두 조건을 모두 통과해야 필터를 통과한다.
+    - 폴백 데이터는 "현재 시점" 스냅샷이다 — rec_date가 과거인 재생성 시 부정확할 수 있다.
+    - 폴백 종목 symbol은 접미사 포함(예: "005930.KS")이며, 이 경우 pykrx OHLCV 조회는
+      불가하여 기술 시그널은 '데이터 부족'으로 처리된다(degraded).
+
+    meta(dict)가 주어지면 "universe_source" 키에 실제 사용 경로를 기록한다
+    ("krx" | "naver_fallback" | "empty").
     """
+    krx = _build_universe_krx(top_n, date)
+    if krx:
+        if meta is not None:
+            meta["universe_source"] = "krx"
+        return krx
+
+    logger.info("build_universe: KRX 유니버스 비어있음 → 네이버 시총 폴백 시도")
+    naver = _build_universe_naver(top_n, date)
+    if meta is not None:
+        meta["universe_source"] = "naver_fallback" if naver else "empty"
+    return naver
+
+
+def _build_universe_krx(top_n: int, date: str | None) -> list[Candidate]:
+    """KRX(pykrx) 경로. 실패(영업일 미발견/예외/빈 결과) 시 빈 리스트 + warning."""
     date_str = _latest_business_date(date)
     if date_str is None:
-        logger.warning("build_universe: 최근 영업일을 찾지 못해 빈 유니버스 반환")
+        logger.warning("build_universe: 최근 영업일을 찾지 못해 KRX 유니버스 비어있음")
         return []
 
     try:
@@ -103,7 +135,7 @@ def build_universe(top_n: int = 300, date: str | None = None) -> list[Candidate]
             return []
         merged = pd.concat(frames)
     except Exception as exc:
-        logger.warning("build_universe 실패, 빈 유니버스 반환: %s", exc)
+        logger.warning("build_universe(KRX) 실패, 빈 유니버스 반환: %s", exc)
         return []
 
     merged = merged.sort_values("시가총액", ascending=False).head(top_n)
@@ -126,6 +158,43 @@ def build_universe(top_n: int = 300, date: str | None = None) -> list[Candidate]
             )
         )
     return candidates
+
+
+def _build_universe_naver(top_n: int, date: str | None) -> list[Candidate]:
+    """네이버 금융 시총 페이지 폴백 경로. 실패 시 빈 리스트.
+
+    PBR은 페이지에 없어 None. 시총 내림차순 상위 top_n으로 절삭한다.
+    rec_date가 오늘이 아니면(과거 재생성) 스냅샷 부정확 가능성을 warning.
+    """
+    try:
+        rows = naver_market.fetch_market_sum()
+    except Exception as exc:  # 방어적 — fetch 내부에서 이미 페이지별 예외 처리
+        logger.warning("build_universe(네이버) 실패, 빈 유니버스 반환: %s", exc)
+        return []
+    if not rows:
+        logger.warning("build_universe: 네이버 폴백도 0건 — 빈 유니버스 반환")
+        return []
+
+    today = datetime.now().strftime("%Y%m%d")
+    if date is not None and _to_yyyymmdd(date) != today:
+        logger.warning(
+            "네이버 폴백은 현재 시점 스냅샷 — rec_date(%s)가 과거이면 부정확할 수 있음", date
+        )
+
+    rows.sort(key=lambda r: r.market_cap or 0.0, reverse=True)
+    logger.info("build_universe: 네이버 폴백 %d종목 → 상위 %d 사용", len(rows), top_n)
+    return [
+        Candidate(
+            symbol=r.symbol,
+            name=r.name,
+            close=r.close or 0.0,
+            per=r.per,
+            pbr=None,  # 네이버 기본 페이지 미제공
+            roe=r.roe,
+            market_cap=r.market_cap,
+        )
+        for r in rows[:top_n]
+    ]
 
 
 def _to_float(value) -> float | None:
@@ -274,10 +343,14 @@ def generate_recommendations(
 ) -> dict:
     """유니버스→펀더멘털 필터→상위 max_technical개 기술 판정→점수→상위 top_k 저장.
 
-    반환: {"universe": n, "filtered": m, "saved": k}
+    반환: {"universe": n, "filtered": m, "saved": k, "universe_source": src}
+    universe_source: "krx" | "naver_fallback" | "empty" (폴백 사용 여부 추적).
     """
     # rec_date 기준으로 유니버스 구성 — 휴장일 역보정도 이 날짜를 기준으로 동작
-    universe = build_universe(top_n=top_n_universe, date=_to_yyyymmdd(rec_date))
+    meta: dict = {}
+    universe = build_universe(
+        top_n=top_n_universe, date=_to_yyyymmdd(rec_date), meta=meta
+    )
     filtered = fundamental_filter(universe)
 
     # 기술 판정 대상 선정: 펀더멘털 통과 수 → 시가총액 순으로 상위 max_technical개
@@ -305,4 +378,5 @@ def generate_recommendations(
         "universe": len(universe),
         "filtered": len(filtered),
         "saved": min(top_k, len(scored)),
+        "universe_source": meta.get("universe_source", "krx"),
     }

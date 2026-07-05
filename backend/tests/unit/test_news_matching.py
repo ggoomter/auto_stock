@@ -75,7 +75,11 @@ def test_build_name_map_appends_suffix():
 
 
 def test_build_name_map_pykrx_failure_returns_empty():
-    with patch("app.services.naver_news.stock") as mock_stock:
+    # pykrx 실패 시 네이버 폴백을 시도한다(2026 KRX 로그인 정책 대응).
+    # 폴백까지 실패하면 빈 dict — 네이버 호출은 mock하여 네트워크 금지.
+    with patch("app.services.naver_news.stock") as mock_stock, \
+         patch("app.services.naver_news.naver_market.fetch_market_sum",
+               return_value=[]):
         mock_stock.get_market_ticker_list.side_effect = RuntimeError("network down")
         result = build_name_map(force_refresh=True)
 
