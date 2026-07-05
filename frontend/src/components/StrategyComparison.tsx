@@ -120,7 +120,7 @@ export default function StrategyComparison({
         title: {
           display: true,
           text: '날짜',
-          font: { size: 12, weight: 'bold' }
+          font: { size: 12, weight: 'bold' as const }
         }
       },
       y: {
@@ -128,7 +128,7 @@ export default function StrategyComparison({
         title: {
           display: true,
           text: '포트폴리오 가치 (원)',
-          font: { size: 12, weight: 'bold' }
+          font: { size: 12, weight: 'bold' as const }
         },
         ticks: {
           callback: (value: any) => value.toLocaleString()

@@ -1,4 +1,4 @@
-﻿import { TrendingUp, TrendingDown, Activity, Target, AlertCircle, BarChart3 } from 'lucide-react';
+﻿import { Activity, Target, AlertCircle, BarChart3 } from 'lucide-react';
 import type { MasterStrategyResponse } from '../services/api';
 import TradingTimeline from './TradingTimeline';
 import PortfolioChart from './PortfolioChart';
@@ -14,12 +14,6 @@ export default function MasterStrategyResults({ results }: MasterStrategyResults
   const formatNumber = (value: number) => value.toFixed(2);
   const formatRiskValue = (value?: number) =>
     value !== undefined ? `${(Math.abs(value) * 100).toFixed(2)}%` : '-';
-  const formatSignedAmount = (value?: number) => {
-    if (value === undefined) return '-';
-    const sign = value >= 0 ? '+' : '-';
-    return `${sign}${Math.abs(value).toLocaleString()}`;
-  };
-
 
 
   // 한국 주식 여부 확인 (거래 내역에서)

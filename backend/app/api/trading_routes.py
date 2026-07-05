@@ -16,8 +16,17 @@ from ..services.auto_trading_engine import (
 )
 from ..services.position_manager import PositionManager
 from ..services.advanced_risk_manager import AdvancedRiskManager
+from ..db.repositories import SnapshotRepository
 
 router = APIRouter()
+
+# 일반 사용자에게 노출하는 안전한 500 메시지 (내부 예외 문자열 은닉)
+_GENERIC_ERROR = "일시적인 오류가 발생했습니다"
+
+
+# ── 저장소 팩토리 (테스트에서 monkeypatch 대상) ──
+def _get_snapshot_repo() -> SnapshotRepository:
+    return SnapshotRepository(settings.DB_PATH)
 
 # 전역 자동매매 엔진 (싱글톤)
 _trading_engine: Optional[AutoTradingEngine] = None
@@ -351,6 +360,22 @@ async def get_portfolio_status():
     except Exception as e:
         logger.error(f"포트폴리오 조회 실패: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/portfolio/snapshots")
+async def get_portfolio_snapshots():
+    """모의투자 수익 곡선 원천 — 일별 잔고 스냅샷 전체 (날짜 오름차순).
+
+    엔진 실행 여부와 무관하게 저장소에서 읽는다. 초기엔 하루 1행이라
+    점이 1~2개일 수 있어(희소 상태) 프론트에서 별도 처리한다.
+    """
+    try:
+        repo = _get_snapshot_repo()
+        snapshots = repo.list_all()
+        return {"count": len(snapshots), "snapshots": snapshots}
+    except Exception as e:
+        logger.error(f"수익 곡선 스냅샷 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=_GENERIC_ERROR)
 
 
 @router.post("/trading/emergency-stop")

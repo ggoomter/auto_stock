@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, AlertTriangle, HelpCircle } from 'lucide-react';
+import { TrendingUp, HelpCircle } from 'lucide-react';
 import type { AnalysisRequest } from '../services/api';
 import AdvancedStrategyBuilder from './AdvancedStrategyBuilder';
-import UsageGuide from './UsageGuide';
 import StockChart from './StockChart';
 import StockAutocomplete from './StockAutocomplete';
 
@@ -44,10 +43,6 @@ export default function SimpleStrategyForm({ onSubmit, isLoading, initialSymbols
   const [stopLoss, setStopLoss] = useState(7); // 손절
   const [takeProfit, setTakeProfit] = useState(15); // 익절
   const [holdingDays, setHoldingDays] = useState(5); // 보유 기간
-
-  // 자금 관리
-  const [initialCapital, setInitialCapital] = useState(1000000); // 초기 자본 (원)
-  const [positionSize, setPositionSize] = useState(100); // 1회 매수 비율 (%)
 
   // 날짜 계산
   const getDateRange = () => {

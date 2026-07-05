@@ -67,6 +67,9 @@ export interface AnalysisResponse {
       TotalTrades?: number;
       WinTrades?: number;
       LossTrades?: number;
+      Sortino?: number;
+      Calmar?: number;
+      TailRatio?: number;
     };
     cost_assumptions_bps: Record<string, number>;
     equity_curve_ref?: string;
@@ -175,6 +178,9 @@ export interface MasterStrategyResponse {
       TotalTrades?: number;
       WinTrades?: number;
       LossTrades?: number;
+      Sortino?: number;
+      Calmar?: number;
+      TailRatio?: number;
     };
     cost_assumptions_bps: Record<string, number>;
     equity_curve_ref?: string;
@@ -384,6 +390,7 @@ export interface PortfolioStatusResponse {
   positions_value: number;
   total_pnl: number;
   total_pnl_pct: number;
+  price_is_stale?: boolean;
   positions: PositionInfo[];
   risk_metrics: {
     concentration_risk: number;
@@ -484,5 +491,117 @@ export const getTradingHealth = async (): Promise<TradingHealthResponse> => {
   const response = await api.get<TradingHealthResponse>('/trading/health');
   return response.data;
 };
+
+// ============================================================
+// /today · 가격 시계열 · 수익곡선 스냅샷
+// ============================================================
+
+// 조건 체크 항목은 기존 ConditionCheck 인터페이스(160행) 재사용
+
+export interface TodayNewsArticle {
+  title: string;
+  url: string;
+  source: string;
+  published_at: string;
+  sentiment: string;
+  symbols: string[];
+}
+
+export interface TodayNewsResponse {
+  date: string | null;
+  count: number;
+  articles: TodayNewsArticle[];
+}
+
+export interface TodayRecommendation {
+  symbol: string;
+  name: string;
+  score: number;
+  passed_conditions: ConditionCheck[];
+  technical_signals: ConditionCheck[];
+}
+
+export interface TodayRecommendationsResponse {
+  date: string | null;
+  count: number;
+  disclaimer: string;
+  recommendations: TodayRecommendation[];
+}
+
+export interface TodayJobStatus {
+  status: string;
+  detail: string | null;
+  finished_at: string | null;
+}
+
+export interface TodayStatusResponse {
+  date: string;
+  jobs: Record<string, TodayJobStatus>;
+}
+
+export interface PriceBar {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface PriceHistoryResponse {
+  symbol: string;
+  count: number;
+  bars: PriceBar[];
+}
+
+export interface PortfolioSnapshot {
+  snapshot_date: string;
+  total_value: number;
+  cash: number;
+  positions_value: number;
+}
+
+export interface PortfolioSnapshotsResponse {
+  count: number;
+  snapshots: PortfolioSnapshot[];
+}
+
+/** 오늘(또는 지정일)의 뉴스 — symbol 지정 시 해당 종목 최근 기사 */
+export const getTodayNews = async (
+  date?: string,
+  symbol?: string
+): Promise<TodayNewsResponse> => {
+  const params: Record<string, string> = {};
+  if (date) params.date = date;
+  if (symbol) params.symbol = symbol;
+  return (await api.get<TodayNewsResponse>('/today/news', { params })).data;
+};
+
+/** 오늘(또는 지정일)의 추천 종목 (score 내림차순 + disclaimer) */
+export const getTodayRecommendations = async (
+  date?: string
+): Promise<TodayRecommendationsResponse> => {
+  const params: Record<string, string> = {};
+  if (date) params.date = date;
+  return (await api.get<TodayRecommendationsResponse>('/today/recommendations', { params })).data;
+};
+
+/** 오늘 작업(뉴스/추천/정산) 실행 상태 */
+export const getTodayStatus = async (): Promise<TodayStatusResponse> =>
+  (await api.get<TodayStatusResponse>('/today/status')).data;
+
+/** 일봉 OHLCV 시계열 */
+export const getPriceHistory = async (
+  symbol: string,
+  start: string,
+  end: string
+): Promise<PriceHistoryResponse> =>
+  (await api.get<PriceHistoryResponse>('/price-history', {
+    params: { symbol, start, end },
+  })).data;
+
+/** 모의투자 수익 곡선 스냅샷 전체 */
+export const getPortfolioSnapshots = async (): Promise<PortfolioSnapshotsResponse> =>
+  (await api.get<PortfolioSnapshotsResponse>('/portfolio/snapshots')).data;
 
 export default api;

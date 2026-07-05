@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, Bar, Cell } from 'recharts';
-import { Eye, EyeOff, BarChart3, TrendingUp, Maximize2, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, Bar } from 'recharts';
+import { Eye, EyeOff, BarChart3, TrendingUp, Maximize2, X, RefreshCw } from 'lucide-react';
 import { globalEvents, companyEvents, eventColors, eventIcons, type GlobalEvent } from '../data/globalEvents';
 import { detectCandlePattern } from './Candlestick';
+import { getPriceHistory } from '../services/api';
 
 interface StockChartProps {
   symbol: string;
@@ -20,12 +22,15 @@ export default function StockChart({ symbol, startDate, endDate }: StockChartPro
   const [hoveredEventIdx, setHoveredEventIdx] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // 샘플 주가 데이터 생성 (실제로는 API에서 가져와야 함)
-  const stockData = useMemo(() => {
+  // 조회 기간 계산: props startDate/endDate가 있으면 그것을 사용(폼 선택 기간과 동기화),
+  // 없으면 내부 chartPeriod로 계산
+  const { queryStart, queryEnd } = useMemo(() => {
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
+    if (startDate && endDate) {
+      return { queryStart: startDate, queryEnd: endDate };
+    }
     const end = new Date();
     const start = new Date();
-
-    // 차트 기간 설정
     switch (chartPeriod) {
       case '6months':
         start.setMonth(start.getMonth() - 6);
@@ -40,104 +45,36 @@ export default function StockChart({ symbol, startDate, endDate }: StockChartPro
         start.setFullYear(start.getFullYear() - 5);
         break;
       case 'all':
-        start.setFullYear(start.getFullYear() - 20); // 2005년부터
+        start.setFullYear(start.getFullYear() - 20);
         break;
     }
+    return { queryStart: fmt(start), queryEnd: fmt(end) };
+  }, [startDate, endDate, chartPeriod]);
 
-    const days = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  // 실제 가격 데이터 조회 (symbol/기간 변경 시 자동 refetch)
+  const {
+    data: priceHistory,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['priceHistory', symbol, queryStart, queryEnd],
+    queryFn: () => getPriceHistory(symbol, queryStart, queryEnd),
+    enabled: !!symbol,
+  });
 
-    // 시간프레임에 따라 데이터 간격 조정
-    const interval = timeframe === 'daily' ? 1 : timeframe === 'weekly' ? 7 : 30;
-
-    // 시간프레임에 따라 간격 결정
-    let dataInterval = 1; // 일봉 기본
-    if (timeframe === 'weekly') dataInterval = 7;
-    if (timeframe === 'monthly') dataInterval = 30;
-
-    // 기본 날짜 생성
-    const dateSet = new Set<string>();
-    for (let i = 0; i <= days; i += dataInterval) {
-      const date = new Date(start);
-      date.setDate(date.getDate() + i);
-      dateSet.add(date.toISOString().split('T')[0]);
-    }
-
-    // 이벤트 날짜도 포함 (차트에 세로선 표시를 위해)
-    globalEvents.forEach(event => {
-      const eventDate = new Date(event.date);
-      if (eventDate >= start && eventDate <= end) {
-        dateSet.add(event.date);
-      }
-    });
-
-    // 종목별 이벤트도 포함
-    if (companyEvents[symbol]) {
-      companyEvents[symbol].forEach(event => {
-        const eventDate = new Date(event.date);
-        if (eventDate >= start && eventDate <= end) {
-          dateSet.add(event.date);
-        }
-      });
-    }
-
-    // Set을 배열로 변환하고 정렬
-    const allDates = Array.from(dateSet).sort();
-
-    // 주가 데이터 생성 (종목별 시작 가격)
-    const data = [];
-    const startPrices: Record<string, number> = {
-      'AAPL': 180,
-      'TSLA': 250,
-      'NVDA': 500,
-      'MSFT': 380,
-      'GOOGL': 140,
-      'AMZN': 170,
-      'META': 480,
-    };
-
-    let basePrice = startPrices[symbol] || 150;
-
-    for (const dateStr of allDates) {
-      // 랜덤 워크로 주가 시뮬레이션 (일일 변동 -3% ~ +3%)
-      const dailyChangePercent = (Math.random() - 0.5) * 0.06; // -3% ~ +3%
-      basePrice = basePrice * (1 + dailyChangePercent);
-
-      // 극단적인 가격 방지 (시작가의 30% ~ 300% 범위로 제한)
-      const initialPrice = startPrices[symbol] || 150;
-      basePrice = Math.max(initialPrice * 0.3, Math.min(initialPrice * 3, basePrice));
-
-      // OHLC 데이터 생성
-      const close = Number(basePrice.toFixed(2));
-      const intraday = close * 0.015; // 장중 변동 ±1.5%
-      const open = Number((close + (Math.random() - 0.5) * intraday).toFixed(2));
-      const highExtra = Math.random() * intraday * 0.8;
-      const lowExtra = Math.random() * intraday * 0.8;
-      const high = Number((Math.max(open, close) + highExtra).toFixed(2));
-      const low = Number((Math.min(open, close) - lowExtra).toFixed(2));
-
-      // 데이터 유효성 검증
-      if (isNaN(close) || isNaN(open) || isNaN(high) || isNaN(low)) {
-        console.error('Invalid price data:', { close, open, high, low, date: dateStr });
-        continue;
-      }
-
-      if (close < 0 || open < 0 || high < 0 || low < 0) {
-        console.error('Negative price detected:', { close, open, high, low, date: dateStr });
-        continue;
-      }
-
-      data.push({
-        date: dateStr,
-        open: open,
-        high: high,
-        low: low,
-        close: close,
-        price: close, // 라인 차트용
-      });
-    }
-
-    return data;
-  }, [timeframe, chartPeriod, symbol]);
+  // 응답 bars → 기존 데이터 형태 {date,open,high,low,close,price(=close)}로 매핑
+  const stockData = useMemo(() => {
+    if (!priceHistory?.bars) return [];
+    return priceHistory.bars.map((b) => ({
+      date: b.date,
+      open: b.open,
+      high: b.high,
+      low: b.low,
+      close: b.close,
+      price: b.close, // 라인 차트용
+    }));
+  }, [priceHistory]);
 
   // 날짜 범위 내 이벤트 필터링
   const filteredEvents = useMemo(() => {
@@ -321,6 +258,50 @@ export default function StockChart({ symbol, startDate, endDate }: StockChartPro
       </g>
     );
   };
+
+  // 로딩 상태
+  if (isLoading) {
+    return (
+      <div className="card">
+        <h3 className="text-lg font-bold mb-4">{symbol} 주가 차트</h3>
+        <div className="flex flex-col items-center justify-center py-24 text-gray-500 dark:text-gray-400">
+          <RefreshCw className="w-8 h-8 animate-spin mb-3" />
+          <p>가격 데이터를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 에러 상태
+  if (isError) {
+    return (
+      <div className="card">
+        <h3 className="text-lg font-bold mb-4">{symbol} 주가 차트</h3>
+        <div className="flex flex-col items-center justify-center py-24 text-gray-500 dark:text-gray-400">
+          <p className="mb-4">가격 데이터를 불러올 수 없습니다</p>
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors text-sm font-medium"
+          >
+            <RefreshCw className="w-4 h-4" />
+            재시도
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 빈 데이터 상태
+  if (stockData.length === 0) {
+    return (
+      <div className="card">
+        <h3 className="text-lg font-bold mb-4">{symbol} 주가 차트</h3>
+        <div className="flex flex-col items-center justify-center py-24 text-gray-500 dark:text-gray-400">
+          <p>해당 기간에 표시할 가격 데이터가 없습니다</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

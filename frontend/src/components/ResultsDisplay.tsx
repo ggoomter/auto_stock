@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { TrendingUp, TrendingDown, BarChart3, AlertCircle, Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, BarChart3, AlertCircle, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import type { AnalysisResponse } from '../services/api';
 import TradingViewChart from './TradingViewChart';
 
@@ -9,7 +9,7 @@ interface ResultsDisplayProps {
 }
 
 export default function ResultsDisplay({ results, initialCapital = 1000000 }: ResultsDisplayProps) {
-  const { backtest, signal_examples, limitations } = results;
+  const { backtest } = results;
 
   // 접기/펼치기 상태
   const [showTradeHistory, setShowTradeHistory] = useState(true);
@@ -17,7 +17,6 @@ export default function ResultsDisplay({ results, initialCapital = 1000000 }: Re
   const [showDetailedStats, setShowDetailedStats] = useState(false);
 
   const riskSummary = backtest.risk_summary;
-  const warnings = backtest.warnings ?? (riskSummary?.warnings ?? []);
   const tradeHistory = backtest.trade_history ?? [];
 
   const formatRiskValue = (value: number) => `${(Math.abs(value) * 100).toFixed(2)}%`;

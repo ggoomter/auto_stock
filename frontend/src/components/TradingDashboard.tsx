@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  TrendingUp,
-  TrendingDown,
   AlertTriangle,
   Activity,
   DollarSign,
   PieChart,
-  Bell,
   Shield,
   Zap,
-  Eye,
   Settings,
   RefreshCw,
   Play,
@@ -23,12 +19,23 @@ import {
   getTradingStatus,
   getPortfolioStatus,
   emergencyStop,
+  getPortfolioSnapshots,
   type TradingStartRequest,
   type TradingStopRequest,
   type TradingStatusResponse,
-  type PortfolioStatusResponse,
-  type PositionInfo
+  type PortfolioStatusResponse
 } from '../services/api';
+import { useToast } from './Toast';
+import { useQuery } from '@tanstack/react-query';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts';
 
 interface TradingDashboardProps {
   isAutoTrading: boolean;
@@ -39,9 +46,11 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
   isAutoTrading: initialIsAutoTrading,
   onToggleAutoTrading
 }) => {
+  const toast = useToast();
+
   // 상태 관리
   const [isAutoTrading, setIsAutoTrading] = useState(initialIsAutoTrading);
-  const [tradingMode, setTradingMode] = useState<'paper' | 'live'>('paper');
+  // 실전(live) 모드는 백엔드에서 403으로 봉인됨 → 모의(paper) 전용
   const [tradingStatus, setTradingStatus] = useState<TradingStatusResponse | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioStatusResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,11 +60,20 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
   const [totalCapital, setTotalCapital] = useState(10000000);
   const [maxPositions, setMaxPositions] = useState(5);
   const [enabledStrategies, setEnabledStrategies] = useState<string[]>(['buffett', 'lynch']);
-  const [tradingSymbols, setTradingSymbols] = useState<string[]>(['AAPL', 'TSLA', '005930.KS']);
+  const [tradingSymbols] = useState<string[]>(['AAPL', 'TSLA', '005930.KS']);
 
   // UI 상태
   const [showSettings, setShowSettings] = useState(false);
   const [showEmergencyConfirm, setShowEmergencyConfirm] = useState(false);
+  const [showStopConfirm, setShowStopConfirm] = useState(false);
+
+  // 수익 곡선 스냅샷 (모의투자 일별 총자산)
+  const snapshotsQuery = useQuery({
+    queryKey: ['portfolioSnapshots'],
+    queryFn: getPortfolioSnapshots,
+    refetchInterval: 60000,
+  });
+  const snapshots = snapshotsQuery.data?.snapshots ?? [];
 
   // 자동 새로고침 (5초마다)
   useEffect(() => {
@@ -100,22 +118,12 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
    * 자동매매 시작
    */
   const handleStartTrading = async () => {
-    // 실전 모드 경고
-    if (tradingMode === 'live') {
-      const confirmed = window.confirm(
-        '⚠️ 실전 거래 모드로 시작하시겠습니까?\n\n' +
-        '실제 자금이 사용되며 손실 위험이 있습니다.\n' +
-        '충분히 테스트한 후 사용하시기 바랍니다.'
-      );
-      if (!confirmed) return;
-    }
-
     setIsLoading(true);
     setError(null);
 
     try {
       const request: TradingStartRequest = {
-        mode: tradingMode,
+        mode: 'paper',  // 모의투자 전용 (실전은 백엔드에서 봉인)
         total_capital: totalCapital,
         max_positions: maxPositions,
         max_position_size: 0.2,
@@ -137,11 +145,11 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
       // 상태 즉시 새로고침
       await refreshData();
 
-      alert('✅ 자동매매가 시작되었습니다!');
+      toast.success('자동매매가 시작되었습니다!');
     } catch (err: any) {
       console.error('자동매매 시작 실패:', err);
       setError(err.response?.data?.detail || err.message || '자동매매 시작 실패');
-      alert(`❌ 자동매매 시작 실패\n\n${err.response?.data?.detail || err.message}`);
+      toast.error(`자동매매 시작 실패\n\n${err.response?.data?.detail || err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -150,13 +158,13 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
   /**
    * 자동매매 중지
    */
-  const handleStopTrading = async () => {
-    const confirmed = window.confirm(
-      '자동매매를 중지하시겠습니까?\n\n' +
-      '기존 포지션은 유지됩니다.'
-    );
-    if (!confirmed) return;
+  const handleStopTrading = () => {
+    // 확인 모달 표시 (기존 window.confirm 대체)
+    setShowStopConfirm(true);
+  };
 
+  const handleConfirmStop = async () => {
+    setShowStopConfirm(false);
     setIsLoading(true);
     setError(null);
 
@@ -174,11 +182,11 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
 
       await refreshData();
 
-      alert('✅ 자동매매가 중지되었습니다.');
+      toast.success('자동매매가 중지되었습니다.');
     } catch (err: any) {
       console.error('자동매매 중지 실패:', err);
       setError(err.response?.data?.detail || err.message || '자동매매 중지 실패');
-      alert(`❌ 자동매매 중지 실패\n\n${err.response?.data?.detail || err.message}`);
+      toast.error(`자동매매 중지 실패\n\n${err.response?.data?.detail || err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -200,10 +208,10 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
 
       await refreshData();
 
-      alert(`🛑 긴급 정지 완료\n\n청산된 포지션: ${response.closed_positions}개`);
+      toast.success(`긴급 정지 완료\n\n청산된 포지션: ${response.closed_positions}개`);
     } catch (err: any) {
       console.error('긴급 정지 실패:', err);
-      alert(`❌ 긴급 정지 실패\n\n${err.response?.data?.detail || err.message}`);
+      toast.error(`긴급 정지 실패\n\n${err.response?.data?.detail || err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -234,13 +242,30 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
   };
 
   /**
-   * 한국 원화 포맷
+   * 한국 종목 판별 (.KS/.KQ 접미사 또는 6자리 숫자 코드)
+   * backend paper_execution.is_korean_symbol과 동일 규칙
    */
-  const formatKRW = (value: number) => {
-    return new Intl.NumberFormat('ko-KR', {
+  const isKoreanSymbol = (symbol?: string): boolean => {
+    if (!symbol) return true;  // 심볼 미지정(포트폴리오 집계)은 원화 기준
+    return /\.(KS|KQ)$/i.test(symbol) || /^\d{6}$/.test(symbol);
+  };
+
+  /**
+   * 통화 포맷 — 심볼 기반 분기 (한국=₩ 정수, 그 외=$ 소수 2자리)
+   */
+  const formatMoney = (value: number, symbol?: string) => {
+    if (isKoreanSymbol(symbol)) {
+      return new Intl.NumberFormat('ko-KR', {
+        style: 'currency',
+        currency: 'KRW',
+        minimumFractionDigits: 0
+      }).format(value);
+    }
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'KRW',
-      minimumFractionDigits: 0
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(value);
   };
 
@@ -255,37 +280,42 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white p-6">
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-500 bg-clip-text text-transparent">
             자동매매 대시보드
           </h1>
+
+          {/* 모의투자 전용 라벨 (실전은 백엔드에서 봉인) */}
+          <span className="px-3 py-1 rounded-lg text-sm font-semibold bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-500">
+            모의투자 전용
+          </span>
 
           {/* 실행 상태 배지 */}
           <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 ${
             isAutoTrading
-              ? 'border-green-500 bg-green-900/20 text-green-400'
-              : 'border-gray-600 bg-gray-800/50 text-gray-400'
+              ? 'border-green-500 bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+              : 'border-gray-300 bg-gray-100 text-gray-500 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-400'
           }`}>
             <div className={`w-3 h-3 rounded-full ${
-              isAutoTrading ? 'bg-green-400 animate-pulse' : 'bg-gray-500'
+              isAutoTrading ? 'bg-green-400 animate-pulse' : 'bg-gray-400 dark:bg-gray-500'
             }`} />
             <span className="font-semibold">
               {isAutoTrading ? '실행 중' : '정지'}
             </span>
           </div>
 
-          {/* 모드 배지 */}
-          {tradingStatus && (
-            <div className={`px-3 py-1 rounded-lg text-sm font-semibold ${
-              tradingStatus.mode === 'live'
-                ? 'bg-red-900/30 text-red-400 border border-red-500'
-                : 'bg-blue-900/30 text-blue-400 border border-blue-500'
-            }`}>
-              {tradingStatus.mode === 'live' ? '🔴 실전' : '🟢 모의'}
-            </div>
+          {/* 시세 지연 배지 */}
+          {portfolio?.price_is_stale ? (
+            <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-600">
+              시세 갱신 전
+            </span>
+          ) : (
+            <span className="px-3 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700">
+              시세 약 15분 지연
+            </span>
           )}
         </div>
 
@@ -294,7 +324,7 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
           <button
             onClick={refreshData}
             disabled={isLoading}
-            className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+            className="p-2 bg-gray-200 dark:bg-gray-800 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             title="새로고침"
           >
             <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -303,7 +333,7 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
           {/* 설정 */}
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+            className="p-2 bg-gray-200 dark:bg-gray-800 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
             title="설정"
           >
             <Settings className="w-5 h-5" />
@@ -313,7 +343,7 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
           {isAutoTrading && (
             <button
               onClick={() => setShowEmergencyConfirm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-all transform hover:scale-95"
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg font-semibold transition-all transform hover:scale-95"
               title="모든 포지션을 즉시 청산하고 자동매매를 중지합니다"
             >
               <StopCircle className="w-5 h-5" />
@@ -325,7 +355,7 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
           <button
             onClick={handleToggle}
             disabled={isLoading}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all transform hover:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-white transition-all transform hover:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
               isAutoTrading
                 ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700'
                 : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
@@ -354,7 +384,7 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
       {/* 긴급 정지 확인 모달 */}
       {showEmergencyConfirm && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-900 border-2 border-red-500 rounded-xl p-6 max-w-md w-full mx-4">
+          <div className="bg-gray-900 text-white border-2 border-red-500 rounded-xl p-6 max-w-md w-full mx-4">
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle className="w-8 h-8 text-red-500" />
               <h3 className="text-xl font-bold text-red-500">긴급 정지 확인</h3>
@@ -386,6 +416,41 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
         </div>
       )}
 
+      {/* 자동매매 중지 확인 모달 */}
+      {showStopConfirm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-900 text-white border-2 border-orange-500 rounded-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <Pause className="w-8 h-8 text-orange-500" />
+              <h3 className="text-xl font-bold text-orange-500">자동매매 중지 확인</h3>
+            </div>
+
+            <p className="text-gray-300 mb-2">
+              자동매매를 중지하시겠습니까?
+            </p>
+
+            <p className="text-sm text-gray-400 mb-6">
+              기존 포지션은 유지됩니다.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowStopConfirm(false)}
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleConfirmStop}
+                className="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-bold transition-colors"
+              >
+                중지
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 에러 메시지 */}
       {error && (
         <div className="mb-4 p-4 bg-red-900/30 border border-red-500 rounded-lg flex items-start gap-3">
@@ -405,54 +470,41 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
 
       {/* 설정 패널 */}
       {showSettings && (
-        <div className="mb-6 p-6 bg-gray-900 rounded-xl border border-gray-700">
+        <div className="mb-6 p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold mb-4">자동매매 설정</h2>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-400 mb-2">거래 모드</label>
-              <select
-                value={tradingMode}
-                onChange={(e) => setTradingMode(e.target.value as 'paper' | 'live')}
-                disabled={isAutoTrading}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none disabled:opacity-50"
-              >
-                <option value="paper">모의 거래 (Paper Trading)</option>
-                <option value="live">실전 거래 (Live Trading)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-400 mb-2">초기 자본 (KRW)</label>
+              <label className="block text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">초기 자본 (KRW)</label>
               <input
                 type="number"
                 value={totalCapital}
                 onChange={(e) => setTotalCapital(Number(e.target.value))}
                 disabled={isAutoTrading}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none disabled:opacity-50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-400 mb-2">최대 포지션 수</label>
+              <label className="block text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">최대 포지션 수</label>
               <input
                 type="number"
                 value={maxPositions}
                 onChange={(e) => setMaxPositions(Number(e.target.value))}
                 disabled={isAutoTrading}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none disabled:opacity-50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-400 mb-2">활성화 전략</label>
+              <label className="block text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">활성화 전략</label>
               <input
                 type="text"
                 value={enabledStrategies.join(', ')}
                 onChange={(e) => setEnabledStrategies(e.target.value.split(',').map(s => s.trim()))}
                 disabled={isAutoTrading}
                 placeholder="buffett, lynch, graham"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none disabled:opacity-50"
               />
             </div>
           </div>
@@ -463,13 +515,13 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
       {tradingStatus && (
         <div className="grid grid-cols-4 gap-4 mb-6">
           {/* 일일 손익 */}
-          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-800">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400 text-sm font-semibold">일일 손익</span>
+              <span className="text-gray-500 dark:text-gray-400 text-sm font-semibold">일일 손익</span>
               <DollarSign className="w-5 h-5 text-gray-500" />
             </div>
             <div className="text-2xl font-bold mb-1">
-              {formatKRW(tradingStatus.daily_pnl)}
+              {formatMoney(tradingStatus.daily_pnl)}
             </div>
             <div className={`text-sm font-semibold ${
               tradingStatus.daily_pnl_pct >= 0 ? 'text-green-400' : 'text-red-400'
@@ -479,9 +531,9 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
           </div>
 
           {/* 활성 포지션 */}
-          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-800">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400 text-sm font-semibold">활성 포지션</span>
+              <span className="text-gray-500 dark:text-gray-400 text-sm font-semibold">활성 포지션</span>
               <PieChart className="w-5 h-5 text-gray-500" />
             </div>
             <div className="text-2xl font-bold mb-1">
@@ -493,9 +545,9 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
           </div>
 
           {/* 오늘 거래 */}
-          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-800">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400 text-sm font-semibold">오늘 거래</span>
+              <span className="text-gray-500 dark:text-gray-400 text-sm font-semibold">오늘 거래</span>
               <Activity className="w-5 h-5 text-gray-500" />
             </div>
             <div className="text-2xl font-bold mb-1">
@@ -507,9 +559,9 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
           </div>
 
           {/* 리스크 레벨 */}
-          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-800">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400 text-sm font-semibold">리스크 레벨</span>
+              <span className="text-gray-500 dark:text-gray-400 text-sm font-semibold">리스크 레벨</span>
               <Shield className="w-5 h-5 text-gray-500" />
             </div>
             <div className={`text-2xl font-bold mb-1 uppercase ${getRiskColor(tradingStatus.risk_level)}`}>
@@ -524,21 +576,21 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
 
       {/* 포트폴리오 정보 */}
       {portfolio && (
-        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6">
+        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-800 mb-6">
           <h2 className="text-xl font-bold mb-4">포트폴리오</h2>
 
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div>
-              <p className="text-sm text-gray-400 mb-1">총 자산</p>
-              <p className="text-2xl font-bold">{formatKRW(portfolio.total_value)}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">총 자산</p>
+              <p className="text-2xl font-bold">{formatMoney(portfolio.total_value)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">현금</p>
-              <p className="text-2xl font-bold">{formatKRW(portfolio.cash)}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">현금</p>
+              <p className="text-2xl font-bold">{formatMoney(portfolio.cash)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">포지션 가치</p>
-              <p className="text-2xl font-bold">{formatKRW(portfolio.positions_value)}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">포지션 가치</p>
+              <p className="text-2xl font-bold">{formatMoney(portfolio.positions_value)}</p>
             </div>
           </div>
 
@@ -547,7 +599,7 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="text-left text-sm text-gray-400 border-b border-gray-800">
+                  <tr className="text-left text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
                     <th className="pb-2">종목</th>
                     <th className="pb-2 text-right">수량</th>
                     <th className="pb-2 text-right">진입가</th>
@@ -558,15 +610,15 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
                 </thead>
                 <tbody>
                   {portfolio.positions.map((pos, idx) => (
-                    <tr key={idx} className="border-b border-gray-800/50">
+                    <tr key={idx} className="border-b border-gray-200 dark:border-gray-800/50">
                       <td className="py-3 font-semibold">{pos.symbol}</td>
                       <td className="py-3 text-right">{pos.quantity}</td>
-                      <td className="py-3 text-right">{formatKRW(pos.entry_price)}</td>
-                      <td className="py-3 text-right">{formatKRW(pos.current_price)}</td>
+                      <td className="py-3 text-right">{formatMoney(pos.entry_price, pos.symbol)}</td>
+                      <td className="py-3 text-right">{formatMoney(pos.current_price, pos.symbol)}</td>
                       <td className={`py-3 text-right font-semibold ${
                         pos.pnl >= 0 ? 'text-green-400' : 'text-red-400'
                       }`}>
-                        {formatKRW(pos.pnl)} ({pos.pnl_pct >= 0 ? '+' : ''}{pos.pnl_pct.toFixed(2)}%)
+                        {formatMoney(pos.pnl, pos.symbol)} ({pos.pnl_pct >= 0 ? '+' : ''}{pos.pnl_pct.toFixed(2)}%)
                       </td>
                       <td className="py-3">
                         <span className="px-2 py-1 bg-blue-900/30 text-blue-400 rounded text-xs">
@@ -584,18 +636,58 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
         </div>
       )}
 
+      {/* 수익 곡선 (모의투자 일별 총자산 스냅샷) */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-800 mb-6">
+        <h2 className="text-xl font-bold mb-4">수익 곡선</h2>
+        {snapshots.length >= 2 ? (
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={snapshots} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#4b5563" strokeOpacity={0.3} />
+              <XAxis
+                dataKey="snapshot_date"
+                tick={{ fontSize: 12, fill: '#9ca3af' }}
+                stroke="#9ca3af"
+              />
+              <YAxis
+                tick={{ fontSize: 12, fill: '#9ca3af' }}
+                stroke="#9ca3af"
+                domain={['auto', 'auto']}
+                tickFormatter={(v) => formatMoney(Number(v))}
+                width={90}
+              />
+              <Tooltip
+                formatter={(v: number) => [formatMoney(Number(v)), '총 자산']}
+                labelFormatter={(label) => `날짜: ${label}`}
+              />
+              <Line
+                type="monotone"
+                dataKey="total_value"
+                name="총 자산"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-center text-gray-500 dark:text-gray-400 py-12">
+            데이터가 쌓이면 수익 곡선이 표시됩니다
+          </p>
+        )}
+      </div>
+
       {/* 자동매매가 실행 중이 아닐 때 안내 메시지 */}
       {!isAutoTrading && (
-        <div className="bg-gray-900 rounded-xl p-12 border border-gray-800 text-center">
+        <div className="bg-white dark:bg-gray-900 rounded-xl p-12 border border-gray-200 dark:border-gray-800 text-center">
           <Zap className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <h3 className="text-2xl font-bold mb-2 text-gray-400">자동매매가 실행되지 않았습니다</h3>
+          <h3 className="text-2xl font-bold mb-2 text-gray-600 dark:text-gray-400">자동매매가 실행되지 않았습니다</h3>
           <p className="text-gray-500 mb-6">
             "자동매매 시작" 버튼을 눌러 자동 거래를 시작하세요.
           </p>
           <button
             onClick={handleStartTrading}
             disabled={isLoading}
-            className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-lg font-bold transition-all transform hover:scale-95 disabled:opacity-50"
+            className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold transition-all transform hover:scale-95 disabled:opacity-50"
           >
             <Play className="w-5 h-5 inline mr-2" />
             자동매매 시작

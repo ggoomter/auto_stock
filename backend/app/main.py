@@ -9,6 +9,7 @@ from .api.routes import router
 from .api.websocket_api import router as websocket_router, register_websocket_callbacks
 from .api.trading_routes import router as trading_router
 from .api.today_routes import router as today_router
+from .api.market_routes import router as market_router
 from .routers.events import router as events_router
 import traceback
 import numpy as np
@@ -88,6 +89,7 @@ app.include_router(events_router)
 app.include_router(websocket_router, prefix=settings.API_V1_STR, tags=["websocket"])
 app.include_router(trading_router, prefix=settings.API_V1_STR, tags=["trading"])
 app.include_router(today_router, prefix=settings.API_V1_STR, tags=["today"])
+app.include_router(market_router, prefix=settings.API_V1_STR, tags=["market"])
 
 
 @app.on_event("startup")

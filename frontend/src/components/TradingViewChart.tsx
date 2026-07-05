@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { createChart, ColorType, IChartApi, ISeriesApi } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickSeries, AreaSeries, LineSeries } from 'lightweight-charts';
 
 interface ChartData {
   time: string;
@@ -80,7 +80,8 @@ export default function TradingViewChart({
     })).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 
     if (type === 'candlestick') {
-      series = chart.addCandlestickSeries({
+      // lightweight-charts v5: addCandlestickSeries → addSeries(CandlestickSeries, ...)
+      series = chart.addSeries(CandlestickSeries, {
         upColor,
         downColor,
         borderVisible: false,
@@ -89,7 +90,7 @@ export default function TradingViewChart({
       });
       series.setData(formattedData);
     } else if (type === 'area') {
-      series = chart.addAreaSeries({
+      series = chart.addSeries(AreaSeries, {
         topColor: areaTopColor,
         bottomColor: areaBottomColor,
         lineColor,
@@ -97,7 +98,7 @@ export default function TradingViewChart({
       });
       series.setData(formattedData);
     } else {
-      series = chart.addLineSeries({
+      series = chart.addSeries(LineSeries, {
         color: lineColor,
         lineWidth: 2,
       });

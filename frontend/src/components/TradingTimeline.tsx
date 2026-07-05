@@ -36,7 +36,7 @@ export default function TradingTimeline({
   const calculateCumulativeCapital = () => {
     let capital = initialCapital;
     return trades.map((trade) => {
-      const pnl = currency === 'KRW' ? trade.pnl_krw : trade.pnl;
+      const pnl = (currency === 'KRW' ? trade.pnl_krw : trade.pnl) ?? 0;
       capital += pnl;
       return {
         ...trade,
@@ -47,8 +47,8 @@ export default function TradingTimeline({
 
   const tradesWithCapital = calculateCumulativeCapital();
   const totalReturn = ((finalCapital - initialCapital) / initialCapital) * 100;
-  const winningTrades = trades.filter(t => (currency === 'KRW' ? t.pnl_krw : t.pnl) > 0);
-  const losingTrades = trades.filter(t => (currency === 'KRW' ? t.pnl_krw : t.pnl) <= 0);
+  const winningTrades = trades.filter(t => ((currency === 'KRW' ? t.pnl_krw : t.pnl) ?? 0) > 0);
+  const losingTrades = trades.filter(t => ((currency === 'KRW' ? t.pnl_krw : t.pnl) ?? 0) <= 0);
 
   const formatCurrency = (value: number) => {
     if (currency === 'KRW') {

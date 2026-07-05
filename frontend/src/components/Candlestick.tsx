@@ -19,11 +19,9 @@ export const Candlestick = ({ x = 0, y = 0, width = 0, height = 0, payload }: Ca
 
   // 캔들 바디의 위치와 크기 계산
   const candleHeight = Math.abs(close - open);
-  const candleY = Math.min(open, close);
 
   // 최소 높이 보장 (십자형 캔들)
   const minHeight = 1;
-  const displayHeight = Math.max(candleHeight, minHeight);
 
   return (
     <g>
