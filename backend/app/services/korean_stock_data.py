@@ -236,41 +236,6 @@ class KoreanStockDataFetcher:
             logger.error(f"시장 전체 데이터 가져오기 실패: {e}")
             return pd.DataFrame()
 
-    def _enhance_samsung_data(self, data: Dict[str, Any], ticker_code: str) -> Dict[str, Any]:
-        """
-        삼성전자 데이터 보강
-        금융감독원 전자공시시스템(DART)의 최신 공시 데이터 기반
-        """
-        if ticker_code == "005930":  # 삼성전자
-            # 2024년 3분기 실적 기준 (최신 공시)
-            # 출처: 삼성전자 2024년 3분기 실적 공시
-
-            # ROE 보정 (2024년 3분기 누적 기준)
-            # 3분기 누적 순이익: 20.9조원
-            # 평균 자기자본: (326.6조 + 339.4조) / 2 = 333조원
-            # 연환산 ROE = (20.9 * 4/3) / 333 = 8.4%
-            if data['metrics'].get('ROE'):
-                # PyKrx 계산값과 실제값의 차이가 크면 보정
-                pykrx_roe = data['metrics']['ROE']
-                actual_roe = 0.084  # 8.4%
-
-                # 차이가 20% 이상이면 실제값 사용
-                if abs(pykrx_roe - actual_roe) / actual_roe > 0.2:
-                    logger.info(f"삼성전자 ROE 보정: {pykrx_roe*100:.1f}% -> {actual_roe*100:.1f}%")
-                    data['metrics']['ROE'] = actual_roe
-            else:
-                data['metrics']['ROE'] = 0.084  # 8.4%
-
-            # 기타 주요 지표 보정 (2024년 3분기 기준)
-            data['metrics']['debt_to_equity'] = 0.32  # 32% (108.9조/339.4조)
-            data['metrics']['current_ratio'] = 2.1
-            data['metrics']['operating_margin'] = 0.114  # 11.4%
-            data['metrics']['net_margin'] = 0.104  # 10.4%
-
-            logger.info("삼성전자 데이터 보강 완료 (2024년 3분기 공시 기준)")
-
-        return data
-
     def _get_yfinance_data(self, symbol: str) -> Dict[str, Any]:
         """
         yfinance로 재무 데이터 가져오기 - 한국 주식 개선 버전
@@ -353,10 +318,6 @@ class KoreanStockDataFetcher:
             except Exception as e:
                 # logger.warning(f"재무제표 추가 계산 실패: {e}")
                 pass
-
-            # 한국 주식 특별 처리
-            if symbol in ["005930.KS", "005930"]:  # 삼성전자
-                data = self._enhance_samsung_data(data, "005930")
 
             return data
 
@@ -442,17 +403,22 @@ class KoreanStockDataFetcher:
 
         metrics = self.calculate_metrics(data)
 
-        # 성장률 계산 (PER과 PBR로 추정)
-        earnings_growth = 0.10  # 기본값 10%
+        # 성장률: 실측 데이터(earnings_growth)가 있을 때만 사용, 없으면 None
+        # (ROE proxy·기본값 0.10 fabrication 제거)
+        earnings_growth = metrics.get("earnings_growth")  # 소수 형태(예: 0.20) 기대
 
-        # ROE가 있으면 이를 성장률 proxy로 사용
-        if metrics.get("ROE"):
-            earnings_growth = min(metrics["ROE"], 0.30)  # 최대 30%
+        pe = metrics.get("PE")
+        earnings_growth_pct = earnings_growth * 100 if earnings_growth is not None else None
+
+        # PEG: PE와 성장률이 모두 있고 성장률이 양수일 때만 계산
+        peg = None
+        if pe and earnings_growth_pct and earnings_growth_pct > 0:
+            peg = pe / earnings_growth_pct
 
         lynch_metrics = {
-            "PE": metrics.get("PE"),
-            "earnings_growth": earnings_growth * 100,  # 퍼센트로
-            "PEG": metrics.get("PE") / (earnings_growth * 100) if metrics.get("PE") and earnings_growth > 0 else None,
+            "PE": pe,
+            "earnings_growth": earnings_growth_pct,  # 퍼센트로, 없으면 None
+            "PEG": peg,
         }
 
         return lynch_metrics
@@ -469,7 +435,7 @@ class KoreanStockDataFetcher:
 
         graham_metrics = {
             "PB": metrics.get("PB"),
-            "current_ratio": metrics.get("current_ratio") or 1.5,  # 기본값
+            "current_ratio": metrics.get("current_ratio"),  # 실측 없으면 None (기본값 1.5 제거)
             "PE": metrics.get("PE"),
         }
 

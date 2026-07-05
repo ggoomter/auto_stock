@@ -19,8 +19,8 @@ from pydantic import BaseModel
 from ..services.parser import StrategyParser
 from ..services.indicators import IndicatorCalculator, load_sample_data
 from ..services.backtest import BacktestEngine
-from ..services.monte_carlo import MonteCarloSimulator
-from ..services.master_strategies import get_strategy, list_strategies
+# MonteCarloSimulator: 비활성화 (시그널 정렬 결함으로 허수 신뢰구간 — monte_carlo.py 유지, import 제거)
+from ..services.master_strategies import get_strategy, list_strategies, format_coverage_warning
 from ..services.fundamental_analysis import FundamentalAnalyzer
 from ..services.exchange_rate import get_exchange_service
 from ..services.backtest_cache import get_cache
@@ -81,6 +81,10 @@ async def analyze_strategy(request: AnalysisRequest):
         symbol = request.symbols[0]
         data = all_data[symbol]
 
+        # 한국 주식 여부 확인 (.KS, .KQ 접미사 또는 6자리 숫자)
+        symbol_base = symbol.replace('.KS', '').replace('.KQ', '')
+        is_korean_stock = (symbol_base.isdigit() and len(symbol_base) == 6) or symbol.endswith(('.KS', '.KQ'))
+
         # 2. 전략 파싱 및 시그널 생성
         try:
             parser = StrategyParser()
@@ -106,7 +110,9 @@ async def analyze_strategy(request: AnalysisRequest):
                 exit_signals,
                 request.strategy.risk,
                 request.simulate.transaction_cost_bps,
-                request.simulate.slippage_bps
+                request.simulate.slippage_bps,
+                is_korean_stock=is_korean_stock,  # 한국 주식 여부 전달
+                sell_tax_bps=request.simulate.sell_tax_bps  # 한국 매도 거래세
             )
             metrics, equity_curve, risk_report = backtest_engine.run()
             equity_curve_payload = [
@@ -146,17 +152,11 @@ async def analyze_strategy(request: AnalysisRequest):
                 detail=f"백테스트 실행 실패: {str(e)}"
             )
 
-        # 4. 몬테카를로 시뮬레이션
-        mc_simulator = MonteCarloSimulator(
-            data,
-            entry_signals,
-            exit_signals,
-            request.strategy.risk,
-            request.simulate.bootstrap_runs,
-            request.simulate.transaction_cost_bps,
-            request.simulate.slippage_bps
-        )
-        mc_result = mc_simulator.run()
+        # 4. 몬테카를로 시뮬레이션 — 비활성화 (허수 신뢰구간 결함)
+        # monte_carlo.py의 _block_bootstrap이 리샘플 데이터에 합성 date_range 인덱스를
+        # 부여한 뒤 원본 날짜로 시그널을 reindex → 날짜 불일치로 모든 시그널 False →
+        # 거래 0건 → P5/P50/P95 전부 허수. 수리(Task TODO) 전까지 None 전달.
+        mc_result = None
 
         # 5. 예측 (조건부 확률)
         prediction = _calculate_prediction(
@@ -424,7 +424,8 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
                 request.simulate.transaction_cost_bps,
                 request.simulate.slippage_bps,
                 initial_capital=backtest_initial_capital,
-                is_korean_stock=is_korean_stock  # 한국 주식 여부 전달
+                is_korean_stock=is_korean_stock,  # 한국 주식 여부 전달
+                sell_tax_bps=request.simulate.sell_tax_bps  # 한국 매도 거래세
             )
 
             metrics, equity_curve, risk_report = backtest_engine.run()
@@ -660,6 +661,12 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
         # 12. 응답 구성
         logger.info(f"Response data - Exchange rate: {usd_krw_rate}, Initial KRW: {initial_capital_krw}, Final KRW: {final_capital_krw}")
 
+        # 펀더멘털 검증 가능 구간 경고 추가 (Buffett/Lynch/Graham/O'Neil 전략만)
+        backtest_warnings = list(risk_report.get("warnings") or []) if isinstance(risk_report, dict) else []
+        if request.strategy_name.lower() in ("buffett", "lynch", "graham", "oneil"):
+            coverage = getattr(strategy, "last_fundamental_coverage", None)
+            backtest_warnings.append(format_coverage_warning(coverage))
+
         response = MasterStrategyResponse(
             strategy_info=strategy_info,
             backtest=Backtest(
@@ -671,7 +678,7 @@ async def backtest_master_strategy(request: MasterStrategyRequest):
                 equity_curve_ref=None,
                 equity_curve=equity_curve_payload,
                 risk_summary=risk_report,
-                warnings=risk_report.get("warnings") if isinstance(risk_report, dict) else None,
+                warnings=backtest_warnings if backtest_warnings else None,
                 trade_history=None  # Backtest에는 trade_history 넣지 않음 (MasterStrategyResponse에만)
             ),
             fundamental_screen=fundamental_screen,

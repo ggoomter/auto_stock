@@ -9,7 +9,7 @@ interface ResultsDisplayProps {
 }
 
 export default function ResultsDisplay({ results, initialCapital = 1000000 }: ResultsDisplayProps) {
-  const { backtest, monte_carlo, signal_examples, limitations } = results;
+  const { backtest, signal_examples, limitations } = results;
 
   // 접기/펼치기 상태
   const [showTradeHistory, setShowTradeHistory] = useState(true);
