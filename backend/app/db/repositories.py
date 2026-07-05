@@ -145,6 +145,20 @@ class JobRunRepository:
         finally:
             conn.close()
 
+    def get_runs(self, run_date: str) -> list[dict]:
+        """해당 날짜에 기록된 작업 실행 목록 — 프론트 '수집 중/실패 사유' 표시용.
+        각 dict 키: job_name, status, detail, finished_at."""
+        conn = get_connection(self._db_path)
+        try:
+            rows = conn.execute(
+                "SELECT job_name, status, detail, finished_at "
+                "FROM job_runs WHERE run_date=? ORDER BY job_name",
+                (run_date,),
+            ).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
 
 class SnapshotRepository:
     """일별 가상 잔고 스냅샷 — 모의투자 수익 곡선의 원천"""
