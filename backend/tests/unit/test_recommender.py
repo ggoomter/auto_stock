@@ -12,6 +12,7 @@ import pandas as pd
 
 from app.services.recommender import (
     Candidate,
+    build_universe,
     fundamental_filter,
     generate_recommendations,
     score,
@@ -179,6 +180,42 @@ def test_generate_recommendations_flow():
     assert isinstance(first["passed_conditions"], list)
     assert isinstance(first["technical_signals"], list)
     assert 0 <= first["score"] <= 100
+
+
+def test_generate_passes_rec_date_to_build_universe():
+    # rec_date가 유니버스 구성(휴장일 역보정 기준일)에 반영되어야 함
+    repo = _FakeRepo()
+    with patch("app.services.recommender.build_universe",
+               return_value=[]) as mock_bu, \
+         patch("app.services.recommender.time.sleep"):
+        generate_recommendations(repo, "2026-07-05")
+    assert mock_bu.call_args.kwargs["date"] == "20260705"
+
+
+def test_build_universe_negative_bps_roe_none():
+    # 자본잠식(BPS<0)이면 roe 계산 금지 → None (pykrx는 mock)
+    cap_df = pd.DataFrame(
+        {"시가총액": [1e12], "종가": [50000]}, index=["005930"],
+    )
+    fund_df = pd.DataFrame(
+        {"PER": [10.0], "PBR": [1.5], "EPS": [5000.0], "BPS": [-100.0]},
+        index=["005930"],
+    )
+    empty_df = pd.DataFrame({"시가총액": [], "종가": []})
+
+    def fake_cap(date_str, market="KOSPI"):
+        return cap_df if market == "KOSPI" else empty_df
+
+    with patch("app.services.recommender.stock.get_market_cap_by_ticker",
+               side_effect=fake_cap), \
+         patch("app.services.recommender.stock.get_market_fundamental_by_ticker",
+               return_value=fund_df), \
+         patch("app.services.recommender.stock.get_market_ticker_name",
+               return_value="테스트"):
+        cands = build_universe(top_n=10, date="20260703")
+
+    assert len(cands) == 1
+    assert cands[0].roe is None
 
 
 def test_generate_recommendations_respects_top_k():

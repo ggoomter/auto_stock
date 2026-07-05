@@ -112,7 +112,8 @@ def build_universe(top_n: int = 300, date: str | None = None) -> list[Candidate]
     for ticker, row in merged.iterrows():
         eps = _to_float(row.get("EPS"))
         bps = _to_float(row.get("BPS"))
-        roe = eps / bps if (eps is not None and bps not in (None, 0)) else None
+        # 자본잠식(BPS≤0)에서는 ROE 계산 금지 — 계약: bps>0일 때만
+        roe = eps / bps if (eps is not None and bps is not None and bps > 0) else None
         candidates.append(
             Candidate(
                 symbol=str(ticker),
@@ -275,7 +276,8 @@ def generate_recommendations(
 
     반환: {"universe": n, "filtered": m, "saved": k}
     """
-    universe = build_universe(top_n=top_n_universe, date=None)
+    # rec_date 기준으로 유니버스 구성 — 휴장일 역보정도 이 날짜를 기준으로 동작
+    universe = build_universe(top_n=top_n_universe, date=_to_yyyymmdd(rec_date))
     filtered = fundamental_filter(universe)
 
     # 기술 판정 대상 선정: 펀더멘털 통과 수 → 시가총액 순으로 상위 max_technical개
