@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, Calendar, Edit3 } from 'lucide-react';
 import StockAutocomplete from './StockAutocomplete';
 import { getMasterStrategies, getStrategyTemplate, type MasterStrategyRequest } from '../services/api';
+import { useToast } from './Toast';
 
 interface MasterStrategySelectorProps {
   onSubmit: (request: MasterStrategyRequest) => void;
@@ -12,6 +13,7 @@ interface MasterStrategySelectorProps {
 }
 
 export default function MasterStrategySelector({ onSubmit, onLoadTemplate, isLoading, initialSymbols = [] }: MasterStrategySelectorProps) {
+  const toast = useToast();
   const [selectedStrategy, setSelectedStrategy] = useState<string>('');
   const [symbol, setSymbol] = useState('');
   const [dateRange, setDateRange] = useState({
@@ -22,7 +24,7 @@ export default function MasterStrategySelector({ onSubmit, onLoadTemplate, isLoa
   // 템플릿 로드 핸들러
   const handleLoadTemplate = async () => {
     if (!selectedStrategy) {
-      alert('먼저 전략을 선택해주세요.');
+      toast.warning('먼저 전략을 선택해주세요.');
       return;
     }
 
@@ -38,7 +40,7 @@ export default function MasterStrategySelector({ onSubmit, onLoadTemplate, isLoa
       }
     } catch (error) {
       console.error('템플릿 로드 실패:', error);
-      alert('템플릿을 불러오는데 실패했습니다.');
+      toast.error('템플릿을 불러오는데 실패했습니다.');
     }
   };
 
@@ -62,7 +64,7 @@ export default function MasterStrategySelector({ onSubmit, onLoadTemplate, isLoa
     e.preventDefault();
 
     if (!selectedStrategy || !symbol) {
-      alert('전략과 종목을 선택해주세요.');
+      toast.warning('전략과 종목을 선택해주세요.');
       return;
     }
 

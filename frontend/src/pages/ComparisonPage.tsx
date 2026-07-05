@@ -8,6 +8,7 @@ import {
   type StrategyComparisonRequest,
   type StrategyComparisonResponse
 } from '../services/api';
+import { useToast } from '../components/Toast';
 
 const AVAILABLE_STRATEGIES = [
   { id: 'buffett', name: '워렌 버핏', description: '가치투자의 대가' },
@@ -21,6 +22,7 @@ const AVAILABLE_STRATEGIES = [
 ];
 
 export default function ComparisonPage() {
+  const toast = useToast();
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>(['buffett', 'lynch', 'graham']);
   const [symbols, setSymbols] = useState<string[]>(['AAPL']);
   const [startDate, setStartDate] = useState('2020-01-01');
@@ -35,7 +37,7 @@ export default function ComparisonPage() {
     },
     onError: (error: any) => {
       console.error('비교 오류:', error);
-      alert(`비교 중 오류가 발생했습니다.\n\n${error?.response?.data?.detail || error.message}`);
+      toast.error(`비교 중 오류가 발생했습니다.\n\n${error?.response?.data?.detail || error.message}`);
     }
   });
 
@@ -50,11 +52,11 @@ export default function ComparisonPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedStrategies.length < 2) {
-      alert('최소 2개 이상의 전략을 선택해주세요.');
+      toast.warning('최소 2개 이상의 전략을 선택해주세요.');
       return;
     }
     if (symbols.length === 0) {
-      alert('최소 1개 이상의 종목을 선택해주세요.');
+      toast.warning('최소 1개 이상의 종목을 선택해주세요.');
       return;
     }
 

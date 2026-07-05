@@ -13,7 +13,7 @@ import NewsFetchButton from './components/NewsFetchButton';
 import ComparisonPage from './pages/ComparisonPage';
 import RealtimeMonitor from './pages/RealtimeMonitor';
 import TradingDashboard from './components/TradingDashboard';
-import { ToastProvider } from './components/Toast';
+import { ToastProvider, useToast } from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import {
   analyzeStrategy,
@@ -29,6 +29,7 @@ const queryClient = new QueryClient();
 type StrategyType = 'custom' | 'master';
 
 function StrategyPage() {
+  const toast = useToast();
   const [strategyType, setStrategyType] = useState<StrategyType>('master');
   const [results, setResults] = useState<AnalysisResponse | null>(null);
   const [masterResults, setMasterResults] = useState<MasterStrategyResponse | null>(null);
@@ -44,7 +45,7 @@ function StrategyPage() {
     onError: (error: any) => {
       console.error('분석 오류:', error);
       const errorMessage = error?.response?.data?.detail || error?.message || '알 수 없는 오류';
-      alert(`분석 중 오류가 발생했습니다.\n\n에러: ${errorMessage}`);
+      toast.error(`분석 중 오류가 발생했습니다.\n\n에러: ${errorMessage}`);
     },
   });
 
@@ -57,7 +58,7 @@ function StrategyPage() {
     onError: (error: any) => {
       console.error('분석 오류:', error);
       const errorMessage = error?.response?.data?.detail || error?.message || '알 수 없는 오류';
-      alert(`분석 중 오류가 발생했습니다.\n\n에러: ${errorMessage}`);
+      toast.error(`분석 중 오류가 발생했습니다.\n\n에러: ${errorMessage}`);
     },
   });
 
@@ -80,7 +81,7 @@ function StrategyPage() {
     setLoadedTemplate(template);
     setResults(null);
     setMasterResults(null);
-    alert(`${template.strategyInfo.name} 전략이 로드되었습니다!`);
+    toast.success(`${template.strategyInfo.name} 전략이 로드되었습니다!`);
   };
 
   const isLoading = mutation.isPending || masterMutation.isPending;

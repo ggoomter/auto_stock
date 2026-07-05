@@ -24,6 +24,7 @@ import {
   type TradingStatusResponse,
   type PortfolioStatusResponse
 } from '../services/api';
+import { useToast } from './Toast';
 
 interface TradingDashboardProps {
   isAutoTrading: boolean;
@@ -34,6 +35,8 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
   isAutoTrading: initialIsAutoTrading,
   onToggleAutoTrading
 }) => {
+  const toast = useToast();
+
   // 상태 관리
   const [isAutoTrading, setIsAutoTrading] = useState(initialIsAutoTrading);
   const [tradingMode, setTradingMode] = useState<'paper' | 'live'>('paper');
@@ -51,6 +54,7 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
   // UI 상태
   const [showSettings, setShowSettings] = useState(false);
   const [showEmergencyConfirm, setShowEmergencyConfirm] = useState(false);
+  const [showStopConfirm, setShowStopConfirm] = useState(false);
 
   // 자동 새로고침 (5초마다)
   useEffect(() => {
@@ -132,11 +136,11 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
       // 상태 즉시 새로고침
       await refreshData();
 
-      alert('✅ 자동매매가 시작되었습니다!');
+      toast.success('자동매매가 시작되었습니다!');
     } catch (err: any) {
       console.error('자동매매 시작 실패:', err);
       setError(err.response?.data?.detail || err.message || '자동매매 시작 실패');
-      alert(`❌ 자동매매 시작 실패\n\n${err.response?.data?.detail || err.message}`);
+      toast.error(`자동매매 시작 실패\n\n${err.response?.data?.detail || err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -145,13 +149,13 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
   /**
    * 자동매매 중지
    */
-  const handleStopTrading = async () => {
-    const confirmed = window.confirm(
-      '자동매매를 중지하시겠습니까?\n\n' +
-      '기존 포지션은 유지됩니다.'
-    );
-    if (!confirmed) return;
+  const handleStopTrading = () => {
+    // 확인 모달 표시 (기존 window.confirm 대체)
+    setShowStopConfirm(true);
+  };
 
+  const handleConfirmStop = async () => {
+    setShowStopConfirm(false);
     setIsLoading(true);
     setError(null);
 
@@ -169,11 +173,11 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
 
       await refreshData();
 
-      alert('✅ 자동매매가 중지되었습니다.');
+      toast.success('자동매매가 중지되었습니다.');
     } catch (err: any) {
       console.error('자동매매 중지 실패:', err);
       setError(err.response?.data?.detail || err.message || '자동매매 중지 실패');
-      alert(`❌ 자동매매 중지 실패\n\n${err.response?.data?.detail || err.message}`);
+      toast.error(`자동매매 중지 실패\n\n${err.response?.data?.detail || err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -195,10 +199,10 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
 
       await refreshData();
 
-      alert(`🛑 긴급 정지 완료\n\n청산된 포지션: ${response.closed_positions}개`);
+      toast.success(`긴급 정지 완료\n\n청산된 포지션: ${response.closed_positions}개`);
     } catch (err: any) {
       console.error('긴급 정지 실패:', err);
-      alert(`❌ 긴급 정지 실패\n\n${err.response?.data?.detail || err.message}`);
+      toast.error(`긴급 정지 실패\n\n${err.response?.data?.detail || err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -375,6 +379,41 @@ const TradingDashboard: React.FC<TradingDashboardProps> = ({
                 className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold transition-colors"
               >
                 긴급 정지 실행
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 자동매매 중지 확인 모달 */}
+      {showStopConfirm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-900 border-2 border-orange-500 rounded-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <Pause className="w-8 h-8 text-orange-500" />
+              <h3 className="text-xl font-bold text-orange-500">자동매매 중지 확인</h3>
+            </div>
+
+            <p className="text-gray-300 mb-2">
+              자동매매를 중지하시겠습니까?
+            </p>
+
+            <p className="text-sm text-gray-400 mb-6">
+              기존 포지션은 유지됩니다.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowStopConfirm(false)}
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleConfirmStop}
+                className="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-bold transition-colors"
+              >
+                중지
               </button>
             </div>
           </div>
