@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     # SQLite 경로 (테스트에서 주입 가능하도록 설정으로 분리)
     DB_PATH: Optional[str] = None  # None이면 app/db/database.py의 DEFAULT_DB_PATH
 
+    # KRX 정보데이터시스템 계정 (data.krx.co.kr 무료 가입)
+    # 2026년 KRX 정책 변경으로 시가총액·펀더멘털 벌크 조회에 로그인 필수 (pykrx 1.2.x)
+    KRX_ID: Optional[str] = None
+    KRX_PW: Optional[str] = None
+
     class Config:
         # backend/.env 파일 경로 설정
         env_file = str(Path(__file__).parent.parent.parent / ".env")
@@ -37,3 +42,9 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# pykrx는 os.environ에서 KRX_ID/KRX_PW를 읽으므로 .env 값을 환경변수로 전파한다
+if settings.KRX_ID and not os.environ.get("KRX_ID"):
+    os.environ["KRX_ID"] = settings.KRX_ID
+if settings.KRX_PW and not os.environ.get("KRX_PW"):
+    os.environ["KRX_PW"] = settings.KRX_PW

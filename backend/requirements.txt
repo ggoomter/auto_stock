@@ -23,7 +23,7 @@ pandas-ta-classic>=0.3.37
 # Finance data
 yfinance>=0.2.50
 finance-datareader>=0.9.96
-pykrx>=1.0.45  # 한국거래소 주식 데이터
+pykrx>=1.2.8  # 한국거래소 주식 데이터 — 시총/펀더멘털 벌크 조회는 KRX 계정 필요 (backend/.env의 KRX_ID/KRX_PW)
 
 # Security
 python-jose[cryptography]>=3.3.0
