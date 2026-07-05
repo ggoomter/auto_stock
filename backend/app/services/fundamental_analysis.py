@@ -699,7 +699,9 @@ class FundamentalAnalyzer:
             from .pit_fundamentals import build_korean_pit, build_us_pit
             as_of = pd.Timestamp(as_of_date)
             if self.is_korean:
-                start_year = as_of.year - 1
+                # 2년 전부터 조회: YoY 성장률은 전년 동분기가 필요해 1년치만으로는
+                # 백테스트 첫 해 초반의 성장률 판정이 전부 None(매수 불가)이 됨
+                start_year = as_of.year - 2
                 end_year = datetime.now().year
                 pit = build_korean_pit(self.stock_code, start_year, end_year)
             else:
