@@ -27,3 +27,6 @@ pykrx>=1.0.45  # 한국거래소 주식 데이터
 
 # Security
 python-jose[cryptography]>=3.3.0
+
+# pykrx가 pkg_resources에 의존 — setuptools 81+에서 제거되어 크래시 (2026-07-05 확인)
+setuptools<81
