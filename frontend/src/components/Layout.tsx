@@ -51,7 +51,8 @@ export default function Layout() {
   ];
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'dark:bg-gray-900 dark:text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
+    {/* flex 필수: lg에서 사이드바가 static 블록이 되므로 flex가 없으면 본문이 사이드바 아래로 밀려남 */}
+    <div className={`min-h-screen flex transition-colors duration-300 ${isDarkMode ? 'dark:bg-gray-900 dark:text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       {/* Sidebar */}
       <aside 
         className={`fixed top-0 left-0 z-40 h-screen transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 ${
