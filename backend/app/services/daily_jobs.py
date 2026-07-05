@@ -167,10 +167,29 @@ async def _catchup_then_intraday(db_path: str | None = None) -> None:
     await intraday_news_loop(db_path=db_path)
 
 
+# 백그라운드 태스크 참조 보관 — GC가 실행 중 태스크를 수거하지 못하게 강한 참조 유지.
+# (asyncio는 태스크에 강한 참조가 없으면 임의로 회수할 수 있다.)
+_background_task: "asyncio.Task | None" = None
+
+
+def _on_background_done(task: "asyncio.Task") -> None:
+    """백그라운드 태스크 완료 콜백 — 예외로 끝났을 때만 로깅한다.
+
+    정상 종료·취소는 무로그. 예외는 add_done_callback이 삼키므로 여기서 명시적으로
+    꺼내 logger.error로 남긴다 (조용한 크래시 방지)."""
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.error("백그라운드 catch-up 태스크 크래시: %s", exc)
+
+
 def start_background_catchup(db_path: str | None = None) -> None:
     """main.py startup에서 호출 — 서버 기동을 블로킹하지 않는 백그라운드 태스크 등록.
 
     startup은 코루틴이라 실행 중인 이벤트 루프가 존재한다.
     """
+    global _background_task
     loop = asyncio.get_event_loop()
-    loop.create_task(_catchup_then_intraday(db_path))
+    _background_task = loop.create_task(_catchup_then_intraday(db_path))
+    _background_task.add_done_callback(_on_background_done)

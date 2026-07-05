@@ -158,6 +158,43 @@ def test_failure_isolation(db_path, monkeypatch):
     assert "네이버 크롤 실패" in row["detail"]
 
 
+class _FakeTask:
+    """add_done_callback에 넘어오는 태스크를 흉내내는 최소 스텁."""
+    def __init__(self, *, cancelled=False, exc=None):
+        self._cancelled = cancelled
+        self._exc = exc
+
+    def cancelled(self):
+        return self._cancelled
+
+    def exception(self):
+        return self._exc
+
+
+def test_background_done_logs_on_exception(caplog):
+    """예외로 끝난 백그라운드 태스크는 logger.error로 크래시를 남긴다."""
+    import logging
+    from app.services.daily_jobs import _on_background_done
+
+    with caplog.at_level(logging.ERROR):
+        _on_background_done(_FakeTask(exc=RuntimeError("루프 폭발")))
+
+    assert any("루프 폭발" in r.message or "루프 폭발" in r.getMessage()
+               for r in caplog.records)
+
+
+def test_background_done_silent_on_success_and_cancel(caplog):
+    """정상 종료·취소는 로그를 남기지 않는다."""
+    import logging
+    from app.services.daily_jobs import _on_background_done
+
+    with caplog.at_level(logging.ERROR):
+        _on_background_done(_FakeTask(exc=None))       # 정상 종료
+        _on_background_done(_FakeTask(cancelled=True))  # 취소
+
+    assert caplog.records == []
+
+
 def test_weekend_skips_reco_and_reconcile(db_path, spies):
     """주말이면 추천·정산은 실행하지 않고 success(weekend)로 기록, 뉴스는 수집."""
     from app.services.daily_jobs import (
