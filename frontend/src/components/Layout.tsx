@@ -11,7 +11,8 @@ import {
   Moon, 
   Sun,
   TrendingUp,
-  MonitorPlay
+  MonitorPlay,
+  Home
 } from 'lucide-react';
 
 export default function Layout() {
@@ -41,7 +42,8 @@ export default function Layout() {
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const menuItems = [
-    { path: '/', label: '전략 분석', icon: Activity },
+    { path: '/', label: '오늘', icon: Home },
+    { path: '/strategy', label: '전략 분석', icon: Activity },
     { path: '/compare', label: '전략 비교', icon: BarChart2 },
     { path: '/realtime', label: '실시간 모니터링', icon: MonitorPlay },
     { path: '/dashboard', label: '자동매매 대시보드', icon: TrendingUp },

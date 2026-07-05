@@ -12,6 +12,7 @@ import LearnMenu from './components/LearnMenu';
 import NewsFetchButton from './components/NewsFetchButton';
 import ComparisonPage from './pages/ComparisonPage';
 import RealtimeMonitor from './pages/RealtimeMonitor';
+import TodayPage from './pages/TodayPage';
 import TradingDashboard from './components/TradingDashboard';
 import { ToastProvider, useToast } from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -204,7 +205,8 @@ export default function App() {
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Layout />}>
-              <Route index element={<StrategyPage />} />
+              <Route index element={<TodayPage />} />
+              <Route path="strategy" element={<StrategyPage />} />
               <Route path="compare" element={<ComparisonPage />} />
               <Route path="realtime" element={<RealtimeMonitor />} />
               <Route path="dashboard" element={<DashboardPage />} />
