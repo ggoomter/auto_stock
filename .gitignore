@@ -48,3 +48,6 @@ Thumbs.db
 # Windows error files
 nul
 */nul
+
+# pytest
+.pytest_cache/
