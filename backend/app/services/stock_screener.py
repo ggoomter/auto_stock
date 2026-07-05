@@ -325,7 +325,7 @@ class StockScreener:
         # 너무 많으면 상위 50개만 분석 (시가총액 순 등 정렬이 필요하지만 여기선 단순 절삭)
         if len(candidates) > 50:
             # PBR이나 PER 순으로 정렬해서 자르기
-            if screener_type in [ScreenerType.VALUE, ScreenerType.BUFFETT, ScreenerType.GRAHAM]:
+            if screener_type in [ScreenerType.VALUE, ScreenerType.BUFFETT]:
                 # 저평가 순
                 candidates = df.sort_values(by='PER').head(50).index.tolist()
             else:
