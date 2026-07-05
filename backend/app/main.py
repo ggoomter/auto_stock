@@ -93,6 +93,9 @@ async def startup_event():
     """앱 시작 시 실행"""
     from .db.database import init_db
     init_db()
+    # 서버 기동 시 '오늘 안 돌린 작업' 따라잡기 — 블로킹하지 않는 백그라운드 태스크
+    from .services.daily_jobs import start_background_catchup
+    start_background_catchup()
     register_websocket_callbacks()
 
 
