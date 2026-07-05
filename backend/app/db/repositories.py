@@ -2,8 +2,11 @@
 저장소 계층: 호출마다 커넥션을 열고 닫는다 (스레드 안전, 단순함 우선).
 """
 import json
+import logging
 
 from .database import get_connection
+
+logger = logging.getLogger(__name__)
 
 
 class PaperTradingRepository:
@@ -47,12 +50,20 @@ class PaperTradingRepository:
             ).fetchone()
             if row is None:
                 raise ValueError(f"포지션 없음: id={position_id}")
-            conn.execute(
+            # status='open' 조건으로 이미 청산된 포지션의 이중 청산을 막는다.
+            # reconcile(백그라운드 catch-up)과 auto_trading_engine이 동시에 같은
+            # 포지션을 청산하려는 경합에서, 한쪽만 UPDATE에 성공하도록 보장.
+            cur = conn.execute(
                 "UPDATE paper_positions "
                 "SET status='closed', exit_price=?, exit_at=?, exit_reason=? "
-                "WHERE id = ?",
+                "WHERE id = ? AND status = 'open'",
                 (exit_price, exit_at, exit_reason, position_id),
             )
+            if cur.rowcount == 0:
+                # 이미 다른 경로에서 청산됨 — sell 중복 기록을 막고 조용히 반환.
+                # 경합 상황의 정상적인 방어이므로 예외를 던지지 않는다.
+                logger.warning("포지션 이미 청산됨, 이중 청산 스킵: id=%s", position_id)
+                return
             conn.execute(
                 "INSERT INTO paper_trades "
                 "(position_id, symbol, side, quantity, price, executed_at, strategy, reason) "

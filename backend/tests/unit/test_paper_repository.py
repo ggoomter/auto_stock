@@ -49,6 +49,29 @@ def test_close_position_removes_from_open_and_records_sell(repo):
     assert sell["reason"] == "익절매"
 
 
+def test_double_close_records_only_one_sell(repo):
+    """경합 방어: 같은 포지션을 두 번 청산해도 sell 체결은 1건만 기록된다.
+
+    reconcile와 auto_trading_engine이 동시에 같은 포지션을 청산하려는 경합에서
+    두 번째 close_position은 조용히 무시되어야 한다(예외 없음)."""
+    pos_id = repo.open_position(
+        symbol="005930.KS", quantity=10, entry_price=71000.0,
+        strategy="buffett", stop_loss=65000.0, take_profit=85000.0,
+        entry_at="2026-07-02T10:00:00",
+    )
+    repo.close_position(pos_id, exit_price=85000.0,
+                        exit_reason="익절매", exit_at="2026-07-03T11:00:00")
+    # 두 번째 청산 — 예외 없이 조용히 무시되어야 함
+    repo.close_position(pos_id, exit_price=90000.0,
+                        exit_reason="재청산 시도", exit_at="2026-07-03T12:00:00")
+
+    sells = [t for t in repo.list_trades() if t["side"] == "sell"]
+    assert len(sells) == 1
+    # 첫 청산 값이 유지되고 두 번째 시도로 덮어써지지 않아야 함
+    assert sells[0]["price"] == 85000.0
+    assert sells[0]["reason"] == "익절매"
+
+
 def test_update_stops(repo):
     pos_id = repo.open_position(
         symbol="005930.KS", quantity=10, entry_price=71000.0,
