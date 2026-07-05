@@ -30,3 +30,7 @@ python-jose[cryptography]>=3.3.0
 
 # pykrx가 pkg_resources에 의존 — setuptools 81+에서 제거되어 크래시 (2026-07-05 확인)
 setuptools<81
+
+# 뉴스 크롤링 (venv에 이미 설치됨 — 선언 누락 보완)
+beautifulsoup4>=4.12
+lxml>=5.0

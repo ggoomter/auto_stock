@@ -1,6 +1,8 @@
 """
 저장소 계층: 호출마다 커넥션을 열고 닫는다 (스레드 안전, 단순함 우선).
 """
+import json
+
 from .database import get_connection
 
 
@@ -172,5 +174,154 @@ class SnapshotRepository:
                 "FROM portfolio_snapshots ORDER BY snapshot_date",
             ).fetchall()
             return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+
+class NewsRepository:
+    """뉴스 기사·종목 연결 영속화 (url UNIQUE로 중복 방지)"""
+
+    def __init__(self, db_path: str | None = None):
+        self._db_path = db_path
+
+    def save_article(self, published_at: str, source: str, title: str, url: str,
+                     summary: str | None, sentiment: str,
+                     symbols: list[str]) -> int | None:
+        """신규 삽입 시 article_id 반환 + 종목 링크 저장. 이미 존재(무시)면 None."""
+        conn = get_connection(self._db_path)
+        try:
+            cur = conn.execute(
+                "INSERT OR IGNORE INTO news_articles "
+                "(published_at, source, title, url, summary, sentiment) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (published_at, source, title, url, summary, sentiment),
+            )
+            # rowcount==0 이면 url 중복으로 무시됨 → 링크도 건드리지 않고 None 반환
+            if cur.rowcount == 0:
+                conn.rollback()
+                return None
+            article_id = cur.lastrowid
+            for symbol in symbols:
+                conn.execute(
+                    "INSERT OR IGNORE INTO news_stock_links (article_id, symbol) "
+                    "VALUES (?, ?)",
+                    (article_id, symbol),
+                )
+            conn.commit()
+            return article_id
+        finally:
+            conn.close()
+
+    def _attach_symbols(self, conn, rows: list) -> list[dict]:
+        """각 기사 dict에 연결된 종목코드 리스트를 붙인다."""
+        result = []
+        for r in rows:
+            article = dict(r)
+            links = conn.execute(
+                "SELECT symbol FROM news_stock_links WHERE article_id = ? "
+                "ORDER BY symbol",
+                (article["id"],),
+            ).fetchall()
+            article["symbols"] = [lr["symbol"] for lr in links]
+            result.append(article)
+        return result
+
+    def list_by_date(self, date_prefix: str) -> list[dict]:
+        """published_at LIKE 'YYYY-MM-DD%' — symbols 포함, 최신순."""
+        conn = get_connection(self._db_path)
+        try:
+            rows = conn.execute(
+                "SELECT id, published_at, source, title, url, summary, sentiment "
+                "FROM news_articles WHERE published_at LIKE ? "
+                "ORDER BY published_at DESC, id DESC",
+                (date_prefix + "%",),
+            ).fetchall()
+            return self._attach_symbols(conn, rows)
+        finally:
+            conn.close()
+
+    def list_for_symbol(self, symbol: str, limit: int = 20) -> list[dict]:
+        """특정 종목에 연결된 기사 — symbols 포함, 최신순."""
+        conn = get_connection(self._db_path)
+        try:
+            rows = conn.execute(
+                "SELECT a.id, a.published_at, a.source, a.title, a.url, "
+                "       a.summary, a.sentiment "
+                "FROM news_articles a "
+                "JOIN news_stock_links l ON l.article_id = a.id "
+                "WHERE l.symbol = ? "
+                "ORDER BY a.published_at DESC, a.id DESC LIMIT ?",
+                (symbol, limit),
+            ).fetchall()
+            return self._attach_symbols(conn, rows)
+        finally:
+            conn.close()
+
+    def count_by_date(self, date_prefix: str) -> int:
+        conn = get_connection(self._db_path)
+        try:
+            row = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM news_articles "
+                "WHERE published_at LIKE ?",
+                (date_prefix + "%",),
+            ).fetchone()
+            return int(row["cnt"]) if row is not None else 0
+        finally:
+            conn.close()
+
+
+class RecommendationRepository:
+    """일별 추천 종목 영속화 ((rec_date, symbol) UNIQUE로 upsert)"""
+
+    def __init__(self, db_path: str | None = None):
+        self._db_path = db_path
+
+    def save(self, rec_date: str, symbol: str, name: str | None, score: float,
+             passed_conditions: list[dict], technical_signals: list[dict]) -> None:
+        conn = get_connection(self._db_path)
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO recommendations "
+                "(rec_date, symbol, name, score, passed_conditions, technical_signals) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (rec_date, symbol, name, score,
+                 json.dumps(passed_conditions, ensure_ascii=False),
+                 json.dumps(technical_signals, ensure_ascii=False)),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def list_by_date(self, rec_date: str) -> list[dict]:
+        """score 내림차순. JSON 컬럼은 json.loads 해서 list로 반환."""
+        conn = get_connection(self._db_path)
+        try:
+            rows = conn.execute(
+                "SELECT id, rec_date, symbol, name, score, "
+                "       passed_conditions, technical_signals "
+                "FROM recommendations WHERE rec_date = ? "
+                "ORDER BY score DESC, symbol",
+                (rec_date,),
+            ).fetchall()
+            result = []
+            for r in rows:
+                rec = dict(r)
+                rec["passed_conditions"] = json.loads(rec["passed_conditions"]) \
+                    if rec["passed_conditions"] else []
+                rec["technical_signals"] = json.loads(rec["technical_signals"]) \
+                    if rec["technical_signals"] else []
+                result.append(rec)
+            return result
+        finally:
+            conn.close()
+
+    def latest_date(self) -> str | None:
+        """가장 최근 rec_date. 데이터 없으면 None."""
+        conn = get_connection(self._db_path)
+        try:
+            row = conn.execute(
+                "SELECT MAX(rec_date) AS d FROM recommendations",
+            ).fetchone()
+            return row["d"] if row is not None and row["d"] is not None else None
         finally:
             conn.close()
