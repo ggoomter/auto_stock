@@ -8,6 +8,7 @@ from .core.config import settings
 from .api.routes import router
 from .api.websocket_api import router as websocket_router, register_websocket_callbacks
 from .api.trading_routes import router as trading_router
+from .api.today_routes import router as today_router
 from .routers.events import router as events_router
 import traceback
 import numpy as np
@@ -86,6 +87,7 @@ app.include_router(router, prefix=settings.API_V1_STR, tags=["analysis"])
 app.include_router(events_router)
 app.include_router(websocket_router, prefix=settings.API_V1_STR, tags=["websocket"])
 app.include_router(trading_router, prefix=settings.API_V1_STR, tags=["trading"])
+app.include_router(today_router, prefix=settings.API_V1_STR, tags=["today"])
 
 
 @app.on_event("startup")
@@ -93,6 +95,9 @@ async def startup_event():
     """앱 시작 시 실행"""
     from .db.database import init_db
     init_db()
+    # 서버 기동 시 '오늘 안 돌린 작업' 따라잡기 — 블로킹하지 않는 백그라운드 태스크
+    from .services.daily_jobs import start_background_catchup
+    start_background_catchup()
     register_websocket_callbacks()
 
 

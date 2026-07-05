@@ -1,0 +1,78 @@
+<!--
+  네이버 금융 시가총액 페이지(finance.naver.com/sise/sise_market_sum.naver) 축약 픽스처.
+  실제 DOM(2026-07-05 관찰)을 3행 + 엣지 케이스로 축약. 원본 인코딩은 EUC-KR이나
+  테스트는 UTF-8로 저장/로드한다(parse_market_sum_html은 인코딩 무관 순수 함수).
+
+  컬럼 순서(관찰): N | 종목명(a.tltle href=/item/main.naver?code=XXXXXX) | 현재가 |
+    전일비 | 등락률 | 액면가 | 시가총액(억원) | 상장주식수 | 외국인비율 | 거래량 |
+    PER | ROE(%) | 토론
+-->
+<table class="type_2">
+  <thead>
+    <tr>
+      <th scope="col">N</th>
+      <th scope="col">종목명</th>
+      <th scope="col">현재가</th>
+      <th class="tr" scope="col">전일비</th>
+      <th scope="col">등락률</th>
+      <th scope="col">액면가</th>
+      <th scope="col">시가총액</th>
+      <th scope="col">상장주식수</th>
+      <th scope="col">외국인비율</th>
+      <th scope="col">거래량</th>
+      <th scope="col">PER</th>
+      <th scope="col">ROE</th>
+      <th scope="col">토론</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="blank_08" colspan="13"></td></tr>
+    <tr onmouseover="mouseOver(this)" onmouseout="mouseOut(this)">
+      <td class="no">1</td>
+      <td><a class="tltle" href="/item/main.naver?code=005930">삼성전자</a></td>
+      <td class="number">309,500</td>
+      <td class="number"><span class="tah p11 red02">23,500</span></td>
+      <td class="number"><span class="tah p11 red01">+8.22%</span></td>
+      <td class="number">100</td>
+      <td class="number">18,094,232</td>
+      <td class="number">5,846,279</td>
+      <td class="number">46.76</td>
+      <td class="number">31,498,600</td>
+      <td class="number">25.02</td>
+      <td class="number">10.85</td>
+      <td class="center"><a href="/item/board.naver?code=005930"><img alt="토론" src="x.gif"/></a></td>
+    </tr>
+    <tr><td class="blank_08" colspan="13"></td></tr>
+    <tr onmouseover="mouseOver(this)" onmouseout="mouseOut(this)">
+      <td class="no">4</td>
+      <td><a class="tltle" href="/item/main.naver?code=005935">삼성전자우</a></td>
+      <td class="number">208,000</td>
+      <td class="number"><span class="tah p11 red02">19,300</span></td>
+      <td class="number"><span class="tah p11 red01">+10.23%</span></td>
+      <td class="number">100</td>
+      <td class="number">1,668,932</td>
+      <td class="number">802,371</td>
+      <td class="number">76.37</td>
+      <td class="number">4,938,964</td>
+      <td class="number">16.81</td>
+      <td class="number">N/A</td>
+      <td class="center"><a href="/item/board.naver?code=005935"><img alt="토론" src="x.gif"/></a></td>
+    </tr>
+    <tr><td class="blank_08" colspan="13"></td></tr>
+    <tr onmouseover="mouseOver(this)" onmouseout="mouseOut(this)">
+      <td class="no">7</td>
+      <td><a class="tltle" href="/item/main.naver?code=069500">KODEX 200</a></td>
+      <td class="number">41,230</td>
+      <td class="number"><span class="tah p11 nv01">-</span></td>
+      <td class="number"><span class="tah p11 nv01">0.00%</span></td>
+      <td class="number">0</td>
+      <td class="number">72,441</td>
+      <td class="number">175,700</td>
+      <td class="number">5.12</td>
+      <td class="number">1,234,567</td>
+      <td class="number">N/A</td>
+      <td class="number">N/A</td>
+      <td class="center"><a href="/item/board.naver?code=069500"><img alt="토론" src="x.gif"/></a></td>
+    </tr>
+  </tbody>
+</table>
