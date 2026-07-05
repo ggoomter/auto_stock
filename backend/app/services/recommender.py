@@ -98,8 +98,11 @@ def build_universe(
       → fundamental_filter의 PBR 조건은 '데이터 없음'으로 passed=False가 되므로,
         2/3 통과 규칙상 폴백 종목은 PER·ROE 두 조건을 모두 통과해야 필터를 통과한다.
     - 폴백 데이터는 "현재 시점" 스냅샷이다 — rec_date가 과거인 재생성 시 부정확할 수 있다.
-    - 폴백 종목 symbol은 접미사 포함(예: "005930.KS")이며, 이 경우 pykrx OHLCV 조회는
-      불가하여 기술 시그널은 '데이터 부족'으로 처리된다(degraded).
+
+    symbol 형식: 두 경로 모두 접미사 포함("005930.KS"/"035720.KQ")으로 통일 — 앱 표준
+    (paper_positions·news_stock_links와 일치). OHLCV 조회(_fetch_ohlcv)는 접미사를
+    제거한 6자리 코드로 pykrx를 호출하므로 폴백 경로에서도 기술 시그널이 산출된다
+    (pykrx 종목별 get_market_ohlcv는 로그인 불필요 — 실증 확인).
 
     meta(dict)가 주어지면 "universe_source" 키에 실제 사용 경로를 기록한다
     ("krx" | "naver_fallback" | "empty").
@@ -117,8 +120,16 @@ def build_universe(
     return naver
 
 
+# 시장별 yfinance 접미사 — 앱 표준 심볼 형식(paper_positions·news_stock_links와 일치)
+_MARKET_SUFFIX = {"KOSPI": ".KS", "KOSDAQ": ".KQ"}
+
+
 def _build_universe_krx(top_n: int, date: str | None) -> list[Candidate]:
-    """KRX(pykrx) 경로. 실패(영업일 미발견/예외/빈 결과) 시 빈 리스트 + warning."""
+    """KRX(pykrx) 경로. 실패(영업일 미발견/예외/빈 결과) 시 빈 리스트 + warning.
+
+    Candidate.symbol은 앱 표준인 접미사 포함 형식("005930.KS")으로 통일한다
+    (네이버 폴백 경로와 recommendations.symbol 키 일관성).
+    """
     date_str = _latest_business_date(date)
     if date_str is None:
         logger.warning("build_universe: 최근 영업일을 찾지 못해 KRX 유니버스 비어있음")
@@ -130,7 +141,10 @@ def _build_universe_krx(top_n: int, date: str | None) -> list[Candidate]:
             cap = stock.get_market_cap_by_ticker(date_str, market=market)
             if cap.empty or cap["시가총액"].sum() == 0:
                 continue
-            frames.append(_merge_fundamental(cap, date_str, market))
+            frame = _merge_fundamental(cap, date_str, market)
+            # concat 후에도 시장 구분을 잃지 않도록 접미사 컬럼을 부착
+            frame = frame.assign(_suffix=_MARKET_SUFFIX[market])
+            frames.append(frame)
         if not frames:
             return []
         merged = pd.concat(frames)
@@ -148,7 +162,7 @@ def _build_universe_krx(top_n: int, date: str | None) -> list[Candidate]:
         roe = eps / bps if (eps is not None and bps is not None and bps > 0) else None
         candidates.append(
             Candidate(
-                symbol=str(ticker),
+                symbol=f"{ticker}{row.get('_suffix', '.KS')}",
                 name=stock.get_market_ticker_name(ticker) or str(ticker),
                 close=_to_float(row.get("종가")) or 0.0,
                 per=_positive_or_none(_to_float(row.get("PER"))),
@@ -314,11 +328,17 @@ def score(passed_conditions: list[dict], signals: list[dict]) -> float:
 
 # ── OHLCV 조회 (pykrx) ────────────────────────────────────────────
 def _fetch_ohlcv(symbol: str, rec_date: str) -> pd.DataFrame:
-    """종목의 최근 ~400영업일 일봉을 소문자 컬럼으로 반환. 실패 시 빈 DF."""
+    """종목의 최근 ~400영업일 일봉을 소문자 컬럼으로 반환. 실패 시 빈 DF.
+
+    symbol은 접미사 포함("005930.KS")·bare("005930") 모두 허용 — pykrx의
+    종목별 get_market_ohlcv는 로그인 없이 동작하나 6자리 코드만 받으므로
+    접미사를 제거하고 호출한다(네이버 폴백 경로에서도 기술 시그널 산출 가능).
+    """
     end = _to_yyyymmdd(rec_date)
     start = (datetime.strptime(end, "%Y%m%d") - timedelta(days=400)).strftime("%Y%m%d")
+    code = symbol.split(".")[0]  # "005930.KS" → "005930"
     try:
-        df = stock.get_market_ohlcv(start, end, symbol)
+        df = stock.get_market_ohlcv(start, end, code)
     except Exception as exc:
         logger.warning("get_market_ohlcv(%s) 실패: %s", symbol, exc)
         return pd.DataFrame()

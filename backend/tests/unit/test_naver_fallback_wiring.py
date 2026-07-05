@@ -1,8 +1,11 @@
 """KRX 실패 → 네이버 폴백 배선 테스트 (recommender.build_universe · naver_news.build_name_map).
 
-네트워크 금지: naver_market.fetch_market_sum을 mock하여 폴백 경로만 검증한다.
+네트워크 금지: naver_market.fetch_market_sum/pykrx를 mock하여 폴백 경로만 검증한다.
+심볼 형식 통일(접미사 포함)과 _fetch_ohlcv의 6자리 코드 변환도 여기서 검증.
 """
 from unittest.mock import patch
+
+import pandas as pd
 
 from app.services import naver_news, recommender
 from app.services.naver_market import MarketRow
@@ -88,3 +91,52 @@ def test_build_name_map_empty_when_both_fail_not_cached():
         name_map = naver_news.build_name_map(force_refresh=True)
     assert name_map == {}
     assert naver_news._NAME_MAP_CACHE is None  # 빈 결과는 캐시 안 함
+
+
+# ── 심볼 형식 통일 · _fetch_ohlcv 코드 변환 ──────────────────────
+def test_fetch_ohlcv_strips_suffix_before_pykrx():
+    """pykrx get_market_ohlcv는 6자리 코드만 받으므로 접미사를 제거해 호출해야 한다."""
+    ohlcv = pd.DataFrame(
+        {"시가": [1.0], "고가": [1.0], "저가": [1.0], "종가": [1.0], "거래량": [1]}
+    )
+    with patch("app.services.recommender.stock.get_market_ohlcv",
+               return_value=ohlcv) as mock_ohlcv:
+        df = recommender._fetch_ohlcv("005930.KS", "2026-07-06")
+
+    # 세 번째 위치 인자(티커)가 접미사 제거된 6자리 코드여야 함
+    assert mock_ohlcv.call_args.args[2] == "005930"
+    assert list(df.columns) == ["open", "high", "low", "close", "volume"]
+
+
+def test_fetch_ohlcv_bare_code_passthrough():
+    ohlcv = pd.DataFrame(
+        {"시가": [1.0], "고가": [1.0], "저가": [1.0], "종가": [1.0], "거래량": [1]}
+    )
+    with patch("app.services.recommender.stock.get_market_ohlcv",
+               return_value=ohlcv) as mock_ohlcv:
+        recommender._fetch_ohlcv("005930", "2026-07-06")
+    assert mock_ohlcv.call_args.args[2] == "005930"
+
+
+def test_build_universe_krx_symbols_have_market_suffix():
+    """KRX 경로 Candidate.symbol도 앱 표준(접미사 포함)으로 통일돼야 한다."""
+    kospi_cap = pd.DataFrame({"시가총액": [1e12], "종가": [50000]}, index=["005930"])
+    kosdaq_cap = pd.DataFrame({"시가총액": [5e11], "종가": [40000]}, index=["035720"])
+    fund_df = pd.DataFrame(
+        {"PER": [10.0], "PBR": [1.5], "EPS": [5000.0], "BPS": [30000.0]},
+        index=["005930", "035720"],
+    )
+
+    def fake_cap(date_str, market="KOSPI"):
+        return kospi_cap if market == "KOSPI" else kosdaq_cap
+
+    with patch("app.services.recommender.stock.get_market_cap_by_ticker",
+               side_effect=fake_cap), \
+         patch("app.services.recommender.stock.get_market_fundamental_by_ticker",
+               return_value=fund_df), \
+         patch("app.services.recommender.stock.get_market_ticker_name",
+               return_value="테스트"):
+        cands = recommender.build_universe(top_n=10, date="20260706")
+
+    symbols = {c.symbol for c in cands}
+    assert symbols == {"005930.KS", "035720.KQ"}
