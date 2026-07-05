@@ -171,6 +171,53 @@ def test_none_stop_or_take_skips_that_condition(repo):
     assert sell["price"] == round_to_tick_down(85000.0, True)
 
 
+def test_halted_zero_ohlc_bar_does_not_trigger_zero_price_exit(repo):
+    """거래정지일(OHLC=0 봉)이 끼어 있어도 0원 청산 금지 — 이후 정상 봉에서 정산."""
+    _open(repo, stop_loss=65000.0, take_profit=85000.0)
+
+    def fetch_daily(symbol, start, end):
+        return _bars([
+            ("2026-07-02", 0, 0, 0, 0),                   # 거래정지: low=0<=stop 이지만 무효 봉
+            ("2026-07-03", 68000, 68500, 64000, 64500),   # 정상 봉에서 손절 터치
+        ])
+
+    result = reconcile_positions(repo, fetch_daily, as_of="2026-07-05")
+
+    assert result["closed"] == 1
+    sell = [t for t in repo.list_trades() if t["side"] == "sell"][0]
+    # 0원 청산 오염 금지 — 정상 봉 기준 min(open=68000, stop=65000)=65000
+    assert sell["price"] > 0
+    assert sell["price"] == round_to_tick_down(65000.0, True)
+    assert sell["executed_at"] == "2026-07-03T15:30:00"
+
+
+def test_nan_bar_position_skipped_others_still_reconciled(repo):
+    """open=NaN 봉만 있는 포지션은 skipped, 다른 포지션 정산은 계속된다."""
+    _open(repo, symbol="005930.KS")                        # NaN 데이터 포지션
+    _open(repo, symbol="000660.KS", quantity=5,
+          entry_price=200000.0, stop_loss=180000.0, take_profit=260000.0)
+
+    def fetch_daily(symbol, start, end):
+        if symbol == "005930.KS":
+            # 전 봉 NaN → 유효 봉 없음 → skipped (ValueError로 전체 중단되면 안 됨)
+            return _bars([("2026-07-02", float("nan"), float("nan"),
+                           float("nan"), float("nan"))])
+        # 000660: 손절 터치 (low=175000 <= stop=180000)
+        return _bars([("2026-07-02", 185000, 186000, 175000, 176000)])
+
+    result = reconcile_positions(repo, fetch_daily, as_of="2026-07-05")
+
+    assert result["checked"] == 2
+    assert result["closed"] == 1
+    assert result["skipped"] == 1
+    remaining = repo.list_open_positions()
+    assert len(remaining) == 1
+    assert remaining[0]["symbol"] == "005930.KS"
+    sell = [t for t in repo.list_trades() if t["side"] == "sell"][0]
+    assert sell["symbol"] == "000660.KS"
+    assert "손절" in sell["reason"]
+
+
 def test_fetch_failure_skips_position(repo):
     """fetch_daily 예외 → skipped, 포지션 유지."""
     _open(repo)

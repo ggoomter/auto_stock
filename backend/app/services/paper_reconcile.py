@@ -11,13 +11,17 @@
     → 갭상승 개장이어도 목표가(더 낮은 값) 사용.
   - 같은 봉 동시 터치 → 손절 우선 (백테스트 엔진 backtest.py와 동일 규칙).
 """
+import math
 from datetime import datetime, timedelta
-from typing import Callable, Optional
+from typing import Callable
 
 import pandas as pd
 
 from ..utils.tick_size import round_to_tick_down
 from .paper_execution import is_korean_symbol
+
+# _scan_bars 결과: 유효 봉이 하나도 없어 판단 불가함을 나타내는 센티널
+_NO_VALID_BARS = object()
 
 
 def reconcile_positions(repo,
@@ -57,7 +61,22 @@ def reconcile_positions(repo,
                             "status": "skipped", "reason": "데이터 없음"})
             continue
 
-        hit = _scan_bars(pos, bars)
+        # 한 포지션의 스캔 예외(이상 데이터 등)가 나머지 포지션 정산을 막지 않게
+        try:
+            hit = _scan_bars(pos, bars)
+        except Exception as exc:
+            skipped += 1
+            details.append({"id": pos["id"], "symbol": symbol,
+                            "status": "skipped", "reason": f"스캔 실패: {exc}"})
+            continue
+
+        if hit is _NO_VALID_BARS:
+            # 전 봉이 무효(거래정지 OHLC=0·NaN) → 판단 불가, 보수적으로 유지
+            skipped += 1
+            details.append({"id": pos["id"], "symbol": symbol,
+                            "status": "skipped", "reason": "유효 봉 없음"})
+            continue
+
         if hit is None:
             details.append({"id": pos["id"], "symbol": symbol, "status": "held"})
             continue
@@ -73,19 +92,40 @@ def reconcile_positions(repo,
             "skipped": skipped, "details": details}
 
 
-def _scan_bars(pos: dict, bars: pd.DataFrame) -> Optional[tuple]:
-    """날짜 오름차순으로 첫 손절/익절 터치를 찾는다. 없으면 None.
+def _is_valid_bar(open_price: float, high: float, low: float) -> bool:
+    """유효 봉 판정 — 거래정지일(pykrx OHLC=0)·NaN 봉을 걸러낸다.
 
-    반환: (exit_price, exit_reason, exit_at)
+    low=0이면 'low <= stop_loss'가 항상 참이 되어 0원 청산이 DB에 기록되는
+    오염 경로(Phase 1에서 막았던 0원 체결 재발)이므로 반드시 스킵.
+    """
+    for v in (open_price, high, low):
+        if not math.isfinite(v) or v <= 0:
+            return False
+    return True
+
+
+def _scan_bars(pos: dict, bars: pd.DataFrame):
+    """날짜 오름차순으로 첫 손절/익절 터치를 찾는다.
+
+    반환:
+      - (exit_price, exit_reason, exit_at): 터치 발견
+      - None: 유효 봉은 있었으나 터치 없음 (유지)
+      - _NO_VALID_BARS: 유효 봉이 하나도 없음 (판단 불가 → skipped)
     """
     korean = is_korean_symbol(pos["symbol"])
     stop_loss = pos.get("stop_loss")
     take_profit = pos.get("take_profit")
+    saw_valid_bar = False
 
     for idx, row in bars.sort_index().iterrows():
         open_price = float(row["open"])
         high = float(row["high"])
         low = float(row["low"])
+
+        # 거래정지(OHLC=0)·NaN 봉 스킵 = 보수적 유지 (0원 청산 오염 방지)
+        if not _is_valid_bar(open_price, high, low):
+            continue
+        saw_valid_bar = True
         exit_at = _exit_at(idx)
 
         # 1) 손절 우선: min(open, stop) — 갭하락이면 개장가(더 불리)
@@ -98,7 +138,7 @@ def _scan_bars(pos: dict, bars: pd.DataFrame) -> Optional[tuple]:
             exit_price = round_to_tick_down(take_profit, korean)
             return exit_price, "익절매(정산)", exit_at
 
-    return None
+    return None if saw_valid_bar else _NO_VALID_BARS
 
 
 def _next_day(entry_at: str) -> str:
@@ -108,7 +148,12 @@ def _next_day(entry_at: str) -> str:
 
 
 def _exit_at(idx) -> str:
-    """봉 날짜(index) → 'YYYY-MM-DDT15:30:00' (장 마감 시각)."""
+    """봉 날짜(index) → 'YYYY-MM-DDT15:30:00' (장 마감 시각).
+
+    TODO(Task 7): as_of를 '오늘'로 주고 15:30 이전에 실행하면 오늘 봉의
+    exit_at이 미래 시각이 된다 — 오케스트레이터에서 as_of를 전일(또는
+    마감 이후)로 선택해 호출할 것.
+    """
     if isinstance(idx, str):
         date_str = idx[:10]
     else:
@@ -144,6 +189,9 @@ def _fetch_korean(symbol: str, start: str, end: str) -> pd.DataFrame:
 
 
 def _fetch_us(symbol: str, start: str, end: str) -> pd.DataFrame:
+    # TODO(Task 7): yfinance history(end=)는 배타(end 당일 제외), pykrx는
+    # 포함(end 당일 포함) — as_of 당일 봉까지 필요하면 미국 종목은 end+1일을
+    # 넘기도록 오케스트레이터에서 보정할 것 (비대칭 주의).
     try:
         import yfinance as yf
         df = yf.Ticker(symbol).history(start=start, end=end)
