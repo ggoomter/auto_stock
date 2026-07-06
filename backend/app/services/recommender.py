@@ -317,11 +317,39 @@ def technical_signals(symbol: str, ohlcv: pd.DataFrame) -> list[dict]:
     return [gc, rsi_cond, near]
 
 
+# ── 추세 건전성 게이트 ────────────────────────────────────────────
+def trend_gate(ohlcv: pd.DataFrame | None) -> dict:
+    """종가 ≥ 200일 이동평균 게이트 — 하락 추세 종목의 추천 진입 차단.
+
+    실측 근거: 하락 추세 역행 매수(지표 역추세·물타기)는 전부 음의 기대값
+    (claudedocs/strategy_verification_2026-07-06.md 3차 검증). 펀더멘털이
+    좋아도 추세가 무너진 종목(예: 고점 대비 -50%대 하락 중)은 추천 부적격.
+    """
+    if ohlcv is None or len(ohlcv) < _MIN_ROWS:
+        return _cond("상승 추세", "Trend", "종가 ≥ 200일 이동평균",
+                     "데이터 부족", False)
+    close = ohlcv["close"].astype(float)
+    ma200 = close.rolling(200).mean().iloc[-1]
+    cur = close.iloc[-1]
+    passed = bool(pd.notna(ma200) and ma200 > 0 and cur >= ma200)
+    actual = (f"200일선 대비 {(cur / ma200 - 1) * 100:+.1f}%"
+              if pd.notna(ma200) and ma200 > 0 else "데이터 부족")
+    return _cond("상승 추세", "Trend", "종가 ≥ 200일 이동평균", actual, passed)
+
+
 # ── 점수 ──────────────────────────────────────────────────────────
 def score(passed_conditions: list[dict], signals: list[dict]) -> float:
-    """펀더멘털 통과 1개당 20점(최대 60) + 기술 시그널 1개당 ≈13.3점(최대 40)."""
+    """펀더멘털 통과 1개당 20점(최대 60) + 기술 시그널 1개당 ≈13.3점(최대 40).
+
+    Trend 게이트 조건은 제외 — 생존 종목 전원이 통과라 점수에 넣으면
+    일괄 가산만 되고 변별력이 없다 (게이트는 필터, 점수는 순위).
+    """
     fund_passed = min(sum(1 for c in passed_conditions if c.get("passed")), 3)
-    sig_passed = min(sum(1 for s in signals if s.get("passed")), 3)
+    sig_passed = min(
+        sum(1 for s in signals
+            if s.get("passed") and s.get("condition_name_en") != "Trend"),
+        3,
+    )
     total = fund_passed * _FUND_POINT + sig_passed * _SIG_POINT
     return round(total, 1)
 
@@ -384,19 +412,30 @@ def generate_recommendations(
     )
 
     scored: list[tuple[Candidate, list[dict], list[dict], float]] = []
+    trend_rejected = 0
     for cand, conds in ranked[:max_technical]:
         ohlcv = _fetch_ohlcv(cand.symbol, rec_date)
-        signals = technical_signals(cand.symbol, ohlcv)
+        gate = trend_gate(ohlcv)
+        if not gate["passed"]:
+            # 하락 추세(종가 < 200일선) → 점수와 무관하게 추천 제외
+            trend_rejected += 1
+            time.sleep(0.3)
+            continue
+        signals = technical_signals(cand.symbol, ohlcv) + [gate]
         scored.append((cand, conds, signals, score(conds, signals)))
         time.sleep(0.3)  # pykrx 요청 간 예의상 딜레이
 
     scored.sort(key=lambda x: x[3], reverse=True)
+    # 재생성 시 옛 추천이 섞이지 않도록 해당일 기존 행 제거 후 저장
+    if hasattr(repo, "delete_by_date"):
+        repo.delete_by_date(rec_date)
     for cand, conds, signals, sc in scored[:top_k]:
         repo.save(rec_date, cand.symbol, cand.name, sc, conds, signals)
 
     return {
         "universe": len(universe),
         "filtered": len(filtered),
+        "trend_rejected": trend_rejected,
         "saved": min(top_k, len(scored)),
         "universe_source": meta.get("universe_source", "krx"),
     }

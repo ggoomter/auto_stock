@@ -235,3 +235,74 @@ def test_generate_recommendations_respects_top_k():
     assert stats["filtered"] == 5
     assert stats["saved"] == 2
     assert len(repo.saved) == 2
+
+
+# ── 추세 건전성 게이트 (하락 추세 종목 추천 차단) ──────────────────
+def _downtrend_series() -> pd.DataFrame:
+    # 280일 연속 하락 (200 → 60): 종가가 200일 이동평균 아래 → 게이트 미달
+    closes = [200.0 - i * 0.5 for i in range(280)]
+    return _make_ohlcv(closes)
+
+
+def test_generate_rejects_downtrend_below_ma200():
+    """펀더멘털이 좋아도 종가 < MA200(하락 추세)이면 추천에서 제외.
+
+    근거: 하락 추세 역행 매수 전략 전부 음의 기대값 (strategy_verification 3차).
+    """
+    universe = [Candidate(symbol="000001", name="A", close=60.0,
+                          per=10.0, pbr=1.5, roe=0.20, market_cap=3e12)]
+    repo = _FakeRepo()
+    with patch("app.services.recommender.build_universe", return_value=universe), \
+         patch("app.services.recommender._fetch_ohlcv",
+               return_value=_downtrend_series()), \
+         patch("app.services.recommender.time.sleep"):
+        stats = generate_recommendations(repo, "2026-07-05")
+
+    assert stats["saved"] == 0
+    assert stats["trend_rejected"] == 1
+    assert repo.saved == []
+
+
+def test_uptrend_includes_trend_condition_in_signals():
+    """상승 추세 통과 종목은 시그널 목록에 '상승 추세' 조건이 포함되어 저장."""
+    universe = [Candidate(symbol="000001", name="A", close=130.0,
+                          per=10.0, pbr=1.5, roe=0.20, market_cap=3e12)]
+    repo = _FakeRepo()
+    with patch("app.services.recommender.build_universe", return_value=universe), \
+         patch("app.services.recommender._fetch_ohlcv",
+               return_value=_golden_cross_series()), \
+         patch("app.services.recommender.time.sleep"):
+        stats = generate_recommendations(repo, "2026-07-05")
+
+    assert stats["saved"] == 1
+    trend = [s for s in repo.saved[0]["technical_signals"]
+             if s["condition_name_en"] == "Trend"]
+    assert len(trend) == 1 and trend[0]["passed"] is True
+
+
+def test_score_ignores_trend_gate_condition():
+    """Trend 게이트는 생존자 전원이 통과라 점수에 포함하면 안 됨 (등수 왜곡 방지)"""
+    trend_only = [{"condition_name": "상승 추세", "condition_name_en": "Trend",
+                   "required_value": "", "actual_value": "", "passed": True}]
+    assert score([], trend_only) == 0.0
+
+
+def test_regeneration_clears_stale_rows(tmp_path):
+    """같은 날짜로 재생성하면 이전 추천이 삭제되고 새 결과만 남는다."""
+    from app.db.database import init_db
+    from app.db.repositories import RecommendationRepository
+    db = str(tmp_path / "t.db")
+    init_db(db)
+    repo = RecommendationRepository(db)
+    repo.save("2026-07-05", "999999", "옛종목", 90.0, [], [])
+
+    universe = [Candidate(symbol="000001", name="A", close=130.0,
+                          per=10.0, pbr=1.5, roe=0.20, market_cap=3e12)]
+    with patch("app.services.recommender.build_universe", return_value=universe), \
+         patch("app.services.recommender._fetch_ohlcv",
+               return_value=_golden_cross_series()), \
+         patch("app.services.recommender.time.sleep"):
+        generate_recommendations(repo, "2026-07-05")
+
+    rows = repo.list_by_date("2026-07-05")
+    assert [r["symbol"] for r in rows] == ["000001"]  # 옛종목(999999) 제거됨

@@ -90,8 +90,10 @@ function formatJobDetail(jobKey: string, detail: string | null | undefined): str
     if (d.skipped === 'weekend') return '주말 휴장';
     if (jobKey === 'news_crawl')
       return `수집 ${d.fetched ?? 0}건 · 신규 저장 ${d.inserted ?? 0}건 · 종목 연결 ${d.linked_symbols ?? 0}건`;
-    if (jobKey === 'recommendations')
-      return `후보 ${d.universe ?? '-'}개 · 조건 통과 ${d.filtered ?? '-'}개 · 추천 ${d.saved ?? '-'}개`;
+    if (jobKey === 'recommendations') {
+      const trend = typeof d.trend_rejected === 'number' ? ` · 하락추세 제외 ${d.trend_rejected}개` : '';
+      return `후보 ${d.universe ?? '-'}개 · 조건 통과 ${d.filtered ?? '-'}개${trend} · 추천 ${d.saved ?? '-'}개`;
+    }
     if (jobKey === 'paper_reconcile')
       return `점검 ${d.checked ?? 0}건 · 청산 ${d.closed ?? 0}건 · 유지 ${d.skipped ?? 0}건`;
     if (jobKey === 'crisis_check') {
@@ -337,21 +339,19 @@ function RecommendationCard({ rec }: { rec: TodayRecommendation }) {
           </div>
         )}
 
-        {/* 시그널 배지 */}
-        {rec.technical_signals.length > 0 && (
+        {/* 시그널 배지 — 통과한 신호만 표시 (미달 신호를 나열하면 성립한 것처럼 오독됨) */}
+        {rec.technical_signals.filter((s) => s.passed).length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
-            {rec.technical_signals.map((sig, i) => (
-              <span
-                key={i}
-                className={`text-xs font-medium px-2 py-0.5 rounded ${
-                  sig.passed
-                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                }`}
-              >
-                {sig.condition_name}
-              </span>
-            ))}
+            {rec.technical_signals
+              .filter((sig) => sig.passed)
+              .map((sig, i) => (
+                <span
+                  key={i}
+                  className="text-xs font-medium px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                >
+                  {sig.condition_name}
+                </span>
+              ))}
           </div>
         )}
 

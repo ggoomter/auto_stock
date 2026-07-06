@@ -317,6 +317,17 @@ class RecommendationRepository:
         finally:
             conn.close()
 
+    def delete_by_date(self, rec_date: str) -> int:
+        """해당 날짜 추천 전체 삭제 — 재생성 시 옛 종목 잔존 방지. 삭제 행 수 반환."""
+        conn = get_connection(self._db_path)
+        try:
+            cur = conn.execute(
+                "DELETE FROM recommendations WHERE rec_date = ?", (rec_date,))
+            conn.commit()
+            return cur.rowcount
+        finally:
+            conn.close()
+
     def list_by_date(self, rec_date: str) -> list[dict]:
         """score 내림차순. JSON 컬럼은 json.loads 해서 list로 반환."""
         conn = get_connection(self._db_path)
