@@ -28,7 +28,7 @@ class DateRange(BaseModel):
 class RiskParams(BaseModel):
     stop_pct: float = Field(default=0.07, ge=0.01, le=0.5)
     take_pct: float = Field(default=0.15, ge=0.01, le=10.0)  # 최대 10.0 (익절 수치 보수적 제한)
-    position_sizing: Literal["equal_weight", "vol_target_10", "kelly"] = "vol_target_10"
+    position_sizing: Literal["equal_weight", "vol_target_10", "vol_target_20", "kelly"] = "vol_target_10"
     trailing_pct: float = Field(default=0.10, ge=0.01, le=0.5)
     max_risk_per_trade_pct: float = Field(default=0.02, ge=0.0005, le=1.0)
     max_portfolio_drawdown_pct: float = Field(default=0.30, ge=0.05, le=0.9)

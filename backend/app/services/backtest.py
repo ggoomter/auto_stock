@@ -188,19 +188,11 @@ class BacktestEngine:
                     pos = positions[sym]
                     pos["last_close"] = close_price # 평가용 업데이트
 
-                    # 고가 갱신 (트레일링 스탑용)
-                    if high_price > pos["highest_price"]:
-                        pos["highest_price"] = high_price
-
-                    # 트레일링 스탑 업데이트
-                    trailing_stop = pos["highest_price"] * (1 - self.risk_params.trailing_pct)
-                    if trailing_stop > pos["stop_loss"]:
-                        pos["stop_loss"] = trailing_stop
-
                     # 1) 시그널에 의한 청산 (Pending Exit)
                     if sym in pending_exits:
                         exit_price = self._execute_exit_price(open_price)
-                        cash, pnl, pnl_pct = self._close_position_logic(pos, exit_price, current_date, "exit_signal_open")
+                        proceeds, pnl, pnl_pct = self._close_position_logic(pos, exit_price, current_date, "exit_signal_open")
+                        cash += proceeds
                         
                         self._record_trade(sym, pos, exit_price, current_date, "exit_signal_open", pnl, pnl_pct, cash + self._get_positions_value(positions, sym)) # 잔고는 근사치
                         
@@ -231,15 +223,18 @@ class BacktestEngine:
                     if low_price <= pos["stop_loss"]:
                         exit_triggered = True
                         exit_reason = "stop_loss"
-                        exit_price_level = pos["stop_loss"]
+                        # 시가가 손절가 아래로 갭 하락하면 손절가 체결은 불가능 — 시가 체결
+                        exit_price_level = min(open_price, pos["stop_loss"])
                     elif high_price >= pos["take_profit"]:
                         exit_triggered = True
                         exit_reason = "take_profit"
-                        exit_price_level = pos["take_profit"]
+                        # 시가가 익절가 위로 갭 상승하면 시가 체결
+                        exit_price_level = max(open_price, pos["take_profit"])
 
                     if exit_triggered:
                         execution_price = self._execute_exit_price(exit_price_level)
-                        cash, pnl, pnl_pct = self._close_position_logic(pos, execution_price, current_date, exit_reason)
+                        proceeds, pnl, pnl_pct = self._close_position_logic(pos, execution_price, current_date, exit_reason)
+                        cash += proceeds
                         
                         self._record_trade(sym, pos, execution_price, current_date, exit_reason, pnl, pnl_pct, cash + self._get_positions_value(positions, sym))
                         
@@ -251,6 +246,14 @@ class BacktestEngine:
                         consecutive_losses[sym] = 0 if pnl > 0 else consecutive_losses[sym] + 1
                         max_consecutive_losses_observed = max(max_consecutive_losses_observed, consecutive_losses[sym])
                         continue
+
+                    # 트레일링 스탑 갱신 — 당일 고가/저가의 발생 순서를 알 수 없으므로
+                    # 당일 고가로 올린 스탑은 다음 날부터 적용 (intraday look-ahead 방지)
+                    if high_price > pos["highest_price"]:
+                        pos["highest_price"] = high_price
+                    trailing_stop = pos["highest_price"] * (1 - self.risk_params.trailing_pct)
+                    if trailing_stop > pos["stop_loss"]:
+                        pos["stop_loss"] = trailing_stop
 
                 # --- 포지션 진입 (Entry) ---
                 # 포지션이 없고, 진입 대기 중이며, 거래 중지가 아니고, 쿨다운이 없을 때
@@ -333,7 +336,8 @@ class BacktestEngine:
                 final_close = pos["last_close"]
                 
             execution_price = self._execute_exit_price(final_close)
-            cash, pnl, pnl_pct = self._close_position_logic(pos, execution_price, final_date, "final_exit")
+            proceeds, pnl, pnl_pct = self._close_position_logic(pos, execution_price, final_date, "final_exit")
+            cash += proceeds
             self._record_trade(sym, pos, execution_price, final_date, "final_exit", pnl, pnl_pct, cash)
             del positions[sym]
 
@@ -499,13 +503,21 @@ class BacktestEngine:
             # 현재 구조상 외부에서 fraction을 제어하거나 여기서 하드코딩해야 함.
             # 일단 1.0으로 두고 determine_shares에서 cash 제한을 받도록 함.
         
-        if self.risk_params.position_sizing == "vol_target_10":
+        if self.risk_params.position_sizing in ("vol_target_10", "vol_target_20"):
+            target_vol = 0.20 if self.risk_params.position_sizing == "vol_target_20" else 0.10
+            current_vol = 0.0
             if "VOL_annualized" in historical_data.columns:
-                current_vol = historical_data["VOL_annualized"].iloc[-1]
-                if current_vol > 0:
-                    target_vol = 0.10
-                    size = min(target_vol / current_vol, 1.0)
-                    return float(size)
+                current_vol = float(historical_data["VOL_annualized"].iloc[-1] or 0.0)
+            else:
+                # 데이터에 변동성 컬럼이 없으면 최근 60일 수익률로 직접 계산
+                # (기존에는 조용히 1.0 전액 폴백 → vol targeting 미작동)
+                close_col = next((c for c in ("close", "Close", "CLOSE") if c in historical_data.columns), None)
+                if close_col is not None:
+                    returns = historical_data[close_col].pct_change().dropna().tail(60)
+                    if len(returns) >= 20:
+                        current_vol = float(returns.std() * np.sqrt(252))
+            if current_vol > 0:
+                return float(min(target_vol / current_vol, 1.0))
             return 1.0
             
         if self.risk_params.position_sizing == "kelly":
