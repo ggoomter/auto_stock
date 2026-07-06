@@ -15,6 +15,8 @@ Phase 1~4 완료 후 이월된 작업 목록. 우선순위순.
 6. LIVE 매매 개방 전 필수: paper/live 체결 테이블 분리(모드 컬럼), 브로커 `buy_stock/sell_stock` 구현, `/trading/start` 인증, 시장가 주문 삼항식 버그(`broker_api.py`).
 6-1. 한국 주식 백테스트 초기자본 100만원(`routes.py:377`) — 고가주는 리스크 캡(2%) 적용 시 0~1주만 매수 가능해 결과 왜곡. 최소 1,000만원 이상으로 상향 또는 사용자 입력화.
 6-2. super_momentum이 KR 5종목 11년 검증에서 PF 0.58(음의 기대값) — 한국 시장 실전 투입 부적격. 조건 재점검 또는 시장별 활성화 플래그.
+6-3. **한국 시장 전략 재설계** — KR 20종목 2차 검증에서 modern_livermore PF 0.70, buffett PF 0.86 모두 음의 기대값, lynch만 PF 1.52(단 CAGR 0.8%). 현재 전략셋으로는 한국 시장 실전 부적격. 상세: `claudedocs/strategy_verification_2026-07-06.md` 2차 검증.
+6-4. **위기 매수 프로토콜 2단계** — 1단계(감지·알림·상태 영속화, `crisis_protocol.py`)는 완료. 2단계: 트랜치 발동 시 페이퍼 계좌에 지수 ETF(KODEX200/SPY) 분할 매수 자동 실행 + 예비대 현금 계정 분리 + rearm 시 보유분 정리 로직.
 7. Chanos 전략 — backtest 엔진에 숏 로직 구현 후 재등록.
 8. KRX 일반 계정 확보 시 `.env`에 KRX_ID/PW — KRX 벌크 데이터(PBR 포함) 우선 사용됨. 현재는 네이버 폴백(PER·ROE만).
 9. daily_pnl·승률 등 당일 지표가 메모리(trade_history) 의존 — 재시작 시 리셋. DB 기반 복원.
