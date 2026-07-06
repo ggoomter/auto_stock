@@ -171,3 +171,29 @@ def test_status_error_hides_internal_detail(wire_repos, monkeypatch):
     resp = client.get("/api/v1/today/status")
     assert resp.status_code == 500
     assert resp.json()["detail"] == "일시적인 오류가 발생했습니다"
+
+
+# ── 추천: 분석 시점(analyzed_at) — 추천 작업의 성공 완료 시각 ──
+def test_recommendations_include_analyzed_at(wire_repos):
+    RecommendationRepository(wire_repos).save(
+        rec_date="2026-07-05", symbol="005930.KS", name="삼성전자",
+        score=95.0, passed_conditions=[], technical_signals=[])
+    JobRunRepository(wire_repos).record(
+        "recommendations", "2026-07-05", "success",
+        detail='{"universe": 300, "filtered": 20, "saved": 10}',
+        finished_at="2026-07-05T09:12:34")
+
+    resp = client.get("/api/v1/today/recommendations?date=2026-07-05")
+    assert resp.status_code == 200
+    assert resp.json()["analyzed_at"] == "2026-07-05T09:12:34"
+
+
+def test_recommendations_analyzed_at_null_without_job_record(wire_repos):
+    """작업 기록이 없으면(수동 저장 등) analyzed_at은 None — 시각 조작 금지"""
+    RecommendationRepository(wire_repos).save(
+        rec_date="2026-07-05", symbol="005930.KS", name="삼성전자",
+        score=95.0, passed_conditions=[], technical_signals=[])
+
+    resp = client.get("/api/v1/today/recommendations?date=2026-07-05")
+    assert resp.status_code == 200
+    assert resp.json()["analyzed_at"] is None

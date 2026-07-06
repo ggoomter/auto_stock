@@ -523,6 +523,8 @@ export interface TodayRecommendation {
 
 export interface TodayRecommendationsResponse {
   date: string | null;
+  /** 추천 작업이 성공 완료된 시각 (ISO) — 분석 기준 시점 표시용 */
+  analyzed_at: string | null;
   count: number;
   disclaimer: string;
   recommendations: TodayRecommendation[];

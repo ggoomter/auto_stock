@@ -64,8 +64,48 @@ const JOB_LABELS: Record<string, string> = {
   news_crawl: '뉴스',
   recommendations: '추천',
   paper_reconcile: '정산',
+  crisis_check: '위기감시',
 };
-const JOB_KEYS = ['news_crawl', 'recommendations', 'paper_reconcile'];
+const JOB_KEYS = ['news_crawl', 'recommendations', 'paper_reconcile', 'crisis_check'];
+
+/** ISO 시각 → 'HH:MM' (표시용). 파싱 불가 시 null */
+function formatTimeHHMM(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const m = iso.match(/T(\d{2}:\d{2})/);
+  return m ? m[1] : null;
+}
+
+/** ISO 시각 → 'YYYY-MM-DD HH:MM' (분석 기준 시점 표시용 — 연도 포함 명시) */
+function formatAnalyzedAt(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const m = iso.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+  return m ? `${m[1]} ${m[2]}` : iso;
+}
+
+/** 작업 detail(JSON 문자열)을 사람이 읽는 요약으로 변환. 실패 시 원문 유지 */
+function formatJobDetail(jobKey: string, detail: string | null | undefined): string | null {
+  if (!detail) return null;
+  try {
+    const d = JSON.parse(detail);
+    if (d.skipped === 'weekend') return '주말 휴장';
+    if (jobKey === 'news_crawl')
+      return `수집 ${d.fetched ?? 0}건 · 신규 저장 ${d.inserted ?? 0}건 · 종목 연결 ${d.linked_symbols ?? 0}건`;
+    if (jobKey === 'recommendations')
+      return `후보 ${d.universe ?? '-'}개 · 조건 통과 ${d.filtered ?? '-'}개 · 추천 ${d.saved ?? '-'}개`;
+    if (jobKey === 'paper_reconcile')
+      return `점검 ${d.checked ?? 0}건 · 청산 ${d.closed ?? 0}건 · 유지 ${d.skipped ?? 0}건`;
+    if (jobKey === 'crisis_check') {
+      const parts = Object.entries(d).map(([market, v]) => {
+        const dd = (v as { drawdown?: number })?.drawdown;
+        return typeof dd === 'number' ? `${market} 고점대비 ${(dd * 100).toFixed(1)}%` : `${market} 조회실패`;
+      });
+      return parts.length > 0 ? parts.join(' · ') : detail;
+    }
+    return detail;
+  } catch {
+    return detail; // JSON이 아니면(실패 사유 문자열 등) 원문 표시
+  }
+}
 
 /** 작업 상태 → 색/문구 (색+텍스트로 의미 전달) */
 function jobBadgeStyle(status: string | undefined): { text: string; cls: string } {
@@ -129,9 +169,14 @@ function StatusStrip() {
             <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${badge.cls}`}>
               {badge.text}
             </span>
-            {job?.detail && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 max-w-[16rem] truncate" title={job.detail}>
-                {job.detail}
+            {formatJobDetail(key, job?.detail) && (
+              <span className="text-xs text-gray-500 dark:text-gray-400 max-w-[20rem] truncate" title={job?.detail ?? undefined}>
+                {formatJobDetail(key, job?.detail)}
+              </span>
+            )}
+            {formatTimeHHMM(job?.finished_at) && (
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {formatTimeHHMM(job?.finished_at)}
               </span>
             )}
           </div>
@@ -386,6 +431,17 @@ function RecommendationsSection() {
           {query.data?.disclaimer || '교육·연구용 정보로 투자 권유가 아닙니다.'}
         </p>
       </div>
+
+      {/* 분석 기준 시점 — 실시간이 아니라 '이 시각 데이터로 분석했음'을 명시 */}
+      {query.data && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          {formatAnalyzedAt(query.data.analyzed_at)
+            ? `분석 시점: ${formatAnalyzedAt(query.data.analyzed_at)} — 이 시각 수집 데이터 기준 (실시간 아님)`
+            : query.data.date
+              ? `기준일: ${query.data.date} (분석 완료 시각 기록 없음)`
+              : null}
+        </p>
+      )}
 
       {query.isLoading && <SectionSpinner label="추천 불러오는 중..." />}
       {query.isError && (

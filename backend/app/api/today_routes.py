@@ -94,8 +94,17 @@ async def get_today_recommendations(date: str | None = Query(default=None)):
         else:
             recs = repo.list_by_date(resolved_date)
 
+        # 분석 시점 = 해당 날짜 추천 작업(job_runs)의 성공 완료 시각.
+        # "오늘의 추천"이 언제 기준 데이터인지 사용자에게 명시하기 위함.
+        analyzed_at = None
+        if resolved_date is not None:
+            for run in _get_job_repo().get_runs(resolved_date):
+                if run.get("job_name") == "recommendations" and run.get("status") == "success":
+                    analyzed_at = run.get("finished_at")
+
         return {
             "date": resolved_date,
+            "analyzed_at": analyzed_at,
             "count": len(recs),
             "disclaimer": _DISCLAIMER,
             "recommendations": [
