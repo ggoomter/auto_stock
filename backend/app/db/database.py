@@ -81,6 +81,15 @@ CREATE TABLE IF NOT EXISTS job_runs (
     finished_at TEXT NOT NULL,
     UNIQUE (job_name, run_date)
 );
+
+CREATE TABLE IF NOT EXISTS crisis_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    market TEXT NOT NULL,
+    event_type TEXT NOT NULL,   -- 'deploy' | 'rearm'
+    stage INTEGER,              -- deploy 시 1~3, rearm 시 NULL
+    event_date TEXT NOT NULL,
+    drawdown REAL NOT NULL
+);
 """
 
 

@@ -23,7 +23,7 @@ def spies(monkeypatch):
     """3개 작업 함수를 성공 스텁으로 대체하고 호출 여부를 추적한다."""
     from app.services import daily_jobs
 
-    calls = {"news": 0, "reco": 0, "reconcile": 0}
+    calls = {"news": 0, "reco": 0, "reconcile": 0, "crisis": 0}
 
     def fake_build_name_map(*a, **k):
         return {}
@@ -48,6 +48,13 @@ def spies(monkeypatch):
                         fake_generate_recommendations)
     monkeypatch.setattr(daily_jobs.paper_reconcile, "reconcile_positions",
                         fake_reconcile_positions)
+
+    def fake_check_markets(*a, **k):
+        calls["crisis"] += 1
+        return {"KR": {"drawdown": -0.05, "deployed_stages": [], "rearmed": False}}
+
+    monkeypatch.setattr(daily_jobs.crisis_protocol, "check_markets",
+                        fake_check_markets)
     return calls
 
 
@@ -58,7 +65,7 @@ SATURDAY = "2026-07-04"  # 토요일
 def test_success_records_status_and_detail(db_path, spies):
     """3개 작업 모두 성공 → success 반환 + job_runs에 success + detail JSON 기록."""
     from app.services.daily_jobs import (
-        run_catchup, JOB_NEWS, JOB_RECO, JOB_RECONCILE,
+        run_catchup, JOB_NEWS, JOB_RECO, JOB_RECONCILE, JOB_CRISIS,
     )
 
     result = asyncio.run(run_catchup(db_path=db_path, today=WEEKDAY))
@@ -67,13 +74,15 @@ def test_success_records_status_and_detail(db_path, spies):
         JOB_NEWS: "success",
         JOB_RECO: "success",
         JOB_RECONCILE: "success",
+        JOB_CRISIS: "success",
     }
-    assert spies == {"news": 1, "reco": 1, "reconcile": 1}
+    assert spies == {"news": 1, "reco": 1, "reconcile": 1, "crisis": 1}
 
     repo = JobRunRepository(db_path)
     assert repo.has_succeeded(JOB_NEWS, WEEKDAY) is True
     assert repo.has_succeeded(JOB_RECO, WEEKDAY) is True
     assert repo.has_succeeded(JOB_RECONCILE, WEEKDAY) is True
+    assert repo.has_succeeded(JOB_CRISIS, WEEKDAY) is True
 
     # detail이 통계 JSON으로 저장됐는지 확인
     from app.db.database import get_connection
@@ -133,6 +142,9 @@ def test_failure_isolation(db_path, monkeypatch):
         daily_jobs.paper_reconcile, "reconcile_positions",
         lambda *a, **k: calls.__setitem__("reconcile", calls["reconcile"] + 1)
         or {"checked": 0, "closed": 0, "skipped": 0, "details": []})
+    # 위기 체크는 네트워크 금지 — 성공 스텁으로 대체
+    monkeypatch.setattr(daily_jobs.crisis_protocol, "check_markets",
+                        lambda *a, **k: {"KR": {"deployed_stages": []}})
 
     result = asyncio.run(run_catchup(db_path=db_path, today=WEEKDAY))
 
@@ -209,6 +221,10 @@ def test_weekend_skips_reco_and_reconcile(db_path, spies):
     # 추천·정산 작업 함수는 호출되지 않음
     assert spies["reco"] == 0
     assert spies["reconcile"] == 0
+    # 위기 체크는 주말에도 실행 (금요일 폭락 → 주말 기동 시 알림)
+    from app.services.daily_jobs import JOB_CRISIS
+    assert result[JOB_CRISIS] == "success"
+    assert spies["crisis"] == 1
 
     # 같은 날 재실행을 막기 위해 success로 기록됨
     repo = JobRunRepository(db_path)

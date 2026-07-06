@@ -19,7 +19,7 @@ from ..db.repositories import (
     RecommendationRepository,
     PaperTradingRepository,
 )
-from . import naver_news, recommender, paper_reconcile
+from . import naver_news, recommender, paper_reconcile, crisis_protocol
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 JOB_NEWS = "news_crawl"
 JOB_RECO = "recommendations"
 JOB_RECONCILE = "paper_reconcile"
+JOB_CRISIS = "crisis_check"
 
 # 장중 뉴스 재수집: 평일 09:00~15:30, 30분 간격
 _MARKET_OPEN = dtime(9, 0)
@@ -55,6 +56,10 @@ def _do_news(db_path: str | None) -> dict:
 def _do_reco(db_path: str | None, today: str) -> dict:
     return recommender.generate_recommendations(
         repo=RecommendationRepository(db_path), rec_date=today)
+
+
+def _do_crisis(db_path: str | None, today: str) -> dict:
+    return crisis_protocol.check_markets(db_path=db_path, today=today)
 
 
 def _do_reconcile(db_path: str | None, today: str) -> dict:
@@ -133,6 +138,11 @@ async def run_catchup(db_path: str | None = None,
     else:
         results[JOB_RECONCILE] = await _run_job(
             job_repo, JOB_RECONCILE, today, lambda: _do_reconcile(db_path, today))
+
+    # 4) 위기 매수 프로토콜 — 폭락은 요일을 가리지 않으므로 주말에도 체크
+    #    (금요일 폭락을 주말 기동 시 알림받을 수 있어야 함)
+    results[JOB_CRISIS] = await _run_job(
+        job_repo, JOB_CRISIS, today, lambda: _do_crisis(db_path, today))
 
     return results
 

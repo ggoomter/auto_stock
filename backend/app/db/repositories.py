@@ -350,3 +350,45 @@ class RecommendationRepository:
             return row["d"] if row is not None and row["d"] is not None else None
         finally:
             conn.close()
+
+
+class CrisisRepository:
+    """위기 매수 프로토콜 이벤트 영속화 (append-only)
+
+    활성 트랜치 = 해당 시장의 마지막 'rearm' 이벤트 이후 'deploy'된 stage 집합.
+    """
+
+    def __init__(self, db_path: str | None = None):
+        self._db_path = db_path
+
+    def record_event(self, market: str, event_type: str, stage: int | None,
+                     event_date: str, drawdown: float) -> None:
+        conn = get_connection(self._db_path)
+        try:
+            conn.execute(
+                "INSERT INTO crisis_events (market, event_type, stage, event_date, drawdown) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (market, event_type, stage, event_date, drawdown),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def active_stages(self, market: str) -> set[int]:
+        """마지막 rearm 이후 발동된 트랜치 stage 집합"""
+        conn = get_connection(self._db_path)
+        try:
+            last_rearm = conn.execute(
+                "SELECT MAX(id) AS i FROM crisis_events "
+                "WHERE market = ? AND event_type = 'rearm'",
+                (market,),
+            ).fetchone()
+            after_id = last_rearm["i"] if last_rearm and last_rearm["i"] is not None else 0
+            rows = conn.execute(
+                "SELECT stage FROM crisis_events "
+                "WHERE market = ? AND event_type = 'deploy' AND id > ?",
+                (market, after_id),
+            ).fetchall()
+            return {row["stage"] for row in rows if row["stage"] is not None}
+        finally:
+            conn.close()
