@@ -40,25 +40,23 @@ REM --- 포트 충돌 체크 및 이전 인스턴스 종료 ---
 echo Checking for port conflicts...
 echo.
 
-REM 백엔드 포트 8650 체크
-netstat -ano | findstr :8650
+REM 백엔드 포트 8650 체크 (wmic은 Windows 11에서 제거됨 — 포트 점유 PID를 직접 종료)
+netstat -ano | findstr :8650 | findstr LISTENING
 if not errorlevel 1 (
     echo [WARNING] Port 8650 is already in use
     echo Attempting to stop previous backend instance...
-    wmic process where "commandline like '%%uvicorn%%app.main:app%%'" delete
-    wmic process where "commandline like '%%uvicorn_start.py%%'" delete
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8650 ^| findstr LISTENING') do taskkill /T /F /PID %%a
     timeout /t 2 /nobreak
     echo [OK] Previous backend stopped
     echo.
 )
 
 REM 프론트엔드 포트 4783 체크
-netstat -ano | findstr :4783
+netstat -ano | findstr :4783 | findstr LISTENING
 if not errorlevel 1 (
     echo [WARNING] Port 4783 is already in use
     echo Attempting to stop previous frontend instance...
-    wmic process where "commandline like '%%vite%%'" delete
-    wmic process where "commandline like '%%npm%%run%%dev%%'" delete
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :4783 ^| findstr LISTENING') do taskkill /T /F /PID %%a
     timeout /t 2 /nobreak
     echo [OK] Previous frontend stopped
     echo.
@@ -140,15 +138,14 @@ echo.
 echo Stopping services...
 echo.
 
-REM Backend 프로세스 종료
+REM Backend 프로세스 종료 (포트 점유 PID 기준 — wmic은 Windows 11에서 제거됨,
+REM 창 제목은 자식 bat이 변경하므로 WINDOWTITLE 필터는 불충분)
 echo Stopping backend...
-taskkill /FI "WINDOWTITLE eq Backend Server*" /F 2>NUL
-wmic process where "commandline like '%%uvicorn%%app.main:app%%'" delete 2>NUL
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8650 ^| findstr LISTENING') do taskkill /T /F /PID %%a 2>NUL
 
 REM Frontend 프로세스 종료
 echo Stopping frontend...
-taskkill /FI "WINDOWTITLE eq Frontend Server*" /F 2>NUL
-wmic process where "commandline like '%%vite%%'" delete 2>NUL
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :4783 ^| findstr LISTENING') do taskkill /T /F /PID %%a 2>NUL
 
 echo.
 echo [OK] All services stopped.

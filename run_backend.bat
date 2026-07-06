@@ -18,16 +18,18 @@ if not exist venv (
     exit /b 1
 )
 
-call venv\Scripts\activate.bat
-echo [OK] Virtual environment activated
+REM activate.bat은 venv 생성 당시 경로(G: 드라이브)가 하드코딩돼 있어 무효 —
+REM PATH 조작 대신 venv의 python.exe를 직접 지정한다 (전역 python 오염 차단)
+set "VENV_PY=%~dp0backend\venv\Scripts\python.exe"
+echo [OK] Using venv python: %VENV_PY%
 
 echo.
 echo [2/3] Checking dependencies...
-python -c "import fastapi, pandas, apscheduler" >nul 2>&1
+"%VENV_PY%" -c "import fastapi, pandas, apscheduler" >nul 2>&1
 if errorlevel 1 (
     echo [WARNING] Core dependencies missing
     echo Installing from requirements.txt...
-    pip install -q -r requirements.txt
+    "%VENV_PY%" -m pip install -q -r requirements.txt
     if errorlevel 1 (
         echo [ERROR] Failed to install dependencies!
         pause
@@ -35,10 +37,10 @@ if errorlevel 1 (
     )
 )
 
-python -c "import pandas_ta" >nul 2>&1
+"%VENV_PY%" -c "import pandas_ta" >nul 2>&1
 if errorlevel 1 (
     echo [WARNING] pandas-ta not found, installing without dependencies...
-    pip install --no-deps pandas-ta==0.4.71b0
+    "%VENV_PY%" -m pip install --no-deps pandas-ta==0.4.71b0
     if errorlevel 1 (
         echo [ERROR] Failed to install pandas-ta!
         pause
@@ -53,7 +55,10 @@ echo [3/3] Starting FastAPI server on http://localhost:8650 (port 8650)
 echo Press Ctrl+C to stop the server when finished.
 echo.
 
-python uvicorn_start.py
+REM 서버 출력을 logs\backend.log로 기록 — 최소화 창에서 죽어도 원인 추적 가능
+if not exist "%~dp0logs" mkdir "%~dp0logs"
+echo ===== [%date% %time%] backend start ===== >> "%~dp0logs\backend.log"
+"%VENV_PY%" uvicorn_start.py >> "%~dp0logs\backend.log" 2>&1
 
 if errorlevel 1 (
     echo.
