@@ -189,6 +189,85 @@ function StatusStrip() {
 }
 
 // ============================================================
+// 지표 한글 해설 — "왜 이 조건을 보는가"를 초보자 눈높이로 설명
+// ============================================================
+
+interface IndicatorGuide {
+  /** 이 지표가 무엇인지 (조건 체크리스트 각 행 아래 표시) */
+  meaning: string;
+  /** 통과 시 "왜 추천 근거가 되는지" 문장 (actual_value를 받아 완성) */
+  reason: (actual: string) => string;
+}
+
+const INDICATOR_GUIDE: Record<string, IndicatorGuide> = {
+  PER: {
+    meaning:
+      'PER(주가수익비율) = 주가 ÷ 주당 연간 이익. 회사가 버는 이익에 비해 주가가 몇 배인지를 나타내며, 낮을수록 이익 대비 주가가 싼 편입니다.',
+    reason: (a) => `이익에 비해 주가가 비싸지 않습니다 (PER ${a} — 25배 미만이면 고평가 부담이 적은 구간)`,
+  },
+  PBR: {
+    meaning:
+      'PBR(주가순자산비율) = 주가 ÷ 주당 순자산. 회사가 가진 자산 가치 대비 주가 수준으로, 낮을수록 자산 대비 저평가입니다.',
+    reason: (a) => `회사 자산 가치 대비 주가가 부담스럽지 않습니다 (PBR ${a})`,
+  },
+  ROE: {
+    meaning:
+      'ROE(자기자본이익률) = 순이익 ÷ 자기자본. 회사가 주주 돈으로 1년에 몇 %의 이익을 만드는지로, 높을수록 장사를 잘하는 회사입니다.',
+    reason: (a) => `주주 자본으로 이익을 잘 내는 회사입니다 (ROE ${a} — 10% 초과)`,
+  },
+  GoldenCross: {
+    meaning:
+      '골든크로스 = 최근 20일 평균 주가가 60일 평균 주가를 위로 뚫는 것. 단기 매수세가 중기 흐름보다 강해졌다는 신호입니다.',
+    reason: () => `최근 매수세가 붙으며 20일 평균선이 60일 평균선을 상향 돌파했습니다`,
+  },
+  RSIRebound: {
+    meaning:
+      'RSI(상대강도지수)는 최근 14일간 상승·하락 강도로 과열(70↑)/과매도(30↓)를 재는 지표. "과매도 → 회복"은 단기 반등 신호입니다.',
+    reason: (a) => `과매도 구간까지 눌렸다가 회복을 시작했습니다 (${a})`,
+  },
+  NearHigh: {
+    meaning:
+      '52주 신고가 근접 = 현재 주가가 최근 1년 최고가의 95% 이상. 신고가 부근은 물린 매물(저항)이 적어 추세가 이어지기 쉽습니다.',
+    reason: (a) => `1년 최고가 부근이라 매물 저항이 적습니다 (${a})`,
+  },
+  Trend: {
+    meaning:
+      '상승 추세 = 종가가 200일 평균선 위. 장기 방향이 위를 향한다는 뜻이며, 이 조건에 미달(하락 추세)한 종목은 추천에서 아예 제외됩니다.',
+    reason: (a) => `장기(200일선) 상승 추세가 유지되고 있습니다 (${a})`,
+  },
+};
+
+/** 통과한 조건들을 한글 문장 목록으로 — "왜 이 종목을 추천하는가" */
+function WhyRecommended({ rec }: { rec: TodayRecommendation }) {
+  const passed = [...rec.passed_conditions, ...rec.technical_signals].filter((c) => c.passed);
+  if (passed.length === 0) return null;
+  return (
+    <div className="p-3 rounded-lg bg-primary-50 border border-primary-200 dark:bg-primary-900/20 dark:border-primary-800">
+      <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">
+        왜 이 종목이 추천되었나요?
+      </h4>
+      <ul className="space-y-1.5">
+        {passed.map((c, i) => {
+          const guide = INDICATOR_GUIDE[c.condition_name_en ?? ''];
+          const text = guide
+            ? guide.reason(c.actual_value || '')
+            : `${c.condition_name} 조건을 충족했습니다 (${c.actual_value || '-'})`;
+          return (
+            <li key={i} className="flex gap-2 text-xs text-gray-700 dark:text-gray-300">
+              <span className="shrink-0 text-primary-600 dark:text-primary-400 font-bold">✓</span>
+              <span>{text}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+        미달 조건은 점수에 반영되지 않았으며, 아래 조건 체크에서 전체 판정을 확인할 수 있습니다.
+      </p>
+    </div>
+  );
+}
+
+// ============================================================
 // 조건 체크리스트 (초록/빨강 박스 — MasterStrategyResults 패턴 참조)
 // ============================================================
 
@@ -227,6 +306,12 @@ function ConditionRow({ check }: { check: ConditionCheck }) {
             {check.actual_value || '데이터 없음'}
           </span>
         </div>
+        {/* 지표 한글 해설 — 이 조건이 무엇이고 왜 보는지 */}
+        {INDICATOR_GUIDE[check.condition_name_en ?? '']?.meaning && (
+          <p className="mt-1.5 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+            {INDICATOR_GUIDE[check.condition_name_en ?? ''].meaning}
+          </p>
+        )}
       </div>
       <span
         className={`ml-3 shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
@@ -365,6 +450,9 @@ function RecommendationCard({ rec }: { rec: TodayRecommendation }) {
       {expanded && (
         <div className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-4">
           {/* 조건 체크리스트 전체 */}
+          {/* 추천 사유 — 통과 지표를 한글 문장으로 풀어 설명 */}
+          <WhyRecommended rec={rec} />
+
           <div>
             <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">조건 체크</h4>
             <div className="space-y-2">
