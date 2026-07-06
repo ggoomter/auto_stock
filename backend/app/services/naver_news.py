@@ -17,7 +17,14 @@ from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
-from pykrx import stock
+
+# pykrx는 임포트 시점에 KRX 로그인(네트워크)을 시도한다 — VPN/SSL 환경에서
+# SSLError가 나도 앱은 떠야 하므로 실패 시 None (호출부 try/except가 네이버 폴백)
+try:
+    from pykrx import stock
+except Exception as _pykrx_exc:  # noqa: BLE001 - ImportError 외 네트워크 예외 포함
+    stock = None
+    logging.getLogger(__name__).warning("pykrx 임포트 실패(네트워크/SSL 추정): %s", _pykrx_exc)
 
 from app.services import naver_market
 

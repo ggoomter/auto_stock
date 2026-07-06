@@ -16,7 +16,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 import pandas as pd
-from pykrx import stock
+
+# pykrx는 임포트 시점에 KRX 로그인(네트워크)을 시도한다 — 실패해도 앱은 떠야 함
+# (stock=None이면 호출부 try/except의 AttributeError로 네이버 폴백 경로 동작)
+try:
+    from pykrx import stock
+except Exception as _pykrx_exc:  # noqa: BLE001
+    stock = None
+    logging.getLogger(__name__).warning("pykrx 임포트 실패(네트워크/SSL 추정): %s", _pykrx_exc)
 
 from app.services import naver_market
 

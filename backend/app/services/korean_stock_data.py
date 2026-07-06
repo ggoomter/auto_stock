@@ -14,9 +14,9 @@ warnings.filterwarnings('ignore')
 try:
     from pykrx import stock
     PYKRX_AVAILABLE = True
-except ImportError:
-    PYKRX_AVAILABLE = False
-    logger.warning("PyKrx를 사용할 수 없습니다. pip install pykrx를 실행하세요.")
+except Exception as _pykrx_exc:  # noqa: BLE001 - pykrx가 임포트 시 네트워크(KRX 로그인)를 타므로
+    PYKRX_AVAILABLE = False     # ImportError뿐 아니라 SSL/네트워크 예외도 흡수해야 앱이 뜬다
+    logger.warning("PyKrx를 사용할 수 없습니다(설치 또는 네트워크 문제): %s", _pykrx_exc)
 
 
 class KoreanStockDataFetcher:

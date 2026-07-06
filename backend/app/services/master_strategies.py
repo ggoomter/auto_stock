@@ -452,6 +452,63 @@ class LivermoreStrategy(MasterStrategy):
         )
 
 
+class TurtleATRLivermoreStrategy(MasterStrategy):
+    """
+    리버모어 진입 × 터틀(리처드 데니스) ATR 청산
+
+    진입: 순수 livermore와 동일 (52주 신고가 돌파 + 거래량 급증)
+    청산: 기존 livermore 청산 OR 샹들리에 이탈
+          (종가 < 22일 최고 종가 - 2.5 × ATR22 — 변동성에 맞춘 추세 종료 판정)
+
+    채택 근거 (실측 4차, claudedocs/strategy_verification_2026-07-06.md):
+    US40 기간분할 양쪽 모두 개선 — CAGR 9.2→10.2%, MDD -21.3→-16.7%,
+    Sharpe 0.63→0.69 (후반 0.84). 고정 % 트레일링보다 종목별 변동성에
+    적응하는 청산이 우수함이 재현됨. KR에서는 개선 없음(미채택 사유 기록).
+    """
+
+    def __init__(self):
+        super().__init__(
+            name="Livermore x Turtle ATR",
+            description="리버모어 신고가 돌파 진입 + 터틀식 샹들리에(ATR) 청산"
+        )
+        self._base = LivermoreStrategy()
+
+    def generate_signals(
+        self,
+        symbol: str,
+        price_data: pd.DataFrame,
+        **kwargs
+    ) -> Tuple[pd.Series, pd.Series]:
+        entry, base_exit = self._base.generate_signals(symbol, price_data, **kwargs)
+
+        cols = {c.lower(): c for c in price_data.columns}
+        close = price_data[cols["close"]].astype(float)
+        high = price_data[cols.get("high", cols["close"])].astype(float)
+        low = price_data[cols.get("low", cols["close"])].astype(float)
+
+        # ATR22 (단순 이동평균 TR) + 샹들리에: 22일 최고 종가 - 2.5×ATR
+        tr = pd.concat([
+            high - low,
+            (high - close.shift(1)).abs(),
+            (low - close.shift(1)).abs(),
+        ], axis=1).max(axis=1)
+        atr22 = tr.rolling(22).mean()
+        chandelier = close < (close.rolling(22).max() - 2.5 * atr22)
+
+        exit_ = _to_bool_series(
+            base_exit.reindex(close.index).fillna(False) | chandelier.fillna(False)
+        )
+        return _to_bool_series(entry), exit_
+
+    def get_risk_params(self) -> RiskParams:
+        return RiskParams(
+            stop_pct=0.08,      # 진입 직후 재해 방지용 손절 (livermore와 동일)
+            take_pct=10.0,      # 익절 목표 없음 — 청산 신호로만 매도
+            trailing_pct=0.5,   # 퍼센트 트레일링 사실상 비활성 (ATR 청산이 담당)
+            position_sizing="equal_weight",
+        )
+
+
 class ModernLivermoreStrategy(MasterStrategy):
     """
     제시 리버모어 현대 해석 전략
@@ -1082,6 +1139,7 @@ MASTER_STRATEGIES = {
     # "dalio": DalioStrategy(),  # ❌ 비활성화 (단일 종목에 부적합)
     "dca": DCAStrategy(),  # ✅ 정기 적립식 투자 (DCA)
     "livermore": LivermoreStrategy(),  # 순수 Livermore (역사적 방법론)
+    "livermore_atr": TurtleATRLivermoreStrategy(),  # ✅ 실측 4차 채택 (US 추세추종 개선판)
     "modern_livermore": ModernLivermoreStrategy(),  # 현대적 개선 Livermore
     "oneil": ONeilStrategy(),
     "wood": WoodStrategy(),  # 캐시 우드 - 혁신 기술 투자

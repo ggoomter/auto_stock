@@ -6,9 +6,15 @@
 - score: 5개 전부 통과 ≈ 100, 0개 = 0
 - generate_recommendations: build_universe/OHLCV mock으로 저장·통계 검증
 """
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 import pandas as pd
+
+
+def _patch_stock(module_path: str, **fns):
+    """pykrx stock을 Mock 묶음으로 통째 교체 — stock=None(임포트 실패) 환경에서도 결정론적"""
+    return patch(module_path, SimpleNamespace(**fns), create=True)
 
 from app.services.recommender import (
     Candidate,
@@ -206,12 +212,10 @@ def test_build_universe_negative_bps_roe_none():
     def fake_cap(date_str, market="KOSPI"):
         return cap_df if market == "KOSPI" else empty_df
 
-    with patch("app.services.recommender.stock.get_market_cap_by_ticker",
-               side_effect=fake_cap), \
-         patch("app.services.recommender.stock.get_market_fundamental_by_ticker",
-               return_value=fund_df), \
-         patch("app.services.recommender.stock.get_market_ticker_name",
-               return_value="테스트"):
+    with _patch_stock("app.services.recommender.stock",
+                      get_market_cap_by_ticker=Mock(side_effect=fake_cap),
+                      get_market_fundamental_by_ticker=Mock(return_value=fund_df),
+                      get_market_ticker_name=Mock(return_value="테스트")):
         cands = build_universe(top_n=10, date="20260703")
 
     assert len(cands) == 1
