@@ -133,6 +133,40 @@ def compute_dynamic_stop(bars: pd.DataFrame) -> float | None:
     return max(candidates) if candidates else None
 
 
+def run_daily_snapshot(repo, snap_repo,
+                       fetch_daily: Callable[[str, str, str], pd.DataFrame],
+                       as_of: str, initial_capital: float) -> dict:
+    """가상 계좌의 일별 자산 스냅샷 저장 — 수익 곡선의 원천 데이터.
+
+    총자산 = 가용 현금 + Σ(보유 수량 × 당일 종가). 종가 조회 실패 종목은
+    진입가로 보수 평가(과대평가 방지 아님 — 미실현 손익 미반영일 뿐임을 인지).
+    포지션이 없어도 저장한다 (현금 100% 상태도 곡선의 일부).
+    """
+    positions = repo.list_open_positions()
+    cash = available_cash(repo, initial_capital)
+    positions_value = 0.0
+    priced = 0
+    for pos in positions:
+        price = pos["entry_price"]  # 폴백: 진입가 평가
+        try:
+            bars = fetch_daily(pos["symbol"], as_of, as_of)
+            if bars is not None and len(bars) > 0:
+                close = float(bars.sort_index().iloc[-1]["close"])
+                if math.isfinite(close) and close > 0:
+                    price = close
+                    priced += 1
+        except Exception as exc:  # noqa: BLE001 - 종목별 실패 격리
+            logger.warning("스냅샷 종가 조회 실패 %s: %s", pos["symbol"], exc)
+        positions_value += pos["quantity"] * price
+
+    total = cash + positions_value
+    snap_repo.save(snapshot_date=as_of, total_value=total, cash=cash,
+                   positions_value=positions_value)
+    return {"date": as_of, "total_value": round(total),
+            "cash": round(cash), "positions_value": round(positions_value),
+            "positions": len(positions), "priced": priced}
+
+
 def run_stop_update(repo, fetch_daily: Callable[[str, str, str], pd.DataFrame],
                     as_of: str) -> dict:
     """보유 포지션의 stop_loss를 매도 기준선으로 끌어올림 (인상만, 인하 금지).

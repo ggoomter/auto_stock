@@ -71,9 +71,10 @@ const JOB_LABELS: Record<string, string> = {
   paper_entry: '페이퍼매수',
   paper_stop_update: '스탑갱신',
   paper_reconcile: '정산',
+  paper_snapshot: '자산기록',
   crisis_check: '위기감시',
 };
-const JOB_KEYS = ['news_crawl', 'recommendations', 'paper_entry', 'paper_stop_update', 'paper_reconcile', 'crisis_check'];
+const JOB_KEYS = ['news_crawl', 'recommendations', 'paper_entry', 'paper_stop_update', 'paper_reconcile', 'paper_snapshot', 'crisis_check'];
 
 /** ISO 시각 → 'HH:MM' (표시용). 파싱 불가 시 null */
 function formatTimeHHMM(iso: string | null | undefined): string | null {
@@ -109,6 +110,10 @@ function formatJobDetail(jobKey: string, detail: string | null | undefined): str
         : '직전 거래일 추천 없음';
     if (jobKey === 'paper_stop_update')
       return `점검 ${d.checked ?? 0}건 · 손절선 인상 ${d.raised ?? 0}건`;
+    if (jobKey === 'paper_snapshot')
+      return typeof d.total_value === 'number'
+        ? `총자산 ${d.total_value.toLocaleString()}원 (현금 ${d.cash?.toLocaleString?.() ?? '-'} · 주식 ${d.positions_value?.toLocaleString?.() ?? '-'})`
+        : null;
     if (jobKey === 'paper_reconcile')
       return `점검 ${d.checked ?? 0}건 · 청산 ${d.closed ?? 0}건 · 유지 ${d.skipped ?? 0}건`;
     if (jobKey === 'crisis_check') {

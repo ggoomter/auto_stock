@@ -153,3 +153,31 @@ def test_compute_dynamic_stop_matches_sell_advisor_levels():
     v = evaluate_sell(entry_price=float(bars["close"].iloc[-30]), ohlcv=bars)
     expected = max(v["levels"]["chandelier"], v["levels"]["ma200"])
     assert stop == pytest.approx(expected, rel=0.001)
+
+
+# ── 일별 자산 스냅샷 (수익 곡선 원천) ──
+def test_snapshot_saves_cash_only_state(db):
+    """포지션 0개(현금 100%)여도 스냅샷은 저장 — 곡선의 시작점."""
+    from app.db.repositories import SnapshotRepository
+    from app.services.paper_trader import run_daily_snapshot
+    repo = PaperTradingRepository(db)
+    snap = SnapshotRepository(db)
+
+    stats = run_daily_snapshot(repo, snap, lambda *a: pd.DataFrame(),
+                               as_of="2026-07-07", initial_capital=10_000_000.0)
+    assert stats["total_value"] == 10_000_000
+    rows = snap.list_all()
+    assert len(rows) == 1 and rows[0]["snapshot_date"] == "2026-07-07"
+
+
+def test_snapshot_values_positions_at_close(db):
+    from app.db.repositories import SnapshotRepository
+    from app.services.paper_trader import run_daily_snapshot
+    repo = PaperTradingRepository(db)
+    repo.open_position("005930.KS", 10, 50_000.0, "s", 46_000.0, None,
+                       "2026-07-06T09:00:00")
+    stats = run_daily_snapshot(repo, SnapshotRepository(db), _fetch_open(55_000.0),
+                               as_of="2026-07-07", initial_capital=10_000_000.0)
+    # 현금 950만 + 10주×55,000(당일 종가) = 10,050,000
+    assert stats["total_value"] == 10_050_000
+    assert stats["priced"] == 1

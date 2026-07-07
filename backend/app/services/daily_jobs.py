@@ -18,6 +18,7 @@ from ..db.repositories import (
     NewsRepository,
     RecommendationRepository,
     PaperTradingRepository,
+    SnapshotRepository,
 )
 from . import naver_news, recommender, paper_reconcile, paper_trader, crisis_protocol
 
@@ -29,6 +30,7 @@ JOB_RECO = "recommendations"
 JOB_RECONCILE = "paper_reconcile"
 JOB_PAPER_ENTRY = "paper_entry"
 JOB_PAPER_STOPS = "paper_stop_update"
+JOB_PAPER_SNAPSHOT = "paper_snapshot"
 JOB_CRISIS = "crisis_check"
 
 # 장중 뉴스 재수집: 평일 09:00~15:30, 30분 간격
@@ -76,6 +78,16 @@ def _do_paper_stops(db_path: str | None, today: str) -> dict:
         repo=PaperTradingRepository(db_path),
         fetch_daily=paper_reconcile.fetch_daily_pykrx,
         as_of=today)
+
+
+def _do_paper_snapshot(db_path: str | None, today: str) -> dict:
+    from ..core.config import settings
+    return paper_trader.run_daily_snapshot(
+        repo=PaperTradingRepository(db_path),
+        snap_repo=SnapshotRepository(db_path),
+        fetch_daily=paper_reconcile.fetch_daily_pykrx,
+        as_of=today,
+        initial_capital=settings.PAPER_INITIAL_CAPITAL)
 
 
 def _do_crisis(db_path: str | None, today: str) -> dict:
@@ -173,7 +185,14 @@ async def run_catchup(db_path: str | None = None,
         results[JOB_RECONCILE] = await _run_job(
             job_repo, JOB_RECONCILE, today, lambda: _do_reconcile(db_path, today))
 
-    # 6) 위기 매수 프로토콜 — 폭락은 요일을 가리지 않으므로 주말에도 체크
+    # 6) 일별 자산 스냅샷 — 수익 곡선 기록 (정산 이후 최종 상태 기준, 주말 skip)
+    if weekend:
+        results[JOB_PAPER_SNAPSHOT] = _skip_weekend(job_repo, JOB_PAPER_SNAPSHOT, today)
+    else:
+        results[JOB_PAPER_SNAPSHOT] = await _run_job(
+            job_repo, JOB_PAPER_SNAPSHOT, today, lambda: _do_paper_snapshot(db_path, today))
+
+    # 7) 위기 매수 프로토콜 — 폭락은 요일을 가리지 않으므로 주말에도 체크
     #    (금요일 폭락을 주말 기동 시 알림받을 수 있어야 함)
     results[JOB_CRISIS] = await _run_job(
         job_repo, JOB_CRISIS, today, lambda: _do_crisis(db_path, today))
