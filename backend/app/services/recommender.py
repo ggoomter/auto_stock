@@ -193,7 +193,9 @@ def _build_universe_naver(top_n: int, date: str | None) -> list[Candidate]:
     rec_date가 오늘이 아니면(과거 재생성) 스냅샷 부정확 가능성을 warning.
     """
     try:
-        rows = naver_market.fetch_market_sum()
+        # 시장당 12페이지(600종목) — 병합 상위 top_n(기본 600)이 한 시장에
+        # 몰려도 절삭되지 않도록 여유 확보 (8페이지=400이면 KOSPI 쏠림 시 부족)
+        rows = naver_market.fetch_market_sum(max_pages_per_market=12)
     except Exception as exc:  # 방어적 — fetch 내부에서 이미 페이지별 예외 처리
         logger.warning("build_universe(네이버) 실패, 빈 유니버스 반환: %s", exc)
         return []
@@ -401,9 +403,9 @@ def _to_yyyymmdd(rec_date: str) -> str:
 def generate_recommendations(
     repo,
     rec_date: str,
-    top_n_universe: int = 300,
+    top_n_universe: int = 600,   # 시총 상위 600 (코스피+코스닥 ~2,760개 중 상위 22%)
     top_k: int = 10,
-    max_technical: int = 30,
+    max_technical: int = 120,    # 펀더멘털 통과자 전수 검사 목표 (통상 ~110개, 암묵적 상한 방지)
 ) -> dict:
     """유니버스→펀더멘털 필터→상위 max_technical개 기술 판정→점수→상위 top_k 저장.
 
