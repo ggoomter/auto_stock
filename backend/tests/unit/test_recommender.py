@@ -341,8 +341,8 @@ def test_fundamentals_only_without_signal_excluded():
 def test_crash_day_excluded_from_buy_now():
     """신호가 있어도 당일 -4% 초과 급락이면 제외 (급락 중 추격 매수 차단)."""
     df = _golden_cross_series()
-    # 마지막 날 -9% 급락으로 교체 (골든크로스는 직전 5일 내 발생 상태 유지)
-    crash = df["close"].iloc[-2] * 0.91
+    # 마지막 날 -4.8% 하락으로 교체 — 신고가 근접(95.2%)은 유지되지만 급락 가드에 걸림
+    crash = df["close"].iloc[-2] * 0.952
     df.iloc[-1, df.columns.get_loc("close")] = crash
     df.iloc[-1, df.columns.get_loc("low")] = crash * 0.99
     df.iloc[-1, df.columns.get_loc("high")] = df["close"].iloc[-2]
@@ -376,6 +376,31 @@ def test_countertrend_rsi_rebound_alone_not_qualifying():
     """
     df = _rsi_rebound_only_above_ma200()
     universe = [Candidate(symbol="000001", name="A", close=float(df["close"].iloc[-1]),
+                          per=10.0, pbr=1.5, roe=0.20, market_cap=3e12)]
+    repo = _FakeRepo()
+    with patch("app.services.recommender.build_universe", return_value=universe), \
+         patch("app.services.recommender._fetch_ohlcv", return_value=df), \
+         patch("app.services.recommender.time.sleep"):
+        stats = generate_recommendations(repo, "2026-07-05")
+
+    assert stats["saved"] == 0
+    assert stats["no_signal"] == 1
+
+
+def test_nearhigh_is_close_based_not_intraday_high():
+    """신고가 근접은 '최고 종가' 기준 — 장중 스파이크 고가 하나로 탈락시키지 않는다."""
+    df = _make_ohlcv(closes=[100.0] * 280, highs=[130.0] * 280)
+    near = next(s for s in technical_signals("T", df)
+                if s["condition_name_en"] == "NearHigh")
+    assert near["passed"] is True  # 종가 기준 100/100 — 고가(130) 기준이면 77%로 탈락
+
+
+def test_golden_cross_alone_not_qualifying():
+    """골든크로스 단독(신고가 미근접)은 '지금 매수' 자격 불가 — 가점만."""
+    closes = [100.0] * 276 + [130.0] * 4
+    closes[50] = 165.0  # 252일 창 안의 옛 고점 → 현재 130은 고점의 79% (신고가 미근접)
+    df = _make_ohlcv(closes)
+    universe = [Candidate(symbol="000001", name="A", close=130.0,
                           per=10.0, pbr=1.5, roe=0.20, market_cap=3e12)]
     repo = _FakeRepo()
     with patch("app.services.recommender.build_universe", return_value=universe), \

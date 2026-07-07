@@ -320,12 +320,14 @@ def technical_signals(symbol: str, ohlcv: pd.DataFrame) -> list[dict]:
     rsi_cond = _cond("RSI 반등", "RSIRebound",
                      "RSI(14) 30 미만→30 이상(최근 10일)", rsi_actual, rsi_passed)
 
-    # 3) 52주 신고가 근접: 종가 ≥ 252일 최고가의 95%
-    high_252 = high.iloc[-252:].max()
+    # 3) 52주 신고가 근접: 종가 ≥ 252일 최고 "종가"의 95%
+    #    (검증된 livermore 진입이 종가 기준이므로 정렬 — 장중 고가 기준은
+    #     스파이크 하나로 진짜 주도주를 탈락시키는 과잉 엄격)
+    high_252 = close.iloc[-252:].max()
     cur = close.iloc[-1]
     near_passed = bool(high_252 > 0 and cur >= high_252 * 0.95)
     ratio = (cur / high_252 * 100) if high_252 > 0 else 0.0
-    near = _cond("52주 신고가 근접", "NearHigh", "종가 ≥ 252일 최고가의 95%",
+    near = _cond("52주 신고가 근접", "NearHigh", "종가 ≥ 252일 최고 종가의 95%",
                  f"고점대비 {ratio:.1f}%", near_passed)
 
     return [gc, rsi_cond, near]
@@ -444,11 +446,13 @@ def generate_recommendations(
 
         signals = technical_signals(cand.symbol, ohlcv)
 
-        # ② 오늘 신호: 추세 신호(골든크로스·52주 신고가 근접) 중 1개 이상 필수.
-        #    RSI 반등은 역추세(과매도 매수) 신호라 단독 자격 불가 — 가점만 인정.
-        #    (근거: 검증된 우위는 추세추종뿐. 역추세 매수는 3차 검증에서
-        #     폭락장 MDD -45.7% — claudedocs/strategy_verification_2026-07-06.md)
-        _TREND_SIGNALS = {"GoldenCross", "NearHigh"}
+        # ② 오늘 신호: 52주 신고가 근접(NearHigh)만 단독 자격 인정.
+        #    - 검증된 유일 진입 계열이 신고가 돌파(livermore, PF 1.6~2.5)이기 때문.
+        #    - 골든크로스는 거래량 확인 없이 고점 -20%대 조정 종목에서도 발생하는
+        #      약한 신호라 가점으로 강등 (MA 교차류는 검증 반복 실패:
+        #      modern_livermore PF 0.70, 지표교차① PF 0.38).
+        #    - RSI 반등은 역추세라 가점만 (폭락장 MDD -45.7%).
+        _TREND_SIGNALS = {"NearHigh"}
         if not any(s["passed"] and s["condition_name_en"] in _TREND_SIGNALS
                    for s in signals):
             no_signal += 1
