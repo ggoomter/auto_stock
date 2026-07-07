@@ -197,3 +197,46 @@ def test_recommendations_analyzed_at_null_without_job_record(wire_repos):
     resp = client.get("/api/v1/today/recommendations?date=2026-07-05")
     assert resp.status_code == 200
     assert resp.json()["analyzed_at"] is None
+
+
+# ── 온디맨드 추천 갱신 ("지금 매수 추천" 버튼) ──
+def test_refresh_recommendations_runs_pipeline_and_records_job(wire_repos, monkeypatch):
+    from app.services import recommender as reco_mod
+
+    calls = {"n": 0}
+
+    def fake_generate(repo, rec_date, **kwargs):
+        calls["n"] += 1
+        return {"universe": 10, "filtered": 3, "trend_rejected": 1, "saved": 2}
+
+    monkeypatch.setattr(reco_mod, "generate_recommendations", fake_generate)
+    # 상태 초기화 (다른 테스트 잔존 방지)
+    today_routes._refresh_state.update(running=False, error=None, started_at=None)
+    # 이 엔드포인트는 settings.DB_PATH를 직접 쓰므로 tmp DB로 교체
+    monkeypatch.setattr(today_routes.settings, "DB_PATH", wire_repos, raising=False)
+
+    resp = client.post("/api/v1/today/refresh-recommendations")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "started"
+    # TestClient는 응답 후 BackgroundTasks를 동기 완료시킴
+    assert calls["n"] == 1
+    assert today_routes._refresh_state["running"] is False
+    assert JobRunRepository(wire_repos).has_succeeded(
+        "recommendations", today_routes._today_str()) is True
+
+
+def test_refresh_rejects_concurrent_run(wire_repos):
+    today_routes._refresh_state.update(running=True, error=None,
+                                       started_at="2026-07-07T09:00:00")
+    try:
+        resp = client.post("/api/v1/today/refresh-recommendations")
+        assert resp.json()["status"] == "already_running"
+    finally:
+        today_routes._refresh_state.update(running=False)
+
+
+def test_refresh_status_endpoint(wire_repos):
+    today_routes._refresh_state.update(running=False, error=None, started_at=None)
+    resp = client.get("/api/v1/today/refresh-status")
+    assert resp.status_code == 200
+    assert resp.json()["running"] is False

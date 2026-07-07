@@ -6,9 +6,11 @@
 전역 DEFAULT_DB_PATH 때문에 TestClient에서 tmp DB 주입이 어려우므로,
 테스트에서 이 팩토리들을 monkeypatch 해 tmp DB 저장소를 주입한다.
 """
-from datetime import date
+import asyncio
+import json
+from datetime import date, datetime
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 from ..core.config import settings
 from ..core.logging_config import logger
@@ -121,6 +123,50 @@ async def get_today_recommendations(date: str | None = Query(default=None)):
     except Exception as e:
         logger.error(f"오늘의 추천 조회 실패 (date={date}): {e}")
         raise HTTPException(status_code=500, detail=_GENERIC_ERROR)
+
+
+# ── 온디맨드 추천 갱신 ("지금 매수 추천" 버튼) ──
+# 동시 실행 방지용 모듈 상태. 프로세스 내 단일 워커 가정(uvicorn 기본).
+_refresh_state = {"running": False, "started_at": None, "error": None}
+
+
+async def _do_refresh_recommendations(today: str) -> None:
+    """추천 파이프라인을 백그라운드에서 1회 실행하고 job_runs를 갱신한다."""
+    from ..services import recommender  # 지연 임포트 — pykrx 임포트 실패 격리
+    try:
+        stats = await asyncio.to_thread(
+            recommender.generate_recommendations,
+            RecommendationRepository(settings.DB_PATH), today)
+        JobRunRepository(settings.DB_PATH).record(
+            "recommendations", today, "success",
+            detail=json.dumps(stats, ensure_ascii=False),
+            finished_at=datetime.now().isoformat())
+    except Exception as exc:  # noqa: BLE001 - 실패는 상태로 노출, 서버는 계속
+        logger.error(f"온디맨드 추천 갱신 실패: {exc}")
+        _refresh_state["error"] = str(exc)[:200]
+    finally:
+        _refresh_state["running"] = False
+
+
+@router.post("/today/refresh-recommendations")
+async def refresh_recommendations(background_tasks: BackgroundTasks):
+    """지금 매수 추천 재계산 시작 (비동기, 약 30~90초 소요).
+
+    진행 상태는 GET /today/refresh-status 로 폴링한다.
+    """
+    if _refresh_state["running"]:
+        return {"status": "already_running",
+                "started_at": _refresh_state["started_at"]}
+    _refresh_state.update(running=True, error=None,
+                          started_at=datetime.now().isoformat())
+    background_tasks.add_task(_do_refresh_recommendations, _today_str())
+    return {"status": "started", "started_at": _refresh_state["started_at"]}
+
+
+@router.get("/today/refresh-status")
+async def get_refresh_status():
+    """온디맨드 추천 갱신 진행 상태 (프론트 버튼 폴링용)."""
+    return dict(_refresh_state)
 
 
 @router.get("/today/status")

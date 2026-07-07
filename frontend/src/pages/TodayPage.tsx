@@ -1,13 +1,16 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { RefreshCw, ChevronDown, ChevronUp, ExternalLink, Info } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { RefreshCw, ChevronDown, ChevronUp, ExternalLink, Info, Target } from 'lucide-react';
 import {
   getTodayStatus,
   getTodayRecommendations,
   getTodayNews,
+  postRefreshRecommendations,
+  getRefreshStatus,
   type ConditionCheck,
   type TodayRecommendation,
 } from '../services/api';
+import { useToast } from '../components/Toast';
 
 // ============================================================
 // 공통 유틸 (섹션별 로딩/에러 UI)
@@ -615,6 +618,96 @@ function NewsSection() {
 }
 
 // ============================================================
+// 히어로: 지금 매수 추천 버튼 (핵심 기능)
+// ============================================================
+
+function BuyNowHero() {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const [running, setRunning] = useState(false);
+  const pollRef = useRef<number | null>(null);
+
+  // 언마운트 시 폴링 정리
+  useEffect(() => () => {
+    if (pollRef.current !== null) window.clearInterval(pollRef.current);
+  }, []);
+
+  const startPolling = () => {
+    pollRef.current = window.setInterval(async () => {
+      try {
+        const st = await getRefreshStatus();
+        if (!st.running) {
+          if (pollRef.current !== null) window.clearInterval(pollRef.current);
+          pollRef.current = null;
+          setRunning(false);
+          if (st.error) {
+            toast.error(`추천 계산 실패: ${st.error}`);
+          } else {
+            await queryClient.invalidateQueries({ queryKey: ['todayRecommendations'] });
+            await queryClient.invalidateQueries({ queryKey: ['todayStatus'] });
+            toast.success('지금 매수 추천이 갱신되었습니다.');
+          }
+        }
+      } catch {
+        // 일시적 폴링 실패는 무시하고 다음 주기에 재시도
+      }
+    }, 3000);
+  };
+
+  const onClick = async () => {
+    try {
+      setRunning(true);
+      const res = await postRefreshRecommendations();
+      if (res.status === 'already_running') {
+        toast.warning('이미 계산이 진행 중입니다. 잠시만 기다려주세요.');
+      }
+      startPolling();
+    } catch {
+      setRunning(false);
+      toast.error('추천 계산을 시작하지 못했습니다. 백엔드 상태를 확인해주세요.');
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border-2 border-primary-500 bg-gradient-to-r from-primary-600 to-primary-700 p-6 shadow-lg">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="text-white">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Target className="w-6 h-6" />
+            지금 매수 추천
+          </h2>
+          <p className="text-sm text-primary-100 mt-1">
+            버튼을 누르면 최신 시세로 즉시 분석합니다 — 시가총액 상위 유니버스 → 펀더멘털
+            필터 → 상승 추세 게이트(하락 추세 자동 제외) → 기술 신호 순으로 선별한 상위 10종목.
+          </p>
+        </div>
+        <button
+          onClick={onClick}
+          disabled={running}
+          className={`shrink-0 inline-flex items-center gap-2 px-6 py-3 rounded-xl text-base font-bold transition-colors ${
+            running
+              ? 'bg-white/30 text-white cursor-not-allowed'
+              : 'bg-white text-primary-700 hover:bg-primary-50 shadow'
+          }`}
+        >
+          {running ? (
+            <>
+              <RefreshCw className="w-5 h-5 animate-spin" />
+              분석 중... (약 1분)
+            </>
+          ) : (
+            <>
+              <Target className="w-5 h-5" />
+              지금 매수 추천 받기
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // 페이지
 // ============================================================
 
@@ -628,11 +721,13 @@ export default function TodayPage() {
         </p>
       </div>
 
+      <BuyNowHero />
+
+      <RecommendationsSection />
+
       <SectionCard title="수집 상태">
         <StatusStrip />
       </SectionCard>
-
-      <RecommendationsSection />
 
       <NewsSection />
     </div>

@@ -588,6 +588,20 @@ export const getTodayRecommendations = async (
   return (await api.get<TodayRecommendationsResponse>('/today/recommendations', { params })).data;
 };
 
+export interface RefreshStatusResponse {
+  running: boolean;
+  started_at: string | null;
+  error: string | null;
+}
+
+/** 지금 매수 추천 재계산 시작 (약 30~90초 소요, refresh-status로 폴링) */
+export const postRefreshRecommendations = async (): Promise<{ status: string }> =>
+  (await api.post<{ status: string }>('/today/refresh-recommendations')).data;
+
+/** 온디맨드 추천 갱신 진행 상태 */
+export const getRefreshStatus = async (): Promise<RefreshStatusResponse> =>
+  (await api.get<RefreshStatusResponse>('/today/refresh-status')).data;
+
 /** 오늘 작업(뉴스/추천/정산) 실행 상태 */
 export const getTodayStatus = async (): Promise<TodayStatusResponse> =>
   (await api.get<TodayStatusResponse>('/today/status')).data;
