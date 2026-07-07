@@ -23,7 +23,8 @@ def spies(monkeypatch):
     """3개 작업 함수를 성공 스텁으로 대체하고 호출 여부를 추적한다."""
     from app.services import daily_jobs
 
-    calls = {"news": 0, "reco": 0, "reconcile": 0, "crisis": 0}
+    calls = {"news": 0, "reco": 0, "reconcile": 0, "crisis": 0,
+             "paper_entry": 0, "paper_stops": 0}
 
     def fake_build_name_map(*a, **k):
         return {}
@@ -55,6 +56,19 @@ def spies(monkeypatch):
 
     monkeypatch.setattr(daily_jobs.crisis_protocol, "check_markets",
                         fake_check_markets)
+
+    def fake_paper_entry(*a, **k):
+        calls["paper_entry"] += 1
+        return {"rec_date": "2026-07-03", "opened": 1, "candidates": 2}
+
+    def fake_stop_update(*a, **k):
+        calls["paper_stops"] += 1
+        return {"checked": 1, "raised": 1, "skipped": 0}
+
+    monkeypatch.setattr(daily_jobs.paper_trader, "run_paper_entry",
+                        fake_paper_entry)
+    monkeypatch.setattr(daily_jobs.paper_trader, "run_stop_update",
+                        fake_stop_update)
     return calls
 
 
@@ -66,6 +80,7 @@ def test_success_records_status_and_detail(db_path, spies):
     """3개 작업 모두 성공 → success 반환 + job_runs에 success + detail JSON 기록."""
     from app.services.daily_jobs import (
         run_catchup, JOB_NEWS, JOB_RECO, JOB_RECONCILE, JOB_CRISIS,
+        JOB_PAPER_ENTRY, JOB_PAPER_STOPS,
     )
 
     result = asyncio.run(run_catchup(db_path=db_path, today=WEEKDAY))
@@ -73,10 +88,13 @@ def test_success_records_status_and_detail(db_path, spies):
     assert result == {
         JOB_NEWS: "success",
         JOB_RECO: "success",
+        JOB_PAPER_ENTRY: "success",
+        JOB_PAPER_STOPS: "success",
         JOB_RECONCILE: "success",
         JOB_CRISIS: "success",
     }
-    assert spies == {"news": 1, "reco": 1, "reconcile": 1, "crisis": 1}
+    assert spies == {"news": 1, "reco": 1, "reconcile": 1, "crisis": 1,
+                     "paper_entry": 1, "paper_stops": 1}
 
     repo = JobRunRepository(db_path)
     assert repo.has_succeeded(JOB_NEWS, WEEKDAY) is True
@@ -142,9 +160,13 @@ def test_failure_isolation(db_path, monkeypatch):
         daily_jobs.paper_reconcile, "reconcile_positions",
         lambda *a, **k: calls.__setitem__("reconcile", calls["reconcile"] + 1)
         or {"checked": 0, "closed": 0, "skipped": 0, "details": []})
-    # 위기 체크는 네트워크 금지 — 성공 스텁으로 대체
+    # 위기 체크·페이퍼 작업은 네트워크 금지 — 성공 스텁으로 대체
     monkeypatch.setattr(daily_jobs.crisis_protocol, "check_markets",
                         lambda *a, **k: {"KR": {"deployed_stages": []}})
+    monkeypatch.setattr(daily_jobs.paper_trader, "run_paper_entry",
+                        lambda *a, **k: {"opened": 0})
+    monkeypatch.setattr(daily_jobs.paper_trader, "run_stop_update",
+                        lambda *a, **k: {"checked": 0, "raised": 0, "skipped": 0})
 
     result = asyncio.run(run_catchup(db_path=db_path, today=WEEKDAY))
 
@@ -221,6 +243,9 @@ def test_weekend_skips_reco_and_reconcile(db_path, spies):
     # 추천·정산 작업 함수는 호출되지 않음
     assert spies["reco"] == 0
     assert spies["reconcile"] == 0
+    # 페이퍼 진입/스탑 갱신도 주말엔 실행하지 않음
+    assert spies["paper_entry"] == 0
+    assert spies["paper_stops"] == 0
     # 위기 체크는 주말에도 실행 (금요일 폭락 → 주말 기동 시 알림)
     from app.services.daily_jobs import JOB_CRISIS
     assert result[JOB_CRISIS] == "success"

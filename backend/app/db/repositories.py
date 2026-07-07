@@ -351,6 +351,19 @@ class RecommendationRepository:
         finally:
             conn.close()
 
+    def latest_date_before(self, date: str) -> str | None:
+        """date '이전' 가장 최근 rec_date — 페이퍼 진입은 직전 거래일 추천을
+        오늘 시가에 사는 구조(신호 익일 시가 진입)이므로 오늘 추천은 제외한다."""
+        conn = get_connection(self._db_path)
+        try:
+            row = conn.execute(
+                "SELECT MAX(rec_date) AS d FROM recommendations WHERE rec_date < ?",
+                (date,),
+            ).fetchone()
+            return row["d"] if row is not None and row["d"] is not None else None
+        finally:
+            conn.close()
+
     def latest_date(self) -> str | None:
         """가장 최근 rec_date. 데이터 없으면 None."""
         conn = get_connection(self._db_path)

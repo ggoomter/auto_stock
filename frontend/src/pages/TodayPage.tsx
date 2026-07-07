@@ -68,10 +68,12 @@ function SectionCard({ title, children }: { title: string; children: React.React
 const JOB_LABELS: Record<string, string> = {
   news_crawl: '뉴스',
   recommendations: '추천',
+  paper_entry: '페이퍼매수',
+  paper_stop_update: '스탑갱신',
   paper_reconcile: '정산',
   crisis_check: '위기감시',
 };
-const JOB_KEYS = ['news_crawl', 'recommendations', 'paper_reconcile', 'crisis_check'];
+const JOB_KEYS = ['news_crawl', 'recommendations', 'paper_entry', 'paper_stop_update', 'paper_reconcile', 'crisis_check'];
 
 /** ISO 시각 → 'HH:MM' (표시용). 파싱 불가 시 null */
 function formatTimeHHMM(iso: string | null | undefined): string | null {
@@ -101,6 +103,12 @@ function formatJobDetail(jobKey: string, detail: string | null | undefined): str
       const crash = typeof d.crash_day === 'number' ? ` · 급락보류 ${d.crash_day}` : '';
       return `후보 ${d.universe ?? '-'} · 조건통과 ${d.filtered ?? '-'}${trend}${noSig}${crash} · 추천 ${d.saved ?? '-'}개`;
     }
+    if (jobKey === 'paper_entry')
+      return d.rec_date
+        ? `${d.rec_date} 추천 기준 · 매수 ${d.opened ?? 0}건 (보유중복 ${d.skipped_held ?? 0} · 데이터없음 ${d.skipped_data ?? 0})`
+        : '직전 거래일 추천 없음';
+    if (jobKey === 'paper_stop_update')
+      return `점검 ${d.checked ?? 0}건 · 손절선 인상 ${d.raised ?? 0}건`;
     if (jobKey === 'paper_reconcile')
       return `점검 ${d.checked ?? 0}건 · 청산 ${d.closed ?? 0}건 · 유지 ${d.skipped ?? 0}건`;
     if (jobKey === 'crisis_check') {

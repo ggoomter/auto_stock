@@ -19,7 +19,7 @@ from ..db.repositories import (
     RecommendationRepository,
     PaperTradingRepository,
 )
-from . import naver_news, recommender, paper_reconcile, crisis_protocol
+from . import naver_news, recommender, paper_reconcile, paper_trader, crisis_protocol
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 JOB_NEWS = "news_crawl"
 JOB_RECO = "recommendations"
 JOB_RECONCILE = "paper_reconcile"
+JOB_PAPER_ENTRY = "paper_entry"
+JOB_PAPER_STOPS = "paper_stop_update"
 JOB_CRISIS = "crisis_check"
 
 # 장중 뉴스 재수집: 평일 09:00~15:30, 30분 간격
@@ -56,6 +58,24 @@ def _do_news(db_path: str | None) -> dict:
 def _do_reco(db_path: str | None, today: str) -> dict:
     return recommender.generate_recommendations(
         repo=RecommendationRepository(db_path), rec_date=today)
+
+
+def _do_paper_entry(db_path: str | None, today: str) -> dict:
+    from ..core.config import settings
+    return paper_trader.run_paper_entry(
+        repo=PaperTradingRepository(db_path),
+        reco_repo=RecommendationRepository(db_path),
+        fetch_daily=paper_reconcile.fetch_daily_pykrx,
+        as_of=today,
+        initial_capital=settings.PAPER_INITIAL_CAPITAL,
+        max_positions=settings.PAPER_MAX_POSITIONS)
+
+
+def _do_paper_stops(db_path: str | None, today: str) -> dict:
+    return paper_trader.run_stop_update(
+        repo=PaperTradingRepository(db_path),
+        fetch_daily=paper_reconcile.fetch_daily_pykrx,
+        as_of=today)
 
 
 def _do_crisis(db_path: str | None, today: str) -> dict:
@@ -132,14 +152,28 @@ async def run_catchup(db_path: str | None = None,
         results[JOB_RECO] = await _run_job(
             job_repo, JOB_RECO, today, lambda: _do_reco(db_path, today))
 
-    # 3) 정산 — 주말 skip
+    # 3) 페이퍼 진입 — 직전 거래일 추천을 오늘 시가에 가상 매수 (주말 skip)
+    if weekend:
+        results[JOB_PAPER_ENTRY] = _skip_weekend(job_repo, JOB_PAPER_ENTRY, today)
+    else:
+        results[JOB_PAPER_ENTRY] = await _run_job(
+            job_repo, JOB_PAPER_ENTRY, today, lambda: _do_paper_entry(db_path, today))
+
+    # 4) 페이퍼 스탑 갱신 — 샹들리에·200일선으로 손절선 인상 (정산 전에 실행)
+    if weekend:
+        results[JOB_PAPER_STOPS] = _skip_weekend(job_repo, JOB_PAPER_STOPS, today)
+    else:
+        results[JOB_PAPER_STOPS] = await _run_job(
+            job_repo, JOB_PAPER_STOPS, today, lambda: _do_paper_stops(db_path, today))
+
+    # 5) 정산 — 주말 skip
     if weekend:
         results[JOB_RECONCILE] = _skip_weekend(job_repo, JOB_RECONCILE, today)
     else:
         results[JOB_RECONCILE] = await _run_job(
             job_repo, JOB_RECONCILE, today, lambda: _do_reconcile(db_path, today))
 
-    # 4) 위기 매수 프로토콜 — 폭락은 요일을 가리지 않으므로 주말에도 체크
+    # 6) 위기 매수 프로토콜 — 폭락은 요일을 가리지 않으므로 주말에도 체크
     #    (금요일 폭락을 주말 기동 시 알림받을 수 있어야 함)
     results[JOB_CRISIS] = await _run_job(
         job_repo, JOB_CRISIS, today, lambda: _do_crisis(db_path, today))

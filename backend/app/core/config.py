@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     # 실전 자동매매 스위치 (Phase 1: 브로커 연동 미완성으로 항상 차단)
     ENABLE_LIVE_TRADING: bool = False
 
+    # 페이퍼 트레이딩 (전진 검증) — 가상 계좌 설정
+    PAPER_INITIAL_CAPITAL: float = 10_000_000.0  # 원
+    PAPER_MAX_POSITIONS: int = 5                 # 균등 배분 1/N
+
     # SQLite 경로 (테스트에서 주입 가능하도록 설정으로 분리)
     DB_PATH: Optional[str] = None  # None이면 app/db/database.py의 DEFAULT_DB_PATH
 
