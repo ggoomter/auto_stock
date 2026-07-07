@@ -332,16 +332,20 @@ def trend_gate(ohlcv: pd.DataFrame | None) -> dict:
     (claudedocs/strategy_verification_2026-07-06.md 3차 검증). 펀더멘털이
     좋아도 추세가 무너진 종목(예: 고점 대비 -50%대 하락 중)은 추천 부적격.
     """
+    _REQUIRED = "일봉 종가 ≥ 200거래일(약 10개월) 이동평균"
     if ohlcv is None or len(ohlcv) < _MIN_ROWS:
-        return _cond("상승 추세", "Trend", "종가 ≥ 200일 이동평균",
+        return _cond("장기 상승 추세(일봉 200일선)", "Trend", _REQUIRED,
                      "데이터 부족", False)
     close = ohlcv["close"].astype(float)
     ma200 = close.rolling(200).mean().iloc[-1]
     cur = close.iloc[-1]
     passed = bool(pd.notna(ma200) and ma200 > 0 and cur >= ma200)
-    actual = (f"200일선 대비 {(cur / ma200 - 1) * 100:+.1f}%"
+    # 당일 등락 병기 — 장기 추세 판정과 별개로 오늘의 급등락을 숨기지 않는다
+    daily_chg = (f" · 당일 {(cur / close.iloc[-2] - 1) * 100:+.1f}%"
+                 if len(close) >= 2 and close.iloc[-2] > 0 else "")
+    actual = (f"200일선 대비 {(cur / ma200 - 1) * 100:+.1f}%{daily_chg}"
               if pd.notna(ma200) and ma200 > 0 else "데이터 부족")
-    return _cond("상승 추세", "Trend", "종가 ≥ 200일 이동평균", actual, passed)
+    return _cond("장기 상승 추세(일봉 200일선)", "Trend", _REQUIRED, actual, passed)
 
 
 # ── 점수 ──────────────────────────────────────────────────────────
