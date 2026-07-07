@@ -96,8 +96,10 @@ function formatJobDetail(jobKey: string, detail: string | null | undefined): str
     if (jobKey === 'news_crawl')
       return `수집 ${d.fetched ?? 0}건 · 신규 저장 ${d.inserted ?? 0}건 · 종목 연결 ${d.linked_symbols ?? 0}건`;
     if (jobKey === 'recommendations') {
-      const trend = typeof d.trend_rejected === 'number' ? ` · 하락추세 제외 ${d.trend_rejected}개` : '';
-      return `후보 ${d.universe ?? '-'}개 · 조건 통과 ${d.filtered ?? '-'}개${trend} · 추천 ${d.saved ?? '-'}개`;
+      const trend = typeof d.trend_rejected === 'number' ? ` · 하락추세 ${d.trend_rejected}` : '';
+      const noSig = typeof d.no_signal === 'number' ? ` · 신호없음 ${d.no_signal}` : '';
+      const crash = typeof d.crash_day === 'number' ? ` · 급락보류 ${d.crash_day}` : '';
+      return `후보 ${d.universe ?? '-'} · 조건통과 ${d.filtered ?? '-'}${trend}${noSig}${crash} · 추천 ${d.saved ?? '-'}개`;
     }
     if (jobKey === 'paper_reconcile')
       return `점검 ${d.checked ?? 0}건 · 청산 ${d.closed ?? 0}건 · 유지 ${d.skipped ?? 0}건`;
@@ -682,8 +684,9 @@ function BuyNowHero() {
             지금 매수 추천
           </h2>
           <p className="text-sm text-primary-100 mt-1">
-            버튼을 누르면 최신 시세로 즉시 분석합니다 — 시가총액 상위 유니버스 → 펀더멘털
-            필터 → 상승 추세 게이트(하락 추세 자동 제외) → 기술 신호 순으로 선별한 상위 10종목.
+            버튼을 누르면 최신 시세로 즉시 분석합니다. 등재 조건 3박자: ① 장기 자격(일봉
+            200일선 위 + 펀더멘털) ② 오늘 발생한 매수 신호 1개 이상 ③ 급락일 아님(당일
+            -4% 이내). 진입은 다음 거래일 시가가 원칙입니다 — 급락 중 추격 매수 금지.
           </p>
         </div>
         <button

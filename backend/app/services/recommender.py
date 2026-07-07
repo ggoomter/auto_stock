@@ -35,6 +35,11 @@ _PBR_MAX = 3.0
 _ROE_MIN = 0.10
 
 # 점수 배분: 펀더멘털 60점(3개), 기술 40점(3개)
+# 당일 급락 가드: 이 폭을 넘는 하락일에는 '지금 매수' 등재 금지.
+# 최적화된 파라미터가 아니라 보수적 가드레일 — 검증된 전략은 전부 강세 확인일에
+# 진입하며(신고가 돌파 등), 급락 중 역추세 매수는 실측에서 음의 기대값(3차 검증).
+CRASH_DAY_PCT = -0.04
+
 _FUND_POINT = 20.0          # 펀더멘털 통과 1개당
 _SIG_POINT = (100.0 - 60.0) / 3.0  # 기술 시그널 통과 1개당 (≈13.333)
 
@@ -424,15 +429,37 @@ def generate_recommendations(
 
     scored: list[tuple[Candidate, list[dict], list[dict], float]] = []
     trend_rejected = 0
+    no_signal = 0
+    crash_day = 0
     for cand, conds in ranked[:max_technical]:
         ohlcv = _fetch_ohlcv(cand.symbol, rec_date)
         gate = trend_gate(ohlcv)
         if not gate["passed"]:
-            # 하락 추세(종가 < 200일선) → 점수와 무관하게 추천 제외
+            # ① 장기 자격: 하락 추세(종가 < 200일선) → 점수와 무관하게 제외
             trend_rejected += 1
             time.sleep(0.3)
             continue
-        signals = technical_signals(cand.symbol, ohlcv) + [gate]
+
+        signals = technical_signals(cand.symbol, ohlcv)
+
+        # ② 오늘 신호: 기술 신호가 하나도 없으면 '자격은 있으나 타이밍 아님' → 제외
+        #    (펀더멘털만으로 '지금 매수'를 말하지 않는다 — 자격 심사 ≠ 매수 신호)
+        if not any(s["passed"] for s in signals):
+            no_signal += 1
+            time.sleep(0.3)
+            continue
+
+        # ③ 급락일 가드: 당일 CRASH_DAY_PCT 초과 하락이면 진입 보류
+        #    (진입은 강세 확인일 + 익일 시가 원칙 — 급락 중 추격 매수 차단)
+        close = ohlcv["close"].astype(float)
+        if len(close) >= 2 and close.iloc[-2] > 0:
+            daily_chg = close.iloc[-1] / close.iloc[-2] - 1
+            if daily_chg <= CRASH_DAY_PCT:
+                crash_day += 1
+                time.sleep(0.3)
+                continue
+
+        signals = signals + [gate]
         scored.append((cand, conds, signals, score(conds, signals)))
         time.sleep(0.3)  # pykrx 요청 간 예의상 딜레이
 
@@ -447,6 +474,8 @@ def generate_recommendations(
         "universe": len(universe),
         "filtered": len(filtered),
         "trend_rejected": trend_rejected,
+        "no_signal": no_signal,
+        "crash_day": crash_day,
         "saved": min(top_k, len(scored)),
         "universe_source": meta.get("universe_source", "krx"),
     }

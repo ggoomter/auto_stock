@@ -310,3 +310,50 @@ def test_regeneration_clears_stale_rows(tmp_path):
 
     rows = repo.list_by_date("2026-07-05")
     assert [r["symbol"] for r in rows] == ["000001"]  # 옛종목(999999) 제거됨
+
+
+# ── "지금 매수" 등재 3박자: 자격(추세) + 오늘 신호 + 급락일 아님 ──
+def _qualified_but_no_signal_series() -> pd.DataFrame:
+    """200일선 위(자격)이지만 신호는 없는 시계열:
+    100 횡보 → 130까지 상승(골든크로스는 40일+ 전) → 118로 완만한 이탈
+    (고점의 90.8% → 신고가 근접 미달, RSI 과매도 없음, 최근 크로스 없음)"""
+    closes = [100.0] * 200
+    closes += [100.0 + 0.75 * (i + 1) for i in range(40)]   # → 130
+    closes += [130.0 - 0.3 * (i + 1) for i in range(40)]    # → 118
+    return _make_ohlcv(closes)
+
+
+def test_fundamentals_only_without_signal_excluded():
+    """펀더멘털만 좋고 기술 신호가 0개면 '지금 매수' 목록에서 제외 (자격≠타이밍)."""
+    universe = [Candidate(symbol="000001", name="A", close=118.0,
+                          per=10.0, pbr=1.5, roe=0.20, market_cap=3e12)]
+    repo = _FakeRepo()
+    with patch("app.services.recommender.build_universe", return_value=universe), \
+         patch("app.services.recommender._fetch_ohlcv",
+               return_value=_qualified_but_no_signal_series()), \
+         patch("app.services.recommender.time.sleep"):
+        stats = generate_recommendations(repo, "2026-07-05")
+
+    assert stats["saved"] == 0
+    assert stats["no_signal"] == 1
+
+
+def test_crash_day_excluded_from_buy_now():
+    """신호가 있어도 당일 -4% 초과 급락이면 제외 (급락 중 추격 매수 차단)."""
+    df = _golden_cross_series()
+    # 마지막 날 -9% 급락으로 교체 (골든크로스는 직전 5일 내 발생 상태 유지)
+    crash = df["close"].iloc[-2] * 0.91
+    df.iloc[-1, df.columns.get_loc("close")] = crash
+    df.iloc[-1, df.columns.get_loc("low")] = crash * 0.99
+    df.iloc[-1, df.columns.get_loc("high")] = df["close"].iloc[-2]
+
+    universe = [Candidate(symbol="000001", name="A", close=float(crash),
+                          per=10.0, pbr=1.5, roe=0.20, market_cap=3e12)]
+    repo = _FakeRepo()
+    with patch("app.services.recommender.build_universe", return_value=universe), \
+         patch("app.services.recommender._fetch_ohlcv", return_value=df), \
+         patch("app.services.recommender.time.sleep"):
+        stats = generate_recommendations(repo, "2026-07-05")
+
+    assert stats["saved"] == 0
+    assert stats["crash_day"] == 1
