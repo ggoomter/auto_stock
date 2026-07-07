@@ -229,8 +229,8 @@ const INDICATOR_GUIDE: Record<string, IndicatorGuide> = {
   },
   RSIRebound: {
     meaning:
-      'RSI(상대강도지수)는 최근 14일간 상승·하락 강도로 과열(70↑)/과매도(30↓)를 재는 지표. "과매도 → 회복"은 단기 반등 신호입니다.',
-    reason: (a) => `과매도 구간까지 눌렸다가 회복을 시작했습니다 (${a})`,
+      'RSI(상대강도지수)는 최근 14일간 상승·하락 강도로 과열(70↑)/과매도(30↓)를 재는 지표. "과매도 → 회복"은 역추세(반등 베팅) 신호라 단독으로는 매수 자격이 되지 않고 가점만 됩니다.',
+    reason: (a) => `과매도까지 눌렸다가 회복 중 — 가점 요소 (${a}). 단독 매수 근거는 아닙니다.`,
   },
   NearHigh: {
     meaning:
@@ -546,7 +546,13 @@ function RecommendationsSection() {
         <SectionError message="추천을 불러올 수 없습니다." onRetry={() => query.refetch()} />
       )}
       {query.data && query.data.recommendations.length === 0 && (
-        <EmptyState message="오늘 추천이 아직 없습니다 (주말·장 시작 전이거나 수집 중)." />
+        <EmptyState
+          message={
+            query.data.analyzed_at
+              ? '오늘은 매수 3박자(추세 자격 · 오늘 추세 신호 · 급락일 아님)를 충족한 종목이 0개입니다 — 무리해서 사지 않는 것이 시스템의 판단입니다. 관망하세요.'
+              : '오늘 추천이 아직 없습니다 (주말·장 시작 전이거나 수집 중).'
+          }
+        />
       )}
       {query.data && query.data.recommendations.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -685,8 +691,9 @@ function BuyNowHero() {
           </h2>
           <p className="text-sm text-primary-100 mt-1">
             버튼을 누르면 최신 시세로 즉시 분석합니다. 등재 조건 3박자: ① 장기 자격(일봉
-            200일선 위 + 펀더멘털) ② 오늘 발생한 매수 신호 1개 이상 ③ 급락일 아님(당일
-            -4% 이내). 진입은 다음 거래일 시가가 원칙입니다 — 급락 중 추격 매수 금지.
+            200일선 위 + 펀더멘털) ② 오늘 발생한 추세 신호(골든크로스·52주 신고가 근접) 1개
+            이상 — RSI 반등 같은 역추세 신호는 가점만 ③ 급락일 아님(당일 -4% 이내).
+            진입은 다음 거래일 시가가 원칙입니다 — 조건이 없는 날은 추천 0개가 정상입니다.
           </p>
         </div>
         <button

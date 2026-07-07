@@ -91,7 +91,17 @@ async def get_today_recommendations(date: str | None = Query(default=None)):
     """오늘(또는 지정일)의 추천 종목 조회 — score 내림차순 (저장소가 정렬·역직렬화)."""
     try:
         repo = _get_reco_repo()
-        resolved_date = date or repo.latest_date()
+        resolved_date = date
+        if resolved_date is None:
+            # 오늘 추천 작업이 성공했다면 결과가 0개여도 '오늘'을 보여준다.
+            # (조건 충족 종목이 없는 날 어제 목록으로 폴백하면 낡은 추천이
+            #  '지금 매수'처럼 보이는 오도가 발생 — 0개는 0개로 정직하게)
+            today = _today_str()
+            job_ok = any(
+                r.get("job_name") == "recommendations" and r.get("status") == "success"
+                for r in _get_job_repo().get_runs(today)
+            )
+            resolved_date = today if job_ok else repo.latest_date()
         if resolved_date is None:
             recs = []
         else:

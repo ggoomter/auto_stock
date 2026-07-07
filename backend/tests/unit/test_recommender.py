@@ -357,3 +357,31 @@ def test_crash_day_excluded_from_buy_now():
 
     assert stats["saved"] == 0
     assert stats["crash_day"] == 1
+
+
+def _rsi_rebound_only_above_ma200() -> pd.DataFrame:
+    """상승 후 급락→반등: 200일선 위(자격)이나 유일 신호가 RSI 반등(역추세)인 시계열.
+    100 → 200 상승(270일) → 8일 급락(RSI<30) → 2일 반등(고점의 88%, 200일선 위)"""
+    closes = [100.0 + (100.0 / 269) * i for i in range(270)]  # → 200
+    peak = closes[-1]
+    closes += [peak - 5.5 * (i + 1) for i in range(8)]        # 급락 → RSI<30
+    closes += [peak * 0.86, peak * 0.885]                     # 반등 → RSI≥30 회복
+    return _make_ohlcv(closes)
+
+
+def test_countertrend_rsi_rebound_alone_not_qualifying():
+    """RSI 반등(역추세)만으로는 '지금 매수' 자격 불가 — 추세 신호(골든크로스/신고가)가 필요.
+
+    근거: 역추세 매수는 3차 검증에서 폭락장 MDD -45.7% (검증된 우위는 추세추종뿐).
+    """
+    df = _rsi_rebound_only_above_ma200()
+    universe = [Candidate(symbol="000001", name="A", close=float(df["close"].iloc[-1]),
+                          per=10.0, pbr=1.5, roe=0.20, market_cap=3e12)]
+    repo = _FakeRepo()
+    with patch("app.services.recommender.build_universe", return_value=universe), \
+         patch("app.services.recommender._fetch_ohlcv", return_value=df), \
+         patch("app.services.recommender.time.sleep"):
+        stats = generate_recommendations(repo, "2026-07-05")
+
+    assert stats["saved"] == 0
+    assert stats["no_signal"] == 1

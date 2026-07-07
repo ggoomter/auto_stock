@@ -442,9 +442,13 @@ def generate_recommendations(
 
         signals = technical_signals(cand.symbol, ohlcv)
 
-        # ② 오늘 신호: 기술 신호가 하나도 없으면 '자격은 있으나 타이밍 아님' → 제외
-        #    (펀더멘털만으로 '지금 매수'를 말하지 않는다 — 자격 심사 ≠ 매수 신호)
-        if not any(s["passed"] for s in signals):
+        # ② 오늘 신호: 추세 신호(골든크로스·52주 신고가 근접) 중 1개 이상 필수.
+        #    RSI 반등은 역추세(과매도 매수) 신호라 단독 자격 불가 — 가점만 인정.
+        #    (근거: 검증된 우위는 추세추종뿐. 역추세 매수는 3차 검증에서
+        #     폭락장 MDD -45.7% — claudedocs/strategy_verification_2026-07-06.md)
+        _TREND_SIGNALS = {"GoldenCross", "NearHigh"}
+        if not any(s["passed"] and s["condition_name_en"] in _TREND_SIGNALS
+                   for s in signals):
             no_signal += 1
             time.sleep(0.3)
             continue

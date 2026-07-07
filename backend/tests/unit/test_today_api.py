@@ -268,3 +268,19 @@ def test_sell_check_rejects_invalid_price():
     resp = client.post("/api/v1/today/sell-check",
                        json={"symbol": "005930.KS", "entry_price": 0})
     assert resp.status_code == 422  # pydantic gt=0 검증
+
+
+def test_recommendations_zero_today_does_not_fall_back_to_yesterday(wire_repos):
+    """오늘 작업이 성공했고 결과가 0개면 어제 목록으로 폴백하지 않는다 (낡은 추천 오도 방지)."""
+    RecommendationRepository(wire_repos).save(
+        rec_date="2026-07-05", symbol="000660.KS", name="어제종목",
+        score=90.0, passed_conditions=[], technical_signals=[])
+    JobRunRepository(wire_repos).record(
+        "recommendations", today_routes._today_str(), "success",
+        detail='{"saved": 0}', finished_at="2026-07-07T09:00:00")
+
+    resp = client.get("/api/v1/today/recommendations")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["date"] == today_routes._today_str()
+    assert body["count"] == 0  # 어제 종목이 보이면 안 됨
