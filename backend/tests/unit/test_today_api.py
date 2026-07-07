@@ -240,3 +240,31 @@ def test_refresh_status_endpoint(wire_repos):
     resp = client.get("/api/v1/today/refresh-status")
     assert resp.status_code == 200
     assert resp.json()["running"] is False
+
+
+# ── 매도 진단 API ──
+def test_sell_check_endpoint(monkeypatch):
+    import numpy as np
+    import pandas as pd
+    from app.services import indicators
+
+    closes = np.array([100.0 + i * 0.2 for i in range(300)])
+    fake_df = pd.DataFrame({
+        "open": closes, "high": closes * 1.01, "low": closes * 0.99,
+        "close": closes, "volume": [1_000_000] * 300,
+    }, index=pd.date_range("2025-01-02", periods=300, freq="B"))
+    monkeypatch.setattr(indicators, "load_sample_data", lambda *a, **k: fake_df)
+
+    resp = client.post("/api/v1/today/sell-check",
+                       json={"symbol": "005930.KS", "entry_price": float(closes[-20])})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["action"] == "hold"
+    assert body["levels"]["ma200"] > 0
+    assert len(body["checks"]) == 4
+
+
+def test_sell_check_rejects_invalid_price():
+    resp = client.post("/api/v1/today/sell-check",
+                       json={"symbol": "005930.KS", "entry_price": 0})
+    assert resp.status_code == 422  # pydantic gt=0 검증

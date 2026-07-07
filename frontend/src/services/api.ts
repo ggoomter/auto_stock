@@ -602,6 +602,30 @@ export const postRefreshRecommendations = async (): Promise<{ status: string }> 
 export const getRefreshStatus = async (): Promise<RefreshStatusResponse> =>
   (await api.get<RefreshStatusResponse>('/today/refresh-status')).data;
 
+export interface SellCheckVerdict {
+  action: 'sell' | 'partial_sell' | 'hold' | 'insufficient_data';
+  symbol: string;
+  current_price: number | null;
+  pnl_pct: number | null;
+  holding_days: number | null;
+  checks: ConditionCheck[];
+  levels: { stop_loss?: number; chandelier?: number; ma200?: number };
+  summary: string;
+  as_of?: string;
+}
+
+/** 보유 종목 매도 진단 — 손절/샹들리에/200일선/부분익절 규칙 판정 */
+export const postSellCheck = async (
+  symbol: string,
+  entryPrice: number,
+  entryDate?: string
+): Promise<SellCheckVerdict> =>
+  (await api.post<SellCheckVerdict>('/today/sell-check', {
+    symbol,
+    entry_price: entryPrice,
+    entry_date: entryDate || null,
+  })).data;
+
 /** 오늘 작업(뉴스/추천/정산) 실행 상태 */
 export const getTodayStatus = async (): Promise<TodayStatusResponse> =>
   (await api.get<TodayStatusResponse>('/today/status')).data;

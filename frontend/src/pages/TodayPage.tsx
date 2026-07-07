@@ -7,7 +7,9 @@ import {
   getTodayNews,
   postRefreshRecommendations,
   getRefreshStatus,
+  postSellCheck,
   type ConditionCheck,
+  type SellCheckVerdict,
   type TodayRecommendation,
 } from '../services/api';
 import { useToast } from '../components/Toast';
@@ -708,6 +710,127 @@ function BuyNowHero() {
 }
 
 // ============================================================
+// 매도 진단: "언제까지 들고, 언제 파는가" (핵심 기능 2)
+// ============================================================
+
+const SELL_ACTION_STYLE: Record<string, { label: string; cls: string }> = {
+  sell: { label: '🔴 전량 매도 권고', cls: 'bg-red-100 text-red-800 border-red-400 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700' },
+  partial_sell: { label: '🟠 부분 익절 권고', cls: 'bg-amber-100 text-amber-800 border-amber-400 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700' },
+  hold: { label: '🟢 보유 유지', cls: 'bg-green-100 text-green-800 border-green-400 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700' },
+  insufficient_data: { label: '⚪ 판단 불가 (데이터 부족)', cls: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600' },
+};
+
+/** 매도 조건 한글 해설 */
+const SELL_GUIDE: Record<string, string> = {
+  StopLoss: '매수가 대비 -8%는 "판단이 틀렸다"는 시장의 답입니다. 손실을 키우지 않는 원금 방어선으로, 이 선을 깨면 이유를 불문하고 정리합니다.',
+  Chandelier: '최근 22일 최고가에서 변동성(ATR)의 2.5배만큼 내려오면 추세가 꺾인 것으로 판정합니다. 종목이 평소 흔들리는 폭을 감안하므로 건강한 조정에는 반응하지 않습니다.',
+  TrendBreak: '종가가 200일 평균선 아래로 내려오면 장기 상승 추세를 잃은 것입니다. 애초에 매수 자격(200일선 위)이 사라진 종목은 들고 있을 자격도 없습니다.',
+  PartialProfit: '+20%에서 절반, +40%에서 추가 1/4을 파는 이유: 이익을 확정해 최악의 경우에도 손실 거래가 되지 않게 만들되, 남은 물량으로 큰 추세를 계속 탑니다.',
+};
+
+function SellAdvisorSection() {
+  const toast = useToast();
+  const [symbol, setSymbol] = useState('');
+  const [entryPrice, setEntryPrice] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [verdict, setVerdict] = useState<SellCheckVerdict | null>(null);
+
+  const onCheck = async () => {
+    const price = parseFloat(entryPrice.replace(/,/g, ''));
+    if (!symbol.trim() || !price || price <= 0) {
+      toast.warning('종목 심볼과 매수가를 입력해주세요 (예: 000660.KS / 309500)');
+      return;
+    }
+    setLoading(true);
+    setVerdict(null);
+    try {
+      const v = await postSellCheck(symbol.trim(), price);
+      setVerdict(v);
+    } catch {
+      toast.error('매도 진단에 실패했습니다. 심볼을 확인해주세요 (예: 005930.KS, AAPL)');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const style = verdict ? SELL_ACTION_STYLE[verdict.action] : null;
+
+  return (
+    <SectionCard title="보유 종목 매도 진단 — 언제까지 들고, 언제 파는가">
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        매도는 날짜가 아니라 조건으로 판단합니다. 검증된 4가지 규칙(손절 -8% · 추세 종료
+        샹들리에 · 200일선 이탈 · 부분 익절)으로 지금 팔아야 하는지 진단합니다.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <input
+          value={symbol}
+          onChange={(e) => setSymbol(e.target.value)}
+          placeholder="종목 심볼 (예: 000660.KS)"
+          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+        />
+        <input
+          value={entryPrice}
+          onChange={(e) => setEntryPrice(e.target.value)}
+          placeholder="매수가 (예: 309500)"
+          inputMode="decimal"
+          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+        />
+        <button
+          onClick={onCheck}
+          disabled={loading}
+          className="shrink-0 inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-60 transition-colors"
+        >
+          {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
+          {loading ? '진단 중...' : '매도 진단'}
+        </button>
+      </div>
+
+      {verdict && style && (
+        <div className="space-y-4">
+          {/* 판정 배지 + 요약 */}
+          <div className={`p-4 rounded-xl border-2 ${style.cls}`}>
+            <div className="font-bold text-base mb-1">{style.label}</div>
+            <p className="text-sm leading-relaxed">{verdict.summary}</p>
+            {verdict.current_price != null && verdict.pnl_pct != null && (
+              <p className="text-xs mt-2 opacity-80">
+                현재가 {verdict.current_price.toLocaleString()} · 수익률{' '}
+                {(verdict.pnl_pct * 100).toFixed(1)}% · 기준일 {verdict.as_of} (일봉 종가 기준)
+              </p>
+            )}
+          </div>
+
+          {/* 조건별 판정 + 해설 */}
+          {verdict.checks.length > 0 && (
+            <div className="space-y-2">
+              {verdict.checks.map((c, i) => (
+                <div key={i}>
+                  <ConditionRow
+                    check={{
+                      ...c,
+                      // 매도 조건은 passed=신호 발생. ConditionRow의 통과(초록)/미달(빨강)
+                      // 의미와 반대이므로 여기서는 신호 없음=안전(초록)으로 뒤집어 전달
+                      passed: !c.passed,
+                    }}
+                  />
+                  {SELL_GUIDE[c.condition_name_en ?? ''] && (
+                    <p className="mt-1 mb-2 ml-1 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                      {SELL_GUIDE[c.condition_name_en ?? '']}
+                    </p>
+                  )}
+                </div>
+              ))}
+              <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                * 초록 = 안전 (매도 신호 없음) · 빨강 = 매도/익절 신호 발생
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
+// ============================================================
 // 페이지
 // ============================================================
 
@@ -724,6 +847,8 @@ export default function TodayPage() {
       <BuyNowHero />
 
       <RecommendationsSection />
+
+      <SellAdvisorSection />
 
       <SectionCard title="수집 상태">
         <StatusStrip />

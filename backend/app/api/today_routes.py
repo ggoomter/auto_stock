@@ -11,6 +11,7 @@ import json
 from datetime import date, datetime
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from ..core.config import settings
 from ..core.logging_config import logger
@@ -167,6 +168,29 @@ async def refresh_recommendations(background_tasks: BackgroundTasks):
 async def get_refresh_status():
     """온디맨드 추천 갱신 진행 상태 (프론트 버튼 폴링용)."""
     return dict(_refresh_state)
+
+
+# ── 매도 진단 ("언제 팔아야 하나" 판단) ──
+class SellCheckRequest(BaseModel):
+    symbol: str = Field(..., description="종목 심볼 (예: 005930.KS, AAPL)")
+    entry_price: float = Field(..., gt=0, description="매수가")
+    entry_date: str | None = Field(default=None, description="매수일 (YYYY-MM-DD, 선택)")
+
+
+@router.post("/today/sell-check")
+async def sell_check(req: SellCheckRequest):
+    """보유 종목 매도 진단 — 검증된 규칙(손절/샹들리에/200일선/부분익절)으로 판정."""
+    import asyncio as _asyncio
+    from ..services import sell_advisor
+    try:
+        verdict = await _asyncio.to_thread(
+            sell_advisor.check_sell, req.symbol, req.entry_price, req.entry_date)
+        return verdict
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"매도 진단 실패 ({req.symbol}): {e}")
+        raise HTTPException(status_code=500, detail=_GENERIC_ERROR)
 
 
 @router.get("/today/status")
